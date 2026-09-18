@@ -20,6 +20,13 @@ describe("setup endpoint hardening", () => {
     const client = { systemOne: vi.fn().mockResolvedValue(sdkResponse) };
     expect((await interpretSetup(input, { apiKey: "test-key", client: client as never })).source).toBe("fallback");
   });
+  it("accepts SDK score rounding within one hundredth", async () => {
+    const rounded = validSdkResponse();
+    rounded.answers.cooperate.score = 2.01;
+    const client = { systemOne: vi.fn().mockResolvedValue(rounded) };
+    expect((await interpretSetup(input, { apiKey: "test-key", client: client as never })).source).toBe("jev");
+  });
+
   it("recomputes and validates the canonical request hash", async () => {
     const decide = vi.fn(); const handler = createJudgeHandler({ decide });
     expect((await handler(request({ ...input, requestHash: "cache-bypass" }))).status).toBe(400);

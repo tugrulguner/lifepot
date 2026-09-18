@@ -22,7 +22,9 @@ export function normalizeFitness(raw: FitnessConfig): FitnessConfig {
   const keys = ["survive", "replicate", "cooperate", "explore", "adapt"] as const;
   const bounded = keys.map((key) => Math.max(0, Number.isFinite(raw[key]) ? raw[key] : 0));
   const total = bounded.reduce((sum, value) => sum + value, 0) || keys.length;
-  const firstFour = bounded.slice(0, 4).map((value) => Math.round((value / total) * 1e9) / 1e9);
+  const firstFour = bounded.slice(0, 4).map((value) => value / total);
+  const overflow = Math.max(0, firstFour.reduce((sum, value) => sum + value, 0) - 1);
+  if (overflow) firstFour[3] -= overflow;
   return { survive: firstFour[0], replicate: firstFour[1], cooperate: firstFour[2], explore: firstFour[3], adapt: 1 - firstFour.reduce((sum, value) => sum + value, 0) };
 }
 export function defaultConfig(): LifeConfig { return { environment: { abundance: "balanced", distribution: "scattered", hazard: "drought", volatility: "stable" }, fitness: { survive: 0.2, replicate: 0.2, cooperate: 0.2, explore: 0.2, adapt: 0.2 } }; }

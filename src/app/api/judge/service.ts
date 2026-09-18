@@ -39,13 +39,27 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
   const apiKey = options.apiKey ?? process.env.TYPESAFE_API_KEY; if (!apiKey) return fallback();
   try {
     const client = options.client ?? new TypeSafeClient({ apiKey, timeout: 5000, retry: { maxRetries: 1 } });
-    const parsed = responseSchema.safeParse(await client.systemOne({ state: answers, questions })); if (!parsed.success) return fallback();
+    const parsed = responseSchema.safeParse(await client.systemOne({ state: answers, questions }));
+    if (!parsed.success) {
+      if (process.env.NODE_ENV !== "production") console.error("[LifePot Jev] invalid response", parsed.error.issues.map(({ path, message }) => ({ path, message })));
+      return fallback();
+    }
     const value = parsed.data.answers;
     const choices: Array<{ choice: string; probabilities: Record<string, number> }> = [value.abundance, value.distribution, value.hazard, value.volatility];
-    if (choices.some((answer) => answer.probabilities[answer.choice] !== Math.max(...Object.values(answer.probabilities)))) return fallback();
+    if (choices.some((answer) => answer.probabilities[answer.choice] !== Math.max(...Object.values(answer.probabilities)))) {
+      if (process.env.NODE_ENV !== "production") console.error("[LifePot Jev] selected choice was not the maximum-probability option");
+      return fallback();
+    }
     const scores = [value.survive, value.replicate, value.cooperate, value.explore, value.adapt];
-    if (scores.some((answer) => Math.abs(answer.score - Object.entries(answer.probabilities).reduce((sum, [level, probability]) => sum + Number(level) * probability, 0)) > 1e-6)) return fallback();
+    const scoreDifferences = scores.map((answer) => Math.abs(answer.score - Object.entries(answer.probabilities).reduce((sum, [level, probability]) => sum + Number(level) * probability, 0)));
+    if (scoreDifferences.some((difference) => difference > 0.011)) {
+      if (process.env.NODE_ENV !== "production") console.error("[LifePot Jev] score did not match its probability-weighted value");
+      return fallback();
+    }
     const config = lifeConfigSchema.parse({ environment: { abundance: value.abundance.choice, distribution: value.distribution.choice, hazard: value.hazard.choice, volatility: value.volatility.choice }, fitness: normalizeFitness({ survive: value.survive.score, replicate: value.replicate.score, cooperate: value.cooperate.score, explore: value.explore.score, adapt: value.adapt.score }) });
     return { config, source: "jev", requestHash };
-  } catch { return fallback(); }
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") console.error("[LifePot Jev] request failed", error instanceof Error ? error.message : "unknown error");
+    return fallback();
+  }
 }
