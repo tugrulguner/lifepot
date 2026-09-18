@@ -29,15 +29,15 @@ describe("setup endpoint hardening", () => {
 
   it("recomputes and validates the canonical request hash", async () => {
     const decide = vi.fn(); const handler = createJudgeHandler({ decide });
-    expect((await handler(request({ ...input, requestHash: "cache-bypass" }))).status).toBe(400);
+    expect((await handler(request({ ...input, requestHash: "forged-hash" }))).status).toBe(400);
     expect(decide).not.toHaveBeenCalled();
   });
-  it("throttles before cache and caches canonical requests", async () => {
+  it("calls Jev for every submission and throttles excess requests", async () => {
     const decide = vi.fn(async () => interpretSetup(input)); const handler = createJudgeHandler({ decide, maxRequests: 2 });
     expect((await handler(request(input))).status).toBe(200);
     expect((await handler(request(input))).status).toBe(200);
     expect((await handler(request(input))).status).toBe(429);
-    expect(decide).toHaveBeenCalledOnce();
+    expect(decide).toHaveBeenCalledTimes(2);
   });
   it("rejects overlong text, unknown fields, and oversized bodies", async () => {
     const decide = vi.fn(); const handler = createJudgeHandler({ decide });

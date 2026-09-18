@@ -21,7 +21,7 @@ LifePot is a deterministic 50×50 artificial-life simulation. Three short visito
 
 The server asks four independent TypeSafe Choice questions and five independent Score questions in one Jev request, validates the complete response, and normalizes the fitness vector. A deterministic semantic fallback is used if Jev is unavailable or returns invalid data. Visitor text remains data; it never becomes executable rules.
 
-Local development needs only `TYPESAFE_API_KEY` for live Jev calls. Production additionally requires `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`; Upstash is a hosted Redis service used only for distributed abuse limits, the daily spend cap, caching, and request locks. Without it, production fails closed to the deterministic interpreter.
+Local development needs only `TYPESAFE_API_KEY` for live Jev calls. Every setup submission calls Jev, including repeated answers, so the showcase exposes real model behavior and token usage rather than replaying a cached interpretation. Production additionally requires `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`; Upstash is used only for distributed abuse limits and the daily spend cap. Without it, production fails closed to the deterministic interpreter.
 
 ## Replay
 

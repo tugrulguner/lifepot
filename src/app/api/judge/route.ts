@@ -6,7 +6,7 @@ import { setupRequestSchema, type SetupRequest } from "./schema";
 import { interpretSetup, type SetupInterpretation } from "./service";
 
 export const runtime = "nodejs";
-const MAX_BODY_BYTES = 16_384; const MAX_IP_BUCKETS = 1024; const MAX_CACHE_ENTRIES = 256;
+const MAX_BODY_BYTES = 16_384; const MAX_IP_BUCKETS = 1024;
 const configured = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 const redis = configured ? Redis.fromEnv() : null;
 const ipLimiter = redis ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(10, "1 m"), prefix: "lifepot:setup:ip" }) : null;
@@ -19,7 +19,7 @@ function fallback(input: SetupRequest): SetupInterpretation { return { config: d
 
 export function createJudgeHandler(options: HandlerOptions = {}) {
   const decide = options.decide ?? interpretSetup; const maxRequests = options.maxRequests ?? 20; const windowMs = options.windowMs ?? 60_000; const now = options.now ?? Date.now;
-  const rates = new Map<string, Bucket>(); const cache = new Map<string, SetupInterpretation>();
+  const rates = new Map<string, Bucket>();
   function limited(ip: string) { const time = now(); let bucket = rates.get(ip); if (!bucket || time >= bucket.resetAt) { if (!bucket && rates.size >= MAX_IP_BUCKETS) rates.delete(rates.keys().next().value as string); bucket = { count: 0, resetAt: time + windowMs }; rates.set(ip, bucket); } bucket.count += 1; return bucket.count > maxRequests; }
   return async (request: Request) => {
     const ip = clientIp(request); if (limited(ip)) return response({ error: "Too many requests" }, 429);
@@ -28,30 +28,19 @@ export function createJudgeHandler(options: HandlerOptions = {}) {
       const raw = await request.text(); if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) return response({ error: "Setup is too large" }, 413);
       const parsed = setupRequestSchema.safeParse(JSON.parse(raw)); if (!parsed.success) return response({ error: "Invalid setup" }, 400);
       const trustedHash = hashSetupRequest(parsed.data.answers); if (parsed.data.requestHash !== trustedHash) return response({ error: "Setup hash mismatch" }, 400);
-      const cached = cache.get(trustedHash); if (cached) return response(cached);
-      if (!options.decide && process.env.TYPESAFE_API_KEY) {
-        if (process.env.NODE_ENV !== "production") {
+      if (!options.decide) {
+        if (!process.env.TYPESAFE_API_KEY) return response(fallback(parsed.data));
+        if (process.env.NODE_ENV === "production") {
           try {
-            const result = await decide(parsed.data);
-            if (cache.size >= MAX_CACHE_ENTRIES) cache.delete(cache.keys().next().value as string);
-            cache.set(trustedHash, result);
-            return response(result);
+            if (!redis || !ipLimiter || !spendLimiter) return response(fallback(parsed.data));
+            const [perIp, daily] = await Promise.all([ipLimiter.limit(ip), spendLimiter.limit("global")]); if (!perIp.success || !daily.success) return response(fallback(parsed.data));
           } catch {
             return response(fallback(parsed.data));
           }
         }
-        try {
-          if (!redis || !ipLimiter || !spendLimiter) return response(fallback(parsed.data));
-          const [perIp, daily] = await Promise.all([ipLimiter.limit(ip), spendLimiter.limit("global")]); if (!perIp.success || !daily.success) return response(fallback(parsed.data));
-          const key = `lifepot:setup:cache:${trustedHash}`; const shared = await redis.get<SetupInterpretation>(key); if (shared) return response(shared);
-          const lock = `lifepot:setup:lock:${trustedHash}`; if (!await redis.set(lock, "1", { nx: true, ex: 10 })) return response(fallback(parsed.data));
-          try { const result = await decide(parsed.data); await redis.set(key, result, { ex: 86_400 }); return response(result); } finally { await redis.del(lock); }
-        } catch {
-          return response(fallback(parsed.data));
-        }
       }
       try {
-        const result = await decide(parsed.data); if (cache.size >= MAX_CACHE_ENTRIES) cache.delete(cache.keys().next().value as string); cache.set(trustedHash, result); return response(result);
+        return response(await decide(parsed.data));
       } catch {
         return response(fallback(parsed.data));
       }
