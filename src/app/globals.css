@@ -77,6 +77,9 @@ button:disabled { cursor: not-allowed; opacity: .42; }
 .review-card { position: relative; z-index: 2; width: min(760px, 100%); padding: clamp(28px, 5vw, 54px); border: 1px solid var(--line); background: rgba(3, 15, 13, .93); box-shadow: 0 30px 100px rgba(0,0,0,.34); }
 .review-card h1 { font-size: clamp(42px, 5vw, 66px); }
 .environment-code { margin: 17px 0 34px; color: var(--acid); font: 500 11px var(--mono); letter-spacing: .12em; }
+.interpreter-proof { display: flex; align-items: center; gap: 8px; margin: -21px 0 25px; color: var(--muted); font: 9px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.interpreter-proof span { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
+.interpreter-proof.is-jev { color: var(--mint); }.interpreter-proof.is-jev span { background: var(--mint); box-shadow: 0 0 8px rgba(121,235,195,.7); }
 .condition-list { border-top: 1px solid var(--line); }
 .condition-list > div { display: grid; grid-template-columns: 110px 1fr; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--line); }
 .condition-list span { color: var(--dim); font: 9px var(--mono); text-transform: uppercase; letter-spacing: .11em; }

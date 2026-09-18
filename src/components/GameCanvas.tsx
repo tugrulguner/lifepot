@@ -58,7 +58,10 @@ const JUDGE_RESPONSE = z.object({
   config: lifeConfigSchema,
   source: z.enum(["jev", "fallback"]),
   requestHash: z.string().regex(/^setup_[a-z0-9]+$/),
+  model: z.string().optional(),
+  usage: z.object({ input_tokens: z.number().int().nonnegative(), output_tokens: z.number().int().nonnegative() }).strict().optional(),
 }).strict();
+type InterpretationProof = Pick<z.infer<typeof JUDGE_RESPONSE>, "source" | "model" | "usage">;
 const FITNESS_ORDER: FitnessKey[] = ["survive", "replicate", "cooperate", "explore", "adapt"];
 const LINEAGE_COLORS = ["#74f2ce", "#b6f08e", "#7ad8ff", "#e9b7ff", "#ffd37d", "#ff9e91"];
 
@@ -268,6 +271,7 @@ export function GameCanvas() {
   const [event, setEvent] = useState("The seeded cells are waking in the resource field");
   const [loading, setLoading] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [interpretation, setInterpretation] = useState<InterpretationProof | null>(null);
   const [notice, setNotice] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -327,10 +331,10 @@ export function GameCanvas() {
       if (!response.ok) throw new Error("request");
       const parsed = JUDGE_RESPONSE.safeParse(await response.json());
       if (!parsed.success || parsed.data.requestHash !== requestHash) throw new Error("shape");
-      setAnswers(canonical); setConfig(parsed.data.config); setSeed(seedFromHash(requestHash)); setStage("review");
+      setAnswers(canonical); setConfig(parsed.data.config); setSeed(seedFromHash(requestHash)); setInterpretation({ source: parsed.data.source, model: parsed.data.model, usage: parsed.data.usage }); setStage("review");
     } catch {
       const fallback = deterministicSetup(canonical);
-      setAnswers(canonical); setConfig(fallback); setSeed(seedFromHash(requestHash)); setSetupError(null); setStage("review");
+      setAnswers(canonical); setConfig(fallback); setSeed(seedFromHash(requestHash)); setInterpretation({ source: "fallback" }); setSetupError(null); setStage("review");
     } finally { setLoading(false); }
   }, []);
 
@@ -344,7 +348,7 @@ export function GameCanvas() {
 
   const useFallback = () => {
     const canonical = canonicalAnswers(answers); const requestHash = hashSetupRequest(canonical);
-    setConfig(deterministicSetup(canonical)); setSeed(seedFromHash(requestHash)); setSetupError(null); setStage("review");
+    setConfig(deterministicSetup(canonical)); setSeed(seedFromHash(requestHash)); setInterpretation({ source: "fallback" }); setSetupError(null); setStage("review");
   };
 
   const restart = () => {
@@ -417,6 +421,9 @@ export function GameCanvas() {
           <p className="eyebrow">Your experimental world</p>
           <h1 id="review-title" ref={headingRef} tabIndex={-1}>World conditions</h1>
           <p className="environment-code">{environmentLabel(config)}</p>
+          <p className={`interpreter-proof ${interpretation?.source === "jev" ? "is-jev" : "is-fallback"}`} data-testid="interpreter-source">
+            <span aria-hidden="true" />{interpretation?.source === "jev" ? `Jev API · ${interpretation.model ?? "jev-latest"}${interpretation.usage ? ` · ${interpretation.usage.input_tokens} input / ${interpretation.usage.output_tokens} output tokens` : ""}` : "Deterministic interpreter · no API usage"}
+          </p>
           <div className="condition-list">{plainEnvironment(config).map(([label, text]) => <div key={label}><span>{label}</span><p>{text}</p></div>)}</div>
           <div className="fitness-review">
             <div><p className="eyebrow">Selection rewards</p><strong>{titleCase(topFitness ?? "survive")} leads</strong></div>

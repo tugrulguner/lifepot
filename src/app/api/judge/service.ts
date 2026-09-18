@@ -4,7 +4,8 @@ import { deterministicSetup, hashSetupRequest, lifeConfigSchema, normalizeFitnes
 import type { LifeConfig } from "@/game/world";
 import type { SetupRequest } from "./schema";
 
-export type SetupInterpretation = { config: LifeConfig; source: "jev" | "fallback"; requestHash: string };
+type JevUsage = { input_tokens: number; output_tokens: number };
+export type SetupInterpretation = { config: LifeConfig; source: "jev" | "fallback"; requestHash: string; model?: string; usage?: JevUsage };
 const questions = {
   abundance: choice("How abundant are usable resources inside the resource-bearing locations described by `world`? Judge explicit resource amount words such as scarce, rich, abundant, or plentiful. A small number of locations (for example, 'a few rich oases') describes distribution and must not by itself make resources scarce.", { scarce: "Resources themselves are rare or limited", balanced: "Resource amount is moderate or unspecified", rich: "Resources themselves are plentiful, rich, or abundant" }),
   distribution: choice("How are resources distributed in `world`?", { clustered: "Concentrated in patches or oases", scattered: "Spread across the habitat", seasonal: "Availability shifts in recurring seasons" }),
@@ -26,7 +27,7 @@ const scoreAnswer = z.object({ type: z.literal("score"), score: z.number().finit
   probabilities: z.object({ "0": probability, "1": probability, "2": probability, "3": probability, "4": probability }).strict().refine(sumsToOne),
   legend: z.object({ "0": z.unknown(), "1": z.unknown(), "2": z.unknown(), "3": z.unknown(), "4": z.unknown() }).strict(),
 }).strict();
-const responseSchema = z.object({ answers: z.object({
+const responseSchema = z.object({ model: z.string(), usage: z.object({ input_tokens: z.number().int().nonnegative(), output_tokens: z.number().int().nonnegative() }).strict(), answers: z.object({
   abundance: choiceAnswer(["scarce", "balanced", "rich"]), distribution: choiceAnswer(["clustered", "scattered", "seasonal"]), hazard: choiceAnswer(["drought", "toxin", "heat", "crowding", "predator"]), volatility: choiceAnswer(["stable", "pulsing", "chaotic"]),
   survive: scoreAnswer, replicate: scoreAnswer, cooperate: scoreAnswer, explore: scoreAnswer, adapt: scoreAnswer,
 }).strict() }).passthrough();
@@ -52,12 +53,14 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
     }
     const scores = [value.survive, value.replicate, value.cooperate, value.explore, value.adapt];
     const scoreDifferences = scores.map((answer) => Math.abs(answer.score - Object.entries(answer.probabilities).reduce((sum, [level, probability]) => sum + Number(level) * probability, 0)));
-    if (scoreDifferences.some((difference) => difference > 0.011)) {
+    // Jev rounds both scores and individual probabilities for transport. Their
+    // independently rounded values may differ by a few hundredths.
+    if (scoreDifferences.some((difference) => difference > 0.051)) {
       if (process.env.NODE_ENV !== "production") console.error("[LifePot Jev] score did not match its probability-weighted value");
       return fallback();
     }
     const config = lifeConfigSchema.parse({ environment: { abundance: value.abundance.choice, distribution: value.distribution.choice, hazard: value.hazard.choice, volatility: value.volatility.choice }, fitness: normalizeFitness({ survive: value.survive.score, replicate: value.replicate.score, cooperate: value.cooperate.score, explore: value.explore.score, adapt: value.adapt.score }) });
-    return { config, source: "jev", requestHash };
+    return { config, source: "jev", requestHash, model: parsed.data.model, usage: parsed.data.usage };
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("[LifePot Jev] request failed", error instanceof Error ? error.message : "unknown error");
     return fallback();
