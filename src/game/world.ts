@@ -1,212 +1,73 @@
-export const GRID_SIZE = 50;
-export const GRID_CELLS = GRID_SIZE * GRID_SIZE;
-export const TRAIT_COUNT = 5;
-export const ENGINE_VERSION = "lifepot-ca-2";
-export const DEFAULT_GENERATIONS = 180;
+import type { EvolutionDecision, EnvironmentPressure, MutationTarget, MutationTempo, PredatorStrategy, PreyStrategy } from "./decisions";
+import { applyRulePatch, defaultRuleGraph, ruleChangeDue, validateRuleGraph, type PairInteraction, type SpeciesPair, type WorldRuleGraph } from "./rules";
 
-export type ResourceAbundance = "scarce" | "balanced" | "rich";
-export type ResourceDistribution = "clustered" | "scattered" | "seasonal";
-export type Hazard = "drought" | "toxin" | "heat" | "crowding" | "predator";
-export type Volatility = "stable" | "pulsing" | "chaotic";
-export type FitnessKey = "survive" | "replicate" | "cooperate" | "explore" | "adapt";
-export type FitnessConfig = Record<FitnessKey, number>;
-export type LifeConfig = {
-  environment: { abundance: ResourceAbundance; distribution: ResourceDistribution; hazard: Hazard; volatility: Volatility };
-  fitness: FitnessConfig;
-};
-export type OrganismSeed = { x: number; y: number; energy: number; lineage: number; generation: number; traits: readonly [number, number, number, number, number] };
-export type ResourceSeed = { x: number; y: number; amount: number };
-export type SimulationStats = { population: number; births: number; deaths: number; maxGeneration: number; lineages: number };
-export type SimulationOutcome = "running" | "extinct" | "surviving" | "thriving";
-export type SimulationState = {
-  seed: number; rngState: number; generation: number; config: LifeConfig;
-  occupied: Uint8Array; energy: Float32Array; age: Uint16Array; organismGeneration: Uint16Array; lineage: Uint32Array; traits: Uint8Array;
-  resources: Uint8Array; hazards: Uint8Array; stats: SimulationStats; outcome: SimulationOutcome;
-};
-export type CreateSimulationOptions = { seed: number; config: LifeConfig; initialPopulation?: readonly OrganismSeed[]; initialResources?: readonly ResourceSeed[] };
-import { cohortForCell, type CellAction, type EpochDecision } from "./decisions";
-
-export function indexOf(x: number, y: number): number {
-  const nx = ((x % GRID_SIZE) + GRID_SIZE) % GRID_SIZE;
-  const ny = ((y % GRID_SIZE) + GRID_SIZE) % GRID_SIZE;
-  return ny * GRID_SIZE + nx;
-}
-
-function random(state: number): [number, number] {
-  let x = state | 0 || 0x6d2b79f5;
-  x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
-  const next = x >>> 0;
-  return [next / 0x1_0000_0000, next];
-}
-
-function resourceCapacity(config: LifeConfig): number {
-  return config.environment.abundance === "scarce" ? 70 : config.environment.abundance === "rich" ? 230 : 145;
-}
-
-function volatilityAt(config: LifeConfig, generation: number, index: number, seed: number): number {
-  if (config.environment.volatility === "stable") return 0.35;
-  if (config.environment.volatility === "pulsing") return 0.5 + 0.5 * Math.sin((generation + (index % 11)) * Math.PI / 9);
-  const mixed = Math.imul((generation + 1) ^ seed ^ index, 0x45d9f3b) >>> 0;
-  return (mixed & 255) / 255;
-}
-
-function fillResources(resources: Uint8Array, config: LifeConfig, seed: number): number {
-  let rng = seed || 0x6d2b79f5;
-  const cap = resourceCapacity(config);
-  for (let i = 0; i < GRID_CELLS; i += 1) {
-    let roll: number; [roll, rng] = random(rng);
-    if (config.environment.distribution === "clustered") {
-      const x = i % GRID_SIZE; const y = Math.floor(i / GRID_SIZE);
-      const cluster = ((Math.floor(x / 8) + Math.floor(y / 8) * 3 + seed) % 5) <= 1;
-      resources[i] = cluster ? Math.round(cap * (0.55 + roll * 0.45)) : Math.round(cap * roll * 0.12);
-    } else if (config.environment.distribution === "seasonal") {
-      const band = (Math.sin((i % GRID_SIZE) / 7 + Math.floor(i / GRID_SIZE) / 9) + 1) / 2;
-      resources[i] = Math.round(cap * (0.15 + 0.7 * band) * (0.65 + roll * 0.35));
-    } else resources[i] = Math.round(cap * (0.25 + roll * 0.55));
-  }
-  return rng;
-}
-
-const DEFAULT_TRAITS = [128, 128, 128, 128, 128] as const;
-function defaultPopulation(): OrganismSeed[] {
-  const result: OrganismSeed[] = [];
-  for (let y = 23; y <= 26; y += 1) for (let x = 22; x <= 27; x += 1) result.push({ x, y, energy: 105, lineage: result.length + 1, generation: 0, traits: DEFAULT_TRAITS });
-  return result;
-}
-
-export function createSimulation(options: CreateSimulationOptions): SimulationState {
-  const occupied = new Uint8Array(GRID_CELLS); const energy = new Float32Array(GRID_CELLS);
-  const age = new Uint16Array(GRID_CELLS); const organismGeneration = new Uint16Array(GRID_CELLS);
-  const lineage = new Uint32Array(GRID_CELLS); const traits = new Uint8Array(GRID_CELLS * TRAIT_COUNT);
-  const resources = new Uint8Array(GRID_CELLS); const hazards = new Uint8Array(GRID_CELLS);
-  const rngState = fillResources(resources, options.config, options.seed >>> 0);
-  for (const item of options.initialResources ?? []) resources[indexOf(item.x, item.y)] = Math.max(0, Math.min(255, Math.round(item.amount)));
-  const population = options.initialPopulation ?? defaultPopulation();
-  for (const organism of population) {
-    const i = indexOf(organism.x, organism.y); occupied[i] = 1; energy[i] = organism.energy;
-    organismGeneration[i] = organism.generation; lineage[i] = organism.lineage >>> 0;
-    for (let trait = 0; trait < TRAIT_COUNT; trait += 1) traits[i * TRAIT_COUNT + trait] = Math.max(0, Math.min(255, organism.traits[trait]));
-  }
-  return { seed: options.seed >>> 0, rngState, generation: 0, config: structuredClone(options.config), occupied, energy, age, organismGeneration, lineage, traits, resources, hazards, stats: { population: population.length, births: 0, deaths: 0, maxGeneration: 0, lineages: new Set(population.map((item) => item.lineage)).size }, outcome: population.length ? "running" : "extinct" };
-}
-
-const DIRECTIONS = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]] as const;
-function neighbors(index: number): number[] {
-  const x = index % GRID_SIZE; const y = Math.floor(index / GRID_SIZE);
-  return DIRECTIONS.map(([dx, dy]) => indexOf(x + dx, y + dy));
-}
-
-function copyOrganism(state: SimulationState, target: SimulationState, from: number, to: number): void {
-  target.occupied[to] = 1; target.energy[to] = state.energy[from]; target.age[to] = state.age[from];
-  target.organismGeneration[to] = state.organismGeneration[from]; target.lineage[to] = state.lineage[from];
-  for (let t = 0; t < TRAIT_COUNT; t += 1) target.traits[to * TRAIT_COUNT + t] = state.traits[from * TRAIT_COUNT + t];
-}
-
-function environmentHazard(state: SimulationState, index: number): number {
-  const pulse = volatilityAt(state.config, state.generation + 1, index, state.seed);
-  if (state.config.environment.hazard === "predator") {
-    const generation = state.generation + 1;
-    const hunterX = (state.seed + generation * 3) % GRID_SIZE;
-    const hunterY = (state.seed * 7 + generation * 2) % GRID_SIZE;
-    const x = index % GRID_SIZE; const y = Math.floor(index / GRID_SIZE);
-    const dx = Math.min(Math.abs(x - hunterX), GRID_SIZE - Math.abs(x - hunterX));
-    const dy = Math.min(Math.abs(y - hunterY), GRID_SIZE - Math.abs(y - hunterY));
-    const distance = dx + dy;
-    return distance <= 8 ? Math.max(1, Math.round((9 - distance) * 5 * (0.6 + pulse))) : 1;
-  }
-  const base = state.config.environment.hazard === "toxin" ? 36 : state.config.environment.hazard === "heat" ? 29 : state.config.environment.hazard === "drought" ? 24 : 18;
-  return Math.max(1, Math.round(base * (0.45 + pulse)));
-}
-
-export function stepSimulation(state: SimulationState, decision?: EpochDecision): SimulationState {
-  if (state.outcome === "extinct" || state.generation >= DEFAULT_GENERATIONS) return state;
-  const next: SimulationState = {
-    ...state, generation: state.generation + 1,
-    occupied: new Uint8Array(GRID_CELLS), energy: new Float32Array(GRID_CELLS), age: new Uint16Array(GRID_CELLS), organismGeneration: new Uint16Array(GRID_CELLS), lineage: new Uint32Array(GRID_CELLS), traits: new Uint8Array(GRID_CELLS * TRAIT_COUNT),
-    resources: state.resources.slice(), hazards: new Uint8Array(GRID_CELLS), stats: { ...state.stats }, outcome: "running",
-  };
-  let rng = state.rngState;
-  const cap = resourceCapacity(state.config);
-  const baseRegrowth = state.config.environment.abundance === "scarce" ? 1 : state.config.environment.abundance === "rich" ? 4 : 2;
-  const environmentAction = decision?.environment.choice ?? "hold";
-  if (environmentAction === "redistribute") {
-    const source = next.resources.slice();
-    for (let i = 0; i < GRID_CELLS; i += 1) next.resources[i] = Math.round(source[i] * 0.65 + source[(i + 73) % GRID_CELLS] * 0.35);
-  }
-  for (let i = 0; i < GRID_CELLS; i += 1) {
-    const volatility = volatilityAt(state.config, next.generation, i, state.seed);
-    const seasonal = state.config.environment.distribution === "seasonal" ? 0.25 + 0.75 * ((Math.sin(next.generation / 11 + i % GRID_SIZE / 8) + 1) / 2) : 1;
-    const drought = state.config.environment.hazard === "drought" ? 0.45 : 1;
-    const growthMultiplier = environmentAction === "bloom" ? 3 : environmentAction === "hazard_surge" ? 0.6 : 1;
-    next.resources[i] = Math.min(cap, next.resources[i] + Math.max(1, Math.round(baseRegrowth * growthMultiplier * seasonal * drought * (0.65 + volatility * 0.35))));
-    const hazardMultiplier = environmentAction === "hazard_surge" ? 1.65 : environmentAction === "relief" ? 0.45 : 1;
-    next.hazards[i] = Math.max(0, Math.min(255, Math.round(environmentHazard(state, i) * hazardMultiplier)));
-  }
-  let deaths = 0; let births = 0; let maxGeneration = state.stats.maxGeneration;
-  for (let i = 0; i < GRID_CELLS; i += 1) {
-    if (!state.occupied[i]) continue;
-    copyOrganism(state, next, i, i);
-    next.age[i] = Math.min(65535, state.age[i] + 1);
-    const local = neighbors(i); const occupiedNeighbors = local.filter((n) => state.occupied[n]).length;
-    const action: CellAction | undefined = decision?.cohorts[cohortForCell(state, i)].choice;
-    const efficiency = state.traits[i * TRAIT_COUNT] / 255;
-    const resilience = state.traits[i * TRAIT_COUNT + 3] / 255;
-    const intakeMultiplier = action === "forage" ? 1.55 : action === "conserve" ? 0.55 : 1;
-    const consumed = Math.min(next.resources[i], Math.max(1, Math.round((7 + efficiency * 10) * intakeMultiplier)));
-    next.resources[i] -= consumed;
-    const fit = state.config.fitness;
-    const cooperationBonus = occupiedNeighbors * (0.25 + fit.cooperate * 1.5) * (action === "cluster" ? 1.8 : 1);
-    const hazard = next.hazards[i] / 16;
-    let hazardCost = hazard * (1.25 - resilience * 0.45 - fit.adapt * 0.45);
-    if (state.config.environment.hazard === "crowding") hazardCost += occupiedNeighbors * (1.1 - fit.cooperate * 0.7);
-    if (state.config.environment.hazard === "predator") hazardCost += Math.max(0, 4 - occupiedNeighbors) * (1.55 - fit.cooperate);
-    if (state.config.environment.hazard === "toxin") hazardCost += consumed * 0.12;
-    if (state.config.environment.hazard === "heat") hazardCost += 1.4;
-    const metabolism = (4.5 - fit.survive * 1.8 + (state.traits[i * TRAIT_COUNT + 1] / 255) * 0.8) * (action === "conserve" ? 0.52 : action === "forage" ? 1.12 : 1);
-    next.energy[i] = state.energy[i] + consumed * (0.75 + efficiency * 0.45) + cooperationBonus - metabolism - hazardCost;
-    if (next.energy[i] <= 0 || next.age[i] > 150 + Math.round(fit.survive * 90)) {
-      next.occupied[i] = 0; next.energy[i] = 0; deaths += 1; continue;
-    }
-    const empty = local.filter((n) => !state.occupied[n] && !next.occupied[n]);
-    const reproductionThreshold = 145 - fit.replicate * 70 - (state.traits[i * TRAIT_COUNT + 1] / 255) * 18 + (action === "reproduce" ? -55 : action === "conserve" ? 70 : 0);
-    if (empty.length && next.energy[i] >= reproductionThreshold) {
-      let roll: number; [roll, rng] = random(rng); const target = empty[Math.floor(roll * empty.length) % empty.length];
-      const childEnergy = next.energy[i] * (0.38 + fit.replicate * 0.12); next.energy[i] -= childEnergy;
-      next.occupied[target] = 1; next.energy[target] = childEnergy; next.age[target] = 0;
-      next.organismGeneration[target] = Math.min(65535, state.organismGeneration[i] + 1); next.lineage[target] = state.lineage[i];
-      maxGeneration = Math.max(maxGeneration, next.organismGeneration[target]);
-      for (let t = 0; t < TRAIT_COUNT; t += 1) {
-        let mutationRoll: number; [mutationRoll, rng] = random(rng);
-        const mutation = mutationRoll < 0.08 + fit.adapt * 0.12 ? (mutationRoll < 0.1 ? -1 : 1) : 0;
-        next.traits[target * TRAIT_COUNT + t] = Math.max(0, Math.min(255, state.traits[i * TRAIT_COUNT + t] + mutation));
-      }
-      births += 1;
-    } else if (empty.length && (action === "disperse" || fit.explore > 0.45) && next.energy[i] > 28) {
-      let roll: number; [roll, rng] = random(rng);
-      if (action === "disperse" || roll < fit.explore * 0.12) {
-        const target = empty[Math.floor(roll * empty.length * 17) % empty.length]; copyOrganism(next, next, i, target);
-        next.occupied[i] = 0; next.energy[i] = 0;
-      }
+export const GRID_SIZE = 50, GRID_CELLS = 2500, TRAIT_COUNT = 5, DEFAULT_GENERATIONS = 180, MAX_ENERGY = 255, MAX_SPECIES = 32;
+export const ENGINE_VERSION = "lifepot-ca-3";
+export type ResourceAbundance = "scarce"|"balanced"|"rich"; export type ResourceDistribution = "clustered"|"scattered"|"seasonal"; export type Hazard = "drought"|"toxin"|"heat"|"crowding"; export type Volatility = "stable"|"pulsing"|"chaotic";
+export type FitnessKey = "survive"|"replicate"|"cooperate"|"explore"|"adapt"; export type FitnessConfig = Record<FitnessKey,number>; export type GuildName = "prey"|"predator";
+export type LifeConfig = { environment:{abundance:ResourceAbundance;distribution:ResourceDistribution;hazard:Hazard;volatility:Volatility}; fitness:FitnessConfig; founders:{balance:"prey_heavy"|"balanced"|"predator_heavy";diversity:"focused"|"varied";preyStrategy:PreyStrategy;predatorStrategy:PredatorStrategy}; rules?:WorldRuleGraph };
+export type OrganismSeed = {x:number;y:number;guild:GuildName;ruleSpecies?:number;energy:number;lineage:number;species:number;generation:number;strategy:PreyStrategy|PredatorStrategy;traits:readonly [number,number,number,number,number]};
+export type ResourceSeed={x:number;y:number;amount:number};
+export type EcologyFrame={generation:number;prey:number;predators:number;kills:number;resources:number;speciesRichness:number};
+export type SimulationStats={population:number;prey:number;predators:number;births:number;deaths:number;kills:number;resources:number;maxGeneration:number;lineages:number;speciesRichness:number};
+export type SimulationOutcome="running"|"extinct"|"surviving"|"thriving";
+export type SimulationState={seed:number;rngState:number;generation:number;config:LifeConfig;activeRuleChange?:{sourceGeneration:number;activatedAt:number;revertAt:number|null;previousRules:WorldRuleGraph};appliedRuleChanges:number[];guild:Uint8Array;ruleSpecies:Uint8Array;occupied:Uint8Array;energy:Float32Array;age:Uint16Array;organismGeneration:Uint16Array;lineage:Uint32Array;species:Uint16Array;strategy:Uint8Array;traits:Uint8Array;resources:Uint8Array;hazards:Uint8Array;history:EcologyFrame[];stats:SimulationStats;outcome:SimulationOutcome};
+export type CreateSimulationOptions={seed:number;config:LifeConfig;initialPopulation?:readonly OrganismSeed[];initialResources?:readonly ResourceSeed[]};
+const PREY=["efficient_grazing","early_brood","armored","swarming","dispersal"] as const; const PRED=["ambush","pursuit","pack_hunting","efficient_kill","brood_hunting"] as const;
+export function strategyCode(value:PreyStrategy|PredatorStrategy){const p=(PREY as readonly string[]).indexOf(value);return p>=0?p:(PRED as readonly string[]).indexOf(value)+PREY.length;}
+export function strategyName(code:number,guild:number):PreyStrategy|PredatorStrategy{return guild===1?(PREY[code]??PREY[0]):(PRED[code-PREY.length]??PRED[0]);}
+export function indexOf(x:number,y:number){return ((y%GRID_SIZE+GRID_SIZE)%GRID_SIZE)*GRID_SIZE+((x%GRID_SIZE+GRID_SIZE)%GRID_SIZE);}
+function rand(s:number):[number,number]{let x=s|0||0x6d2b79f5;x^=x<<13;x^=x>>>17;x^=x<<5;const n=x>>>0;return[n/0x100000000,n];}
+const dirs=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]] as const; function neighbors(i:number){const x=i%50,y=Math.floor(i/50);return dirs.map(([dx,dy])=>indexOf(x+dx,y+dy));}
+function resourceCap(c:LifeConfig){return c.environment.abundance==="scarce"?75:c.environment.abundance==="rich"?235:150;}
+function fillResources(a:Uint8Array,c:LifeConfig,seed:number){let r=seed;const cap=resourceCap(c);for(let i=0;i<GRID_CELLS;i++){let q;[q,r]=rand(r);const x=i%50,y=Math.floor(i/50);const factor=c.environment.distribution==="clustered"?(((Math.floor(x/8)+Math.floor(y/8)*3+seed)%5)<=1?1:.12):c.environment.distribution==="seasonal"?.2+.8*(Math.sin(x/7+y/9)+1)/2:.55;a[i]=Math.round(cap*(.2+.7*q)*factor);}return r;}
+function defaultPopulation(config:LifeConfig,seed:number):OrganismSeed[]{
+  const rules=config.rules??defaultRuleGraph(),out:OrganismSeed[]=[];
+  const occupied=new Set<number>();
+  let rng=seed>>>0,lineage=1;
+  for(const [slot,speciesRule] of rules.species.entries()){
+    const guild:GuildName=speciesRule.role==="hunter"||speciesRule.role==="omnivore"?"predator":"prey";
+    const base=speciesRule.role==="producer"||speciesRule.role==="grazer"?18:speciesRule.role==="hunter"?8:10;
+    const balanceScale=guild==="prey"?(config.founders.balance==="prey_heavy"?1.3:config.founders.balance==="predator_heavy"?.8:1):(config.founders.balance==="predator_heavy"?1.5:config.founders.balance==="prey_heavy"?.65:1);
+    const count=Math.max(3,Math.round(base*balanceScale));
+    for(let member=0;member<count;member+=1){
+      let q:number,index:number;
+      do{[q,rng]=rand(rng);index=Math.floor(q*GRID_CELLS);}while(occupied.has(index));
+      occupied.add(index);
+      const variance=config.founders.diversity==="varied"?((member*29+slot*17)%61)-30:0;
+      out.push({x:index%GRID_SIZE,y:Math.floor(index/GRID_SIZE),guild,ruleSpecies:slot+1,energy:guild==="prey"?112:135,lineage:lineage++,species:slot+1,generation:0,strategy:guild==="prey"?config.founders.preyStrategy:config.founders.predatorStrategy,traits:[128+variance,128-variance,128+(variance>>1),128,128]});
     }
   }
-  next.rngState = rng; next.stats.births += births; next.stats.deaths += deaths;
-  next.stats.population = next.occupied.reduce((sum, value) => sum + value, 0); next.stats.maxGeneration = maxGeneration;
-  const lineageIds = new Set<number>(); for (let i = 0; i < GRID_CELLS; i += 1) if (next.occupied[i]) lineageIds.add(next.lineage[i]);
-  next.stats.lineages = lineageIds.size;
-  if (!next.stats.population) next.outcome = "extinct";
-  else if (next.generation >= DEFAULT_GENERATIONS) next.outcome = next.stats.population >= 90 || next.stats.births >= 180 ? "thriving" : "surviving";
-  return next;
+  return out;
 }
-
-export function runSimulation(initial: SimulationState, generations = DEFAULT_GENERATIONS): SimulationState {
-  let state = initial;
-  const target = Math.min(DEFAULT_GENERATIONS, state.generation + Math.max(0, Math.floor(generations)));
-  while (state.generation < target && state.outcome === "running") state = stepSimulation(state);
-  if (state.outcome === "running") state = { ...state, outcome: state.stats.population >= 90 || state.stats.births >= 180 ? "thriving" : "surviving" };
-  return state;
+function totals(state:SimulationState):SimulationStats{let prey=0,predators=0,resources=0;const lineages=new Set<number>(),species=new Set<number>();for(let i=0;i<GRID_CELLS;i++){resources+=state.resources[i];if(state.guild[i]===1)prey++;if(state.guild[i]===2)predators++;if(state.guild[i]){lineages.add(state.lineage[i]);species.add(state.species[i]);}}return{...state.stats,population:prey+predators,prey,predators,resources,lineages:lineages.size,speciesRichness:species.size};}
+export function createSimulation(o:CreateSimulationOptions):SimulationState{const config={...structuredClone(o.config),rules:validateRuleGraph(o.config.rules??defaultRuleGraph())};const guild=new Uint8Array(GRID_CELLS),ruleSpecies=new Uint8Array(GRID_CELLS),energy=new Float32Array(GRID_CELLS),age=new Uint16Array(GRID_CELLS),organismGeneration=new Uint16Array(GRID_CELLS),lineage=new Uint32Array(GRID_CELLS),species=new Uint16Array(GRID_CELLS),strategy=new Uint8Array(GRID_CELLS),traits=new Uint8Array(GRID_CELLS*5),resources=new Uint8Array(GRID_CELLS),hazards=new Uint8Array(GRID_CELLS);const rngState=fillResources(resources,config,o.seed>>>0);for(const v of o.initialResources??[])resources[indexOf(v.x,v.y)]=Math.max(0,Math.min(255,Math.round(v.amount)));const pop=o.initialPopulation??defaultPopulation(config,o.seed);for(const v of pop){const i=indexOf(v.x,v.y);guild[i]=v.guild==="prey"?1:2;ruleSpecies[i]=Math.max(1,Math.min(config.rules.species.length,v.ruleSpecies??(v.guild==="prey"?1:Math.min(2,config.rules.species.length))));energy[i]=Math.max(0,Math.min(MAX_ENERGY,v.energy));lineage[i]=v.lineage;species[i]=Math.max(1,Math.min(MAX_SPECIES,v.species));organismGeneration[i]=v.generation;strategy[i]=strategyCode(v.strategy);for(let t=0;t<5;t++)traits[i*5+t]=Math.max(0,Math.min(255,v.traits[t]));}const occupied=guild.slice();const state:SimulationState={seed:o.seed>>>0,rngState,generation:0,config,appliedRuleChanges:[],guild,ruleSpecies,occupied,energy,age,organismGeneration,lineage,species,strategy,traits,resources,hazards,history:[],stats:{population:0,prey:0,predators:0,births:0,deaths:0,kills:0,resources:0,maxGeneration:0,lineages:0,speciesRichness:0},outcome:pop.length?"running":"extinct"};state.stats=totals(state);state.history=[{generation:0,prey:state.stats.prey,predators:state.stats.predators,kills:0,resources:state.stats.resources,speciesRichness:state.stats.speciesRichness}];return state;}
+function copy(s:SimulationState,n:SimulationState,a:number,b:number){n.guild[b]=s.guild[a];n.ruleSpecies[b]=s.ruleSpecies[a];n.occupied[b]=s.guild[a];n.energy[b]=s.energy[a];n.age[b]=s.age[a];n.organismGeneration[b]=s.organismGeneration[a];n.lineage[b]=s.lineage[a];n.species[b]=s.species[a];n.strategy[b]=s.strategy[a];for(let t=0;t<5;t++)n.traits[b*5+t]=s.traits[a*5+t];}
+function pressureEffect(d:EvolutionDecision|undefined,generation:number):{pressure:EnvironmentPressure;power:number}{if(!d)return{pressure:"stability",power:0};const duration=d.environmentIntensity.choice==="low"?6:d.environmentIntensity.choice==="medium"?12:18;if(generation>d.generation+duration)return{pressure:"stability",power:0};return{pressure:d.environmentPressure.choice,power:d.environmentIntensity.choice==="low"?.45:d.environmentIntensity.choice==="medium"?.8:1.2};}
+function scheduledActivationState(state:SimulationState){const prior=state.history.reduce((best,frame)=>Math.abs(frame.generation-(state.generation-12))<Math.abs(best.generation-(state.generation-12))?frame:best,state.history[0]);const delta=state.stats.population-(prior.prey+prior.predators);const activeSlots=new Set<number>();for(let i=0;i<GRID_CELLS;i++)if(state.guild[i])activeSlots.add(state.ruleSpecies[i]);return{resourceBand:state.stats.resources/GRID_CELLS<resourceCap(state.config)*.28?"low" as const:state.stats.resources/GRID_CELLS>resourceCap(state.config)*.7?"high" as const:"balanced" as const,populationBand:delta<=-Math.max(5,prior.prey*.25)?"crash" as const:delta>=Math.max(8,prior.prey*.3)?"boom" as const:"stable" as const,speciesEmerged:state.stats.speciesRichness>prior.speciesRichness,speciesExtinct:activeSlots.size<state.config.rules!.species.length,predationHigh:state.stats.kills-prior.kills>=Math.max(3,state.stats.prey*.16)};}
+function scheduledDuration(value:"short"|"medium"|"long"|"persistent"){return value==="short"?6:value==="medium"?12:value==="long"?24:null;}
+function updateScheduledRules(previous:SimulationState,next:SimulationState,decisions:readonly EvolutionDecision[]){
+  if(next.activeRuleChange?.revertAt!==null&&next.activeRuleChange&&next.generation>next.activeRuleChange.revertAt){const version=next.config.rules!.version+1;next.config.rules=validateRuleGraph({...next.activeRuleChange.previousRules,version});next.activeRuleChange=undefined;}
+  if(next.activeRuleChange&&next.activeRuleChange.revertAt!==null)return;
+  const decision=decisions.find(candidate=>candidate.scheduledRuleChange&&!next.appliedRuleChanges.includes(candidate.generation)&&candidate.generation<next.generation&&ruleChangeDue(candidate.scheduledRuleChange,next.generation,scheduledActivationState(previous)));
+  const change=decision?.scheduledRuleChange;
+  if(!decision||!change||decision.ruleGraphVersion===undefined||decision.ruleGraphVersion>next.config.rules!.version)return;
+  const previousRules=structuredClone(next.config.rules!);const patched=applyRulePatch(next.config.rules!,change.patch);next.config.rules=validateRuleGraph({...patched,environment:{...patched.environment,intensity:decision.environmentIntensity.choice}});const duration=scheduledDuration(change.duration);next.activeRuleChange={sourceGeneration:decision.generation,activatedAt:next.generation,revertAt:duration===null?null:next.generation+duration-1,previousRules};next.appliedRuleChanges=[...next.appliedRuleChanges,decision.generation];
 }
-
-export function snapshotSimulation(state: SimulationState) {
-  return { engineVersion: ENGINE_VERSION, seed: state.seed, rngState: state.rngState, generation: state.generation, outcome: state.outcome, stats: state.stats,
-    occupied: Array.from(state.occupied), energy: Array.from(state.energy), age: Array.from(state.age), organismGeneration: Array.from(state.organismGeneration), lineage: Array.from(state.lineage), traits: Array.from(state.traits), resources: Array.from(state.resources), hazards: Array.from(state.hazards) };
-}
+function graphPressureEffect(state:SimulationState,decision:EvolutionDecision|undefined):{pressure:EnvironmentPressure;power:number}{if(decision&&!decision.scheduledRuleChange)return pressureEffect(decision,state.generation);const environment=state.config.rules!.environment,initialDuration=scheduledDuration(environment.duration);if(!state.activeRuleChange&&initialDuration!==null&&state.generation>initialDuration)return{pressure:"stability",power:0};let power=environment.intensity==="low"?.45:environment.intensity==="medium"?.8:1.2;const change=decision?.scheduledRuleChange;if(change&&state.activeRuleChange?.sourceGeneration===decision.generation){const elapsed=Math.max(0,state.generation-state.activeRuleChange.activatedAt);if(change.transition==="ramp")power*=Math.min(1,(elapsed+1)/4);else if(change.transition==="pulse")power*=.45+.55*((Math.sin(elapsed*Math.PI/3)+1)/2);}return{pressure:environment.pressure,power};}
+function mutationIndex(target:MutationTarget){return ({metabolism:0,fecundity:1,mobility:2,defense:3,sensing:4})[target];}
+function axisDistance(a:number,b:number){const direct=Math.abs(a-b);return Math.min(direct,GRID_SIZE-direct);}
+function pairMode(state:SimulationState,leftSlot:number,rightSlot:number):{mode:PairInteraction;actorIsA:boolean}|null{if(!leftSlot||!rightSlot||leftSlot===rightSlot)return null;const left=state.config.rules!.species[leftSlot-1]?.id,right=state.config.rules!.species[rightSlot-1]?.id;if(!left||!right)return null;const actorIsA=left<right,pair=(actorIsA?`${left}:${right}`:`${right}:${left}`) as SpeciesPair;const interaction=state.config.rules!.interactions.find(candidate=>candidate.pair===pair);return interaction?{mode:interaction.mode,actorIsA}:null;}
+function canConsume(state:SimulationState,actor:number,target:number){const actorSlot=state.ruleSpecies[actor],targetSlot=state.ruleSpecies[target];if(!actorSlot||!targetSlot)return false;if(actorSlot===targetSlot)return state.config.rules!.species[actorSlot-1]?.selfInteraction==="cannibalistic";const relation=pairMode(state,actorSlot,targetSlot);if(!relation)return false;return relation.mode===(relation.actorIsA?"a_consumes_b":"b_consumes_a");}
+function isGraphConsumer(state:SimulationState,index:number){const slot=state.ruleSpecies[index],species=state.config.rules!.species[slot-1];if(!species)return false;if(species.role==="hunter"||species.role==="omnivore"||species.selfInteraction==="cannibalistic")return true;return state.config.rules!.interactions.some(interaction=>(interaction.pair.startsWith(`${species.id}:`)&&interaction.mode==="a_consumes_b")||(interaction.pair.endsWith(`:${species.id}`)&&interaction.mode==="b_consumes_a"));}
+function interactionDelta(state:SimulationState,index:number){let delta=0;const slot=state.ruleSpecies[index],self=state.config.rules!.species[slot-1]?.selfInteraction,cooperation=.5+state.config.fitness.cooperate*2.5;for(const other of neighbors(index)){if(!state.guild[other])continue;if(state.ruleSpecies[other]===slot){if(self==="cooperative")delta+=1.2*cooperation;else if(self==="territorial")delta-=1.8;continue;}const relation=pairMode(state,slot,state.ruleSpecies[other]);if(relation?.mode==="mutualism")delta+=2.4*cooperation;else if(relation?.mode==="competition")delta-=3;else if(relation?.mode==="avoidance")delta-=.6;}return delta;}
+function nearestEdible(state:SimulationState,from:number,radius:number){const x=from%GRID_SIZE,y=Math.floor(from/GRID_SIZE);let best=-1,bestDistance=Infinity;for(let i=0;i<GRID_CELLS;i++){if(!state.guild[i]||i===from||!canConsume(state,from,i))continue;const distance=Math.max(axisDistance(x,i%GRID_SIZE),axisDistance(y,Math.floor(i/GRID_SIZE)));if(distance<=radius&&(distance<bestDistance||(distance===bestDistance&&i<best))){best=i;bestDistance=distance;}}return best;}
+function stepToward(state:SimulationState,from:number,target:number){const tx=target%GRID_SIZE,ty=Math.floor(target/GRID_SIZE);return neighbors(from).filter(i=>!state.guild[i]||i===target).sort((a,b)=>{const ad=Math.max(axisDistance(a%GRID_SIZE,tx),axisDistance(Math.floor(a/GRID_SIZE),ty));const bd=Math.max(axisDistance(b%GRID_SIZE,tx),axisDistance(Math.floor(b/GRID_SIZE),ty));return ad-bd||a-b;})[0]??from;}
+function birth(parent:number,target:number,n:SimulationState,rng:number,d:EvolutionDecision|undefined):number{copy(n,n,parent,target);n.age[target]=0;n.organismGeneration[target]=Math.min(65535,n.organismGeneration[parent]+1);const guild=n.guild[parent];const tempo:MutationTempo|undefined=guild===1?d?.preyMutationTempo.choice:d?.predatorMutationTempo.choice;const baseRate=tempo==="rapid"?.28:tempo==="steady"?.12:.035,rate=Math.min(.5,baseRate+n.config.fitness.adapt*.18);let q;[q,rng]=rand(rng);if(q<rate){const mt=guild===1?d?.preyMutationTarget.choice:d?.predatorMutationTarget.choice;const t=mutationIndex(mt??"metabolism");[q,rng]=rand(rng);n.traits[target*5+t]=Math.max(0,Math.min(255,n.traits[parent*5+t]+(q<.5?-6:6)));n.species[target]=1+((n.species[parent]*31+t*17+n.traits[target*5+t])%MAX_SPECIES);}if(d){const chosen=guild===1?d.preyStrategy.choice:d.predatorStrategy.choice;n.strategy[target]=strategyCode(chosen);}return rng;}
+export function stepSimulation(s:SimulationState,d?:EvolutionDecision,scheduleLedger:readonly EvolutionDecision[]=d?[d]:[]):SimulationState{if(s.outcome!=="running"||s.generation>=DEFAULT_GENERATIONS)return s;const n:SimulationState={...s,generation:s.generation+1,config:structuredClone(s.config),activeRuleChange:s.activeRuleChange?structuredClone(s.activeRuleChange):undefined,appliedRuleChanges:s.appliedRuleChanges.slice(),guild:new Uint8Array(GRID_CELLS),ruleSpecies:new Uint8Array(GRID_CELLS),occupied:new Uint8Array(GRID_CELLS),energy:new Float32Array(GRID_CELLS),age:new Uint16Array(GRID_CELLS),organismGeneration:new Uint16Array(GRID_CELLS),lineage:new Uint32Array(GRID_CELLS),species:new Uint16Array(GRID_CELLS),strategy:new Uint8Array(GRID_CELLS),traits:new Uint8Array(GRID_CELLS*5),resources:s.resources.slice(),hazards:new Uint8Array(GRID_CELLS),history:s.history.slice(),stats:{...s.stats},outcome:"running"};let rng=s.rngState,births=0,deaths=0,kills=0;const consumedCells=new Uint8Array(GRID_CELLS),processedConsumers=new Uint8Array(GRID_CELLS);updateScheduledRules(s,n,scheduleLedger);const effect=graphPressureEffect(n,d),cap=resourceCap(n.config);for(let i=0;i<GRID_CELLS;i++){const environment=n.config.rules!.environment,wave=environment.volatility==="stable"?.5:environment.volatility==="pulsing"?.5+.5*Math.sin((n.generation+i%13)/7):((Math.imul(i^n.generation^s.seed,2654435761)>>>0)&255)/255;let growth=n.config.environment.abundance==="rich"?4:n.config.environment.abundance==="scarce"?1:2;if(environment.regeneration==="pulsed")growth*=.35+wave*1.3;else if(environment.regeneration==="depletion_feedback")growth*=.35+1.65*(1-n.resources[i]/Math.max(1,cap));if(effect.pressure==="nutrient_bloom")growth*=1+effect.power*2;if(effect.pressure==="drought")growth*=1-effect.power*.55;if(effect.pressure==="fragmentation"&&((i%GRID_SIZE)%10<2||Math.floor(i/GRID_SIZE)%10<2))growth*=Math.max(0,1-effect.power*.85);n.resources[i]=Math.min(cap,n.resources[i]+Math.max(0,Math.round(growth*(.6+.4*wave))));let hazard=n.config.environment.hazard==="toxin"?24:n.config.environment.hazard==="heat"?20:n.config.environment.hazard==="crowding"?11:14;if(effect.pressure==="toxin_wave")hazard*=((i+n.generation*7)%19<6?1+effect.power*1.8:.55);else if(effect.pressure==="heat_wave")hazard*=1+effect.power;else if(effect.pressure==="stability")hazard*=.65;n.hazards[i]=Math.min(255,Math.round(hazard*(.6+.5*wave)));}
+for(let i=0;i<GRID_CELLS;i++){if(!s.guild[i]||isGraphConsumer(s,i))continue;copy(s,n,i,i);n.age[i]=s.age[i]+1;const strat=strategyName(s.strategy[i],1) as PreyStrategy,eff=s.traits[i*5]/255,def=s.traits[i*5+3]/255;const consumed=Math.min(n.resources[i],Math.round((strat==="efficient_grazing"?18:12)*(0.7+eff*.5)));n.resources[i]-=consumed;let cost=4+n.hazards[i]/22*(1-def*.5)*(1-n.config.fitness.survive*.45)-interactionDelta(s,i);if(s.config.environment.hazard==="crowding")cost+=neighbors(i).filter(x=>s.guild[x]).length*.25;n.energy[i]=Math.min(MAX_ENERGY,s.energy[i]+consumed*.8-cost);if(n.energy[i]<=0||n.age[i]>190){n.guild[i]=n.occupied[i]=0;n.energy[i]=0;deaths++;continue;}const empty=neighbors(i).filter(x=>!s.guild[x]&&!n.guild[x]);const threshold=(strat==="early_brood"?104:135)-n.config.fitness.replicate*32;if(empty.length&&n.energy[i]>=threshold){let q;[q,rng]=rand(rng);const target=empty[Math.floor(q*empty.length)];const child=n.energy[i]*.38;n.energy[i]-=child;rng=birth(i,target,n,rng,d);n.energy[target]=child;births++;}else if(empty.length&&strat==="dispersal"){let q;[q,rng]=rand(rng);if(q<.08+n.config.fitness.explore*.42){const target=empty[Math.floor(q*empty.length*13)%empty.length];copy(n,n,i,target);n.guild[i]=n.occupied[i]=0;n.ruleSpecies[i]=0;n.energy[i]=0;}}}
+if(s.stats.predators===0&&d){const emergent=n.guild.findIndex((guild,i)=>guild===1&&s.guild[i]===0);if(emergent>=0){n.guild[emergent]=n.occupied[emergent]=2;n.strategy[emergent]=strategyCode(d.predatorStrategy.choice);n.species[emergent]=1+((n.species[emergent]+17)%MAX_SPECIES);n.energy[emergent]=Math.max(96,n.energy[emergent]);}}
+for(let i=0;i<GRID_CELLS;i++){if(!s.guild[i]||!isGraphConsumer(s,i)||consumedCells[i])continue;processedConsumers[i]=1;const strat=strategyName(s.strategy[i],2) as PredatorStrategy;const sensing=1+Math.round(s.traits[i*5+4]/85);const radius=strat==="pursuit"?sensing+3:strat==="pack_hunting"?sensing+2:strat==="ambush"?1:sensing+1;let target=nearestEdible(s,i,radius);const local=neighbors(i).filter(x=>!consumedCells[x]&&canConsume(s,i,x));if(local.length){target=local[0];if(strat==="brood_hunting")target=local.reduce((a,b)=>s.organismGeneration[b]>s.organismGeneration[a]?b:a);}if(target>=0&&consumedCells[target])target=-1;let destination=i;if(target>=0)destination=stepToward(s,i,target);else{const empty=neighbors(i).filter(x=>!s.guild[x]&&!n.guild[x]);if(empty.length&&(strat!=="ambush"||n.generation%2===0)){let q;[q,rng]=rand(rng);destination=empty[Math.floor(q*empty.length)];}}let caught=destination!==i&&!consumedCells[destination]&&canConsume(s,i,destination)&&(n.guild[destination]!==0||(s.guild[destination]!==0&&!processedConsumers[destination]));if(n.guild[destination]&&!caught){const alt=neighbors(i).find(x=>!s.guild[x]&&!n.guild[x]);destination=alt??i;caught=false;}if(caught)consumedCells[destination]=1;copy(s,n,i,destination);if(destination!==i){n.guild[i]=n.occupied[i]=0;n.ruleSpecies[i]=0;n.energy[i]=0;}n.age[destination]=s.age[i]+1;let gain=0;if(caught){kills++;deaths++;gain=strat==="efficient_kill"?72:strat==="pack_hunting"?62:55;}const metabolism=strat==="ambush"?4.5:strat==="pursuit"?8:6;n.energy[destination]=Math.min(MAX_ENERGY,s.energy[i]+gain-metabolism-n.hazards[destination]/45*(1-n.config.fitness.survive*.45)+interactionDelta(s,i));if(n.energy[destination]<=0||n.age[destination]>165){n.guild[destination]=n.occupied[destination]=0;n.ruleSpecies[destination]=0;n.energy[destination]=0;deaths++;continue;}const empty=neighbors(destination).filter(x=>!s.guild[x]&&!n.guild[x]);const threshold=(strat==="brood_hunting"?145:175)-n.config.fitness.replicate*32;if(empty.length&&n.energy[destination]>=threshold){let q;[q,rng]=rand(rng);const t=empty[Math.floor(q*empty.length)];const child=n.energy[destination]*.34;n.energy[destination]-=child;rng=birth(destination,t,n,rng,d);n.energy[t]=child;births++;}}
+n.rngState=rng;n.stats.births+=births;n.stats.deaths+=deaths;n.stats.kills+=kills;n.stats.maxGeneration=Math.max(n.stats.maxGeneration,...n.organismGeneration);n.stats=totals(n);n.history.push({generation:n.generation,prey:n.stats.prey,predators:n.stats.predators,kills:n.stats.kills,resources:n.stats.resources,speciesRichness:n.stats.speciesRichness});if(n.history.length>31)n.history.shift();if(!n.stats.population||!n.stats.prey)n.outcome="extinct";else if(n.generation>=DEFAULT_GENERATIONS)n.outcome=n.stats.prey>=50&&n.stats.predators>0?"thriving":"surviving";return n;}
+export function runSimulation(initial:SimulationState,generations=DEFAULT_GENERATIONS){let s=initial;const target=Math.min(DEFAULT_GENERATIONS,s.generation+Math.max(0,Math.floor(generations)));while(s.generation<target&&s.outcome==="running")s=stepSimulation(s);if(s.outcome==="running")s={...s,outcome:s.stats.prey>=50&&s.stats.predators>0?"thriving":"surviving"};return s;}
+export function snapshotSimulation(s:SimulationState){return{engineVersion:ENGINE_VERSION,seed:s.seed,rngState:s.rngState,generation:s.generation,outcome:s.outcome,stats:s.stats,guild:Array.from(s.guild),ruleSpecies:Array.from(s.ruleSpecies),energy:Array.from(s.energy),age:Array.from(s.age),organismGeneration:Array.from(s.organismGeneration),lineage:Array.from(s.lineage),species:Array.from(s.species),strategy:Array.from(s.strategy),traits:Array.from(s.traits),resources:Array.from(s.resources),hazards:Array.from(s.hazards),history:s.history};}

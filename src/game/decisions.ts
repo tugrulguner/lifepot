@@ -1,145 +1,36 @@
 import { z } from "zod";
-import { GRID_CELLS, GRID_SIZE, TRAIT_COUNT, type SimulationState } from "./world";
+import { GRID_CELLS, type EcologyFrame, type SimulationState } from "./world";
 import type { SetupAnswers } from "./setup";
+import { ACTIVATIONS, DURATIONS, TRANSITIONS, scheduledRuleChangeSchema, type ScheduledRuleChange, type WorldRuleGraph } from "./rules";
 
-export const DECISION_EPOCHS = [0, 30, 60, 90, 120, 150] as const;
-export const COHORT_IDS = ["energy_stressed", "efficient_foragers", "explorers", "resilient", "generalists"] as const;
-export const CELL_ACTIONS = ["forage", "cluster", "disperse", "reproduce", "conserve"] as const;
-export const ENVIRONMENT_ACTIONS = ["bloom", "redistribute", "hazard_surge", "relief", "hold"] as const;
-
-export type DecisionEpoch = (typeof DECISION_EPOCHS)[number];
-export type CohortId = (typeof COHORT_IDS)[number];
-export type CellAction = (typeof CELL_ACTIONS)[number];
-export type EnvironmentAction = (typeof ENVIRONMENT_ACTIONS)[number];
-export type DecisionSource = "jev" | "fallback";
-export type DecisionAnswer<T extends string> = { choice: T; confidence: number; probabilities: Record<T, number> };
-export type EpochDecision = {
-  generation: DecisionEpoch;
-  source: DecisionSource;
-  model?: string;
-  usage?: { input_tokens: number; output_tokens: number };
-  cohorts: Record<CohortId, DecisionAnswer<CellAction>>;
-  environment: DecisionAnswer<EnvironmentAction>;
-};
-export type EpochLedger = EpochDecision[];
-export type CohortSummary = {
-  id: CohortId;
-  count: number;
-  meanEnergy: number;
-  meanLocalPressure: number;
-  meanResource: number;
-  meanHazard: number;
-  meanTraits: readonly [number, number, number, number, number];
-};
-export type EpochStateSummary = {
-  generation: number;
-  intent: SetupAnswers;
-  environment: SimulationState["config"]["environment"];
-  fitness: SimulationState["config"]["fitness"];
-  world: { population: number; births: number; deaths: number; meanEnergy: number; meanResource: number; meanHazard: number };
-  cohorts: readonly CohortSummary[];
-};
-
-const probability = z.number().finite().min(0).max(1);
-// Jev transports rounded probabilities, so a valid distribution may total 0.99 or 1.01.
-const normalized = (value: Record<string, number>) => Math.abs(Object.values(value).reduce<number>((sum, item) => sum + item, 0) - 1) <= 0.011;
-function answerSchema<const T extends readonly [string, ...string[]]>(options: T) {
-  return z.object({
-    choice: z.enum(options),
-    confidence: probability,
-    probabilities: z.record(z.enum(options), probability)
-      .refine((value) => Object.keys(value).length === options.length && normalized(value), "probabilities must cover every action and sum to one"),
-  }).strict().superRefine((answer, context) => {
-    if (answer.probabilities[answer.choice] !== Math.max(...Object.values(answer.probabilities) as number[])) {
-      context.addIssue({ code: "custom", message: "selected action must have maximum probability" });
-    }
-  });
-}
-const decisionSchema = z.object({
-  generation: z.union(DECISION_EPOCHS.map((epoch) => z.literal(epoch)) as unknown as [z.ZodLiteral<DecisionEpoch>, z.ZodLiteral<DecisionEpoch>, ...z.ZodLiteral<DecisionEpoch>[]]),
-  source: z.enum(["jev", "fallback"]),
-  model: z.string().min(1).max(100).optional(),
-  usage: z.object({ input_tokens: z.number().int().nonnegative(), output_tokens: z.number().int().nonnegative() }).strict().optional(),
-  cohorts: z.object(Object.fromEntries(COHORT_IDS.map((id) => [id, answerSchema(CELL_ACTIONS)])) as unknown as Record<CohortId, ReturnType<typeof answerSchema>>).strict(),
-  environment: answerSchema(ENVIRONMENT_ACTIONS),
-}).strict();
-
-function round(value: number): number { return Math.round(value * 100) / 100; }
-function neighbors(index: number): number[] {
-  const x = index % GRID_SIZE; const y = Math.floor(index / GRID_SIZE); const result: number[] = [];
-  for (let dy = -1; dy <= 1; dy += 1) for (let dx = -1; dx <= 1; dx += 1) {
-    if (!dx && !dy) continue;
-    result.push((((y + dy + GRID_SIZE) % GRID_SIZE) * GRID_SIZE) + ((x + dx + GRID_SIZE) % GRID_SIZE));
-  }
-  return result;
-}
-
-export function cohortForCell(state: SimulationState, index: number): CohortId {
-  if (state.energy[index] < 45) return "energy_stressed";
-  const offset = index * TRAIT_COUNT;
-  if (state.traits[offset] >= 190) return "efficient_foragers";
-  if (state.traits[offset + 2] >= 190) return "explorers";
-  if (state.traits[offset + 3] >= 190) return "resilient";
-  return "generalists";
-}
-
-export function summarizeEpochState(state: SimulationState, intent: SetupAnswers): EpochStateSummary {
-  const accumulators = Object.fromEntries(COHORT_IDS.map((id) => [id, { id, count: 0, energy: 0, pressure: 0, resource: 0, hazard: 0, traits: [0, 0, 0, 0, 0] }])) as Record<CohortId, { id: CohortId; count: number; energy: number; pressure: number; resource: number; hazard: number; traits: number[] }>;
-  let totalEnergy = 0; let totalResources = 0; let totalHazards = 0;
-  for (let i = 0; i < GRID_CELLS; i += 1) {
-    totalResources += state.resources[i]; totalHazards += state.hazards[i];
-    if (!state.occupied[i]) continue;
-    const group = accumulators[cohortForCell(state, i)];
-    group.count += 1; group.energy += state.energy[i]; totalEnergy += state.energy[i];
-    group.pressure += neighbors(i).reduce((count, neighbor) => count + state.occupied[neighbor], 0);
-    group.resource += state.resources[i]; group.hazard += state.hazards[i];
-    for (let trait = 0; trait < TRAIT_COUNT; trait += 1) group.traits[trait] += state.traits[i * TRAIT_COUNT + trait];
-  }
-  const cohorts = COHORT_IDS.map((id): CohortSummary => {
-    const group = accumulators[id]; const divisor = group.count || 1;
-    return Object.freeze({
-      id, count: group.count, meanEnergy: round(group.energy / divisor), meanLocalPressure: round(group.pressure / divisor),
-      meanResource: round(group.resource / divisor), meanHazard: round(group.hazard / divisor),
-      meanTraits: Object.freeze(group.traits.map((value) => round(value / divisor))) as unknown as CohortSummary["meanTraits"],
-    });
-  });
-  return Object.freeze({
-    generation: state.generation,
-    intent: Object.freeze({ ...intent }),
-    environment: Object.freeze({ ...state.config.environment }),
-    fitness: Object.freeze({ ...state.config.fitness }),
-    world: Object.freeze({ population: state.stats.population, births: state.stats.births, deaths: state.stats.deaths, meanEnergy: round(totalEnergy / (state.stats.population || 1)), meanResource: round(totalResources / GRID_CELLS), meanHazard: round(totalHazards / GRID_CELLS) }),
-    cohorts: Object.freeze(cohorts),
-  });
-}
-
-export function validateEpochDecision(input: unknown): EpochDecision {
-  const parsed = decisionSchema.safeParse(input);
-  if (!parsed.success) throw new Error("Invalid epoch decision");
-  return parsed.data as EpochDecision;
-}
-
-function certain<T extends string>(choice: T, options: readonly T[]): DecisionAnswer<T> {
-  return { choice, confidence: 1, probabilities: Object.fromEntries(options.map((option) => [option, option === choice ? 1 : 0])) as Record<T, number> };
-}
-
-export function deterministicEpochDecision(summary: EpochStateSummary): EpochDecision {
-  const cohortDefaults: Record<CohortId, CellAction> = {
-    energy_stressed: "conserve",
-    efficient_foragers: "forage",
-    explorers: "disperse",
-    resilient: "cluster",
-    generalists: summary.world.meanEnergy > 125 ? "reproduce" : "forage",
-  };
-  const environment: EnvironmentAction = summary.world.meanHazard > 22 ? "relief" : summary.world.meanResource < 55 ? "bloom" : summary.world.population > 350 ? "redistribute" : "hold";
-  return validateEpochDecision({
-    generation: summary.generation,
-    source: "fallback",
-    cohorts: Object.fromEntries(COHORT_IDS.map((id) => [id, certain(cohortDefaults[id], CELL_ACTIONS)])),
-    environment: certain(environment, ENVIRONMENT_ACTIONS),
-  });
-}
-
-export function decisionEpochAt(generation: number): DecisionEpoch | null {
-  return (DECISION_EPOCHS as readonly number[]).includes(generation) ? generation as DecisionEpoch : null;
+export const PREY_STRATEGIES=["efficient_grazing","early_brood","armored","swarming","dispersal"] as const;
+export const PREDATOR_STRATEGIES=["ambush","pursuit","pack_hunting","efficient_kill","brood_hunting"] as const;
+export const MUTATION_TARGETS=["metabolism","fecundity","mobility","defense","sensing"] as const;
+export const MUTATION_TEMPOS=["slow","steady","rapid"] as const;
+export const ENVIRONMENT_PRESSURES=["nutrient_bloom","drought","toxin_wave","heat_wave","fragmentation","stability"] as const;
+export const INTENSITIES=["low","medium","high"] as const;
+export const EVOLUTION_TRIGGERS=["prey_crash","predator_crash","resource_shift","speciation","predation_spike","stagnation"] as const;
+export type PreyStrategy=typeof PREY_STRATEGIES[number]; export type PredatorStrategy=typeof PREDATOR_STRATEGIES[number]; export type MutationTarget=typeof MUTATION_TARGETS[number]; export type MutationTempo=typeof MUTATION_TEMPOS[number]; export type EnvironmentPressure=typeof ENVIRONMENT_PRESSURES[number]; export type Intensity=typeof INTENSITIES[number]; export type EvolutionTrigger=typeof EVOLUTION_TRIGGERS[number]; export type DecisionSource="jev"|"fallback";
+export type DecisionAnswer<T extends string>={choice:T;confidence:number;probabilities:Record<T,number>};
+export type EcologyObservation={generation:number;prey:number;predators:number;preyDelta12:number;predatorDelta12:number;kills12:number;resourceMean:number;resourceDelta12:number;speciesRichness:number;speciesDelta12:number;meanPreyEnergy:number;meanPredatorEnergy:number};
+export type EcologySummary={generation:number;trigger:EvolutionTrigger;intent:SetupAnswers;environment:SimulationState["config"]["environment"];objective:SimulationState["config"]["fitness"];rules?:WorldRuleGraph;observation:EcologyObservation};
+export type EvolutionDecision={generation:number;trigger:EvolutionTrigger;observationHash:string;source:DecisionSource;model?:string;usage?:{input_tokens:number;output_tokens:number};ruleGraphVersion?:number;scheduledRuleChange?:ScheduledRuleChange;ruleActivation?:DecisionAnswer<typeof ACTIVATIONS[number]>;ruleDuration?:DecisionAnswer<typeof DURATIONS[number]>;ruleTransition?:DecisionAnswer<typeof TRANSITIONS[number]>;preyStrategy:DecisionAnswer<PreyStrategy>;predatorStrategy:DecisionAnswer<PredatorStrategy>;preyMutationTarget:DecisionAnswer<MutationTarget>;preyMutationTempo:DecisionAnswer<MutationTempo>;predatorMutationTarget:DecisionAnswer<MutationTarget>;predatorMutationTempo:DecisionAnswer<MutationTempo>;environmentPressure:DecisionAnswer<EnvironmentPressure>;environmentIntensity:DecisionAnswer<Intensity>};
+export type EvolutionLedger=EvolutionDecision[];
+const probability=z.number().finite().min(0).max(1); const normalized=(v:Record<string,number>)=>Math.abs(Object.values(v).reduce((a,b)=>a+b,0)-1)<=.011;
+function answerSchema<const T extends readonly [string,...string[]]>(options:T){return z.object({choice:z.enum(options),confidence:probability,probabilities:z.record(z.enum(options),probability).refine(v=>Object.keys(v).length===options.length&&normalized(v),"probabilities must cover all choices and sum to one")}).strict().superRefine((a,c)=>{const values=Object.values(a.probabilities) as number[];if(a.probabilities[a.choice]!==Math.max(...values))c.addIssue({code:"custom",message:"selected choice must have maximum probability"});});}
+const schema=z.object({generation:z.number().int().min(12).max(180),trigger:z.enum(EVOLUTION_TRIGGERS),observationHash:z.string().regex(/^eco_[a-z0-9]+$/),source:z.enum(["jev","fallback"]),model:z.string().min(1).max(100).optional(),usage:z.object({input_tokens:z.number().int().nonnegative(),output_tokens:z.number().int().nonnegative()}).strict().optional(),ruleGraphVersion:z.number().int().min(1).optional(),scheduledRuleChange:scheduledRuleChangeSchema.optional(),ruleActivation:answerSchema(ACTIVATIONS).optional(),ruleDuration:answerSchema(DURATIONS).optional(),ruleTransition:answerSchema(TRANSITIONS).optional(),preyStrategy:answerSchema(PREY_STRATEGIES),predatorStrategy:answerSchema(PREDATOR_STRATEGIES),preyMutationTarget:answerSchema(MUTATION_TARGETS),preyMutationTempo:answerSchema(MUTATION_TEMPOS),predatorMutationTarget:answerSchema(MUTATION_TARGETS),predatorMutationTempo:answerSchema(MUTATION_TEMPOS),environmentPressure:answerSchema(ENVIRONMENT_PRESSURES),environmentIntensity:answerSchema(INTENSITIES)}).strict();
+function fnv(text:string){let h=0x811c9dc5;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,0x01000193);}return(h>>>0).toString(36);}
+export function observationHash(o:EcologyObservation){return`eco_${fnv(JSON.stringify(o))}`;}
+function round(v:number){return Math.round(v*100)/100;} function frameAt(state:SimulationState,generation:number):EcologyFrame{return state.history.reduce((best,f)=>Math.abs(f.generation-generation)<Math.abs(best.generation-generation)?f:best,state.history[0]);}
+export function ecologyObservation(state:SimulationState):EcologyObservation{const prior=frameAt(state,Math.max(0,state.generation-12));let preyEnergy=0,predEnergy=0;for(let i=0;i<GRID_CELLS;i++){if(state.guild[i]===1)preyEnergy+=state.energy[i];if(state.guild[i]===2)predEnergy+=state.energy[i];}return Object.freeze({generation:state.generation,prey:state.stats.prey,predators:state.stats.predators,preyDelta12:state.stats.prey-prior.prey,predatorDelta12:state.stats.predators-prior.predators,kills12:state.stats.kills-prior.kills,resourceMean:round(state.stats.resources/GRID_CELLS),resourceDelta12:round((state.stats.resources-prior.resources)/GRID_CELLS),speciesRichness:state.stats.speciesRichness,speciesDelta12:state.stats.speciesRichness-prior.speciesRichness,meanPreyEnergy:round(preyEnergy/(state.stats.prey||1)),meanPredatorEnergy:round(predEnergy/(state.stats.predators||1))});}
+export function detectEvolutionTrigger(state:SimulationState,ledger:readonly EvolutionDecision[]):EvolutionTrigger|null{if(state.generation<12||ledger.length>=8)return null;const last=ledger.at(-1)?.generation??0;if(ledger.length&&state.generation-last<12)return null;const o=ecologyObservation(state);if(o.prey>0&&o.preyDelta12<=-Math.max(5,Math.round((o.prey-o.preyDelta12)*.3)))return"prey_crash";const previousPredators=o.predators-o.predatorDelta12,hadPredators=state.history.some(frame=>frame.predators>0);if((o.predators===0&&hadPredators)||(o.predators>0&&o.predatorDelta12<=-Math.max(2,Math.round(previousPredators*.35))))return"predator_crash";if(Math.abs(o.resourceDelta12)>=18)return"resource_shift";if(o.speciesDelta12>=2)return"speciation";if(o.kills12>=Math.max(3,Math.round(o.prey*.16)))return"predation_spike";if(state.generation-last>=30)return"stagnation";return null;}
+export function summarizeEcology(state:SimulationState,intent:SetupAnswers,trigger:EvolutionTrigger):EcologySummary{return Object.freeze({generation:state.generation,trigger,intent:Object.freeze({...intent}),environment:Object.freeze({...state.config.environment}),objective:Object.freeze({...state.config.fitness}),rules:structuredClone(state.config.rules!),observation:ecologyObservation(state)});}
+export function validateEvolutionDecision(input:unknown):EvolutionDecision{const p=schema.safeParse(input);if(!p.success)throw new Error("Invalid evolution decision");const decision=p.data as EvolutionDecision,change=decision.scheduledRuleChange;if(change){if(change.decidedAtGeneration!==decision.generation||decision.ruleGraphVersion===undefined)throw new Error("Invalid scheduled rule binding");if(decision.ruleActivation?.choice!==change.activation||decision.ruleDuration?.choice!==change.duration||decision.ruleTransition?.choice!==change.transition)throw new Error("Scheduled rule evidence mismatch");if(change.patch.kind==="environment"&&change.patch.field==="pressure"&&decision.environmentPressure.choice!==change.patch.value)throw new Error("Scheduled pressure mismatch");}return decision;}
+function certain<T extends string>(choice:T,options:readonly T[]):DecisionAnswer<T>{return{choice,confidence:1,probabilities:Object.fromEntries(options.map(v=>[v,v===choice?1:0])) as Record<T,number>};}
+export function deterministicEvolutionDecision(s:EcologySummary):EvolutionDecision{
+  const prey:PreyStrategy=s.trigger==="prey_crash"?"early_brood":s.trigger==="predation_spike"?"armored":s.observation.resourceDelta12<0?"efficient_grazing":"dispersal";
+  const predator:PredatorStrategy=s.trigger==="predator_crash"?"efficient_kill":s.trigger==="predation_spike"?"ambush":s.observation.prey>80?"pack_hunting":"pursuit";
+  const pressure:EnvironmentPressure=s.trigger==="resource_shift"&&s.observation.resourceDelta12<0?"nutrient_bloom":s.trigger==="prey_crash"?"stability":s.trigger==="predation_spike"?"fragmentation":s.environment.hazard==="toxin"?"toxin_wave":s.environment.hazard==="heat"?"heat_wave":"drought";
+  const activation=s.trigger==="resource_shift"&&s.observation.resourceDelta12<0?"resources_low":s.trigger==="predator_crash"||s.trigger==="prey_crash"?"after_6":"after_12";
+  return validateEvolutionDecision({generation:s.generation,trigger:s.trigger,observationHash:observationHash(s.observation),source:"fallback",ruleGraphVersion:s.rules?.version??1,scheduledRuleChange:{decidedAtGeneration:s.generation,activation,duration:"medium",transition:"ramp",patch:{kind:"environment",field:"pressure",value:pressure}},ruleActivation:certain(activation,ACTIVATIONS),ruleDuration:certain("medium",DURATIONS),ruleTransition:certain("ramp",TRANSITIONS),preyStrategy:certain(prey,PREY_STRATEGIES),predatorStrategy:certain(predator,PREDATOR_STRATEGIES),preyMutationTarget:certain(s.trigger==="predation_spike"?"defense":"fecundity",MUTATION_TARGETS),preyMutationTempo:certain(s.trigger==="speciation"?"slow":"steady",MUTATION_TEMPOS),predatorMutationTarget:certain(s.trigger==="predator_crash"?"metabolism":"sensing",MUTATION_TARGETS),predatorMutationTempo:certain("steady",MUTATION_TEMPOS),environmentPressure:certain(pressure,ENVIRONMENT_PRESSURES),environmentIntensity:certain(s.trigger==="prey_crash"?"low":"medium",INTENSITIES)});
 }
