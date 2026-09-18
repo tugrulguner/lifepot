@@ -6,7 +6,7 @@ import type { SetupRequest } from "./schema";
 
 export type SetupInterpretation = { config: LifeConfig; source: "jev" | "fallback"; requestHash: string };
 const questions = {
-  abundance: choice("How abundant are usable resources in `world`?", { scarce: "Resources are rare or limited", balanced: "Resources are moderate", rich: "Resources are plentiful" }),
+  abundance: choice("How abundant are usable resources inside the resource-bearing locations described by `world`? Judge explicit resource amount words such as scarce, rich, abundant, or plentiful. A small number of locations (for example, 'a few rich oases') describes distribution and must not by itself make resources scarce.", { scarce: "Resources themselves are rare or limited", balanced: "Resource amount is moderate or unspecified", rich: "Resources themselves are plentiful, rich, or abundant" }),
   distribution: choice("How are resources distributed in `world`?", { clustered: "Concentrated in patches or oases", scattered: "Spread across the habitat", seasonal: "Availability shifts in recurring seasons" }),
   hazard: choice("Which supported hazard best matches `threat`?", { drought: "Resource loss or lack of water", toxin: "Poison, contamination, or toxic exposure", heat: "High temperature or fire", crowding: "Overpopulation or local competition", predator: "Hunters or predators pursue exposed life" }),
   volatility: choice("How does the threat change over time?", { stable: "Mostly constant", pulsing: "Recurring waves or cycles", chaotic: "Irregular and unpredictable" }),
