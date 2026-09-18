@@ -30,6 +30,16 @@ export function createJudgeHandler(options: HandlerOptions = {}) {
       const trustedHash = hashSetupRequest(parsed.data.answers); if (parsed.data.requestHash !== trustedHash) return response({ error: "Setup hash mismatch" }, 400);
       const cached = cache.get(trustedHash); if (cached) return response(cached);
       if (!options.decide && process.env.TYPESAFE_API_KEY) {
+        if (process.env.NODE_ENV !== "production") {
+          try {
+            const result = await decide(parsed.data);
+            if (cache.size >= MAX_CACHE_ENTRIES) cache.delete(cache.keys().next().value as string);
+            cache.set(trustedHash, result);
+            return response(result);
+          } catch {
+            return response(fallback(parsed.data));
+          }
+        }
         try {
           if (!redis || !ipLimiter || !spendLimiter) return response(fallback(parsed.data));
           const [perIp, daily] = await Promise.all([ipLimiter.limit(ip), spendLimiter.limit("global")]); if (!perIp.success || !daily.success) return response(fallback(parsed.data));
