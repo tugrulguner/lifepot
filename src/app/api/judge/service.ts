@@ -2,6 +2,7 @@ import { choice, score, TypeSafeClient } from "@typesafe-ai/sdk";
 import { z } from "zod";
 import { deterministicSetup, hashSetupRequest, lifeConfigSchema, normalizeFitness, type SetupAnswers } from "@/game/setup";
 import type { LifeConfig } from "@/game/world";
+import { CELL_ACTIONS, COHORT_IDS, ENVIRONMENT_ACTIONS, deterministicEpochDecision, validateEpochDecision, type EpochDecision, type EpochStateSummary } from "@/game/decisions";
 import type { SetupRequest } from "./schema";
 
 type JevUsage = { input_tokens: number; output_tokens: number };
@@ -18,7 +19,8 @@ const questions = {
   adapt: score("How strongly does `reward` prioritize adaptation?", ["Not mentioned", "Minor", "Moderate", "Strong", "Primary"]),
 };
 const probability = z.number().finite().min(0).max(1);
-const sumsToOne = (value: Record<string, number>) => Math.abs(Object.values(value).reduce((sum, item) => sum + item, 0) - 1) <= 1e-6;
+// Jev transports rounded probabilities, so a valid distribution may total 0.99 or 1.01.
+const sumsToOne = (value: Record<string, number>) => Math.abs(Object.values(value).reduce((sum, item) => sum + item, 0) - 1) <= 0.011;
 function choiceAnswer<const T extends readonly [string, ...string[]]>(options: T) {
   const probabilities = z.record(z.enum(options), probability).refine((value) => Object.keys(value).length === options.length && sumsToOne(value), "Invalid choice probabilities");
   return z.object({ type: z.literal("choice"), choice: z.enum(options), confidence: probability, probabilities }).strict();
@@ -63,6 +65,65 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
     return { config, source: "jev", requestHash, model: parsed.data.model, usage: parsed.data.usage };
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("[LifePot Jev] request failed", error instanceof Error ? error.message : "unknown error");
+    return fallback();
+  }
+}
+
+const actionCriteria = {
+  forage: "Harvest more local resources, paying a higher metabolic cost",
+  cluster: "Favor safety and cooperation near neighbors",
+  disperse: "Move into less occupied adjacent space",
+  reproduce: "Lower the reproduction threshold and invest energy in offspring",
+  conserve: "Reduce intake, metabolism, and reproduction to preserve energy",
+};
+const cohortQuestion = (index: number) => choice(`Which bounded policy should cells in \`cohorts[${index}]\` follow until the next decision epoch? Use current energy, local pressure, resources, hazard, visitor intent, and fitness. Empty cohorts still need a safe policy if cells enter them later.`, actionCriteria);
+const epochQuestions = {
+  cohort_energy_stressed: cohortQuestion(0),
+  cohort_efficient_foragers: cohortQuestion(1),
+  cohort_explorers: cohortQuestion(2),
+  cohort_resilient: cohortQuestion(3),
+  cohort_generalists: cohortQuestion(4),
+  environment: choice("Which bounded environment policy should affect resources and hazard until the next decision epoch? Use `world`, `environment`, visitor `intent`, and all cohort summaries.", {
+    bloom: "Strongly increase resource regrowth", redistribute: "Smooth resources into different deterministic locations", hazard_surge: "Increase hazard intensity and reduce growth", relief: "Temporarily reduce hazard intensity", hold: "Keep baseline resource and hazard mechanics",
+  }),
+};
+const epochResponseSchema = z.object({
+  model: z.string().min(1),
+  usage: z.object({ input_tokens: z.number().int().nonnegative(), output_tokens: z.number().int().nonnegative() }).strict(),
+  answers: z.object({
+    cohort_energy_stressed: choiceAnswer(CELL_ACTIONS), cohort_efficient_foragers: choiceAnswer(CELL_ACTIONS),
+    cohort_explorers: choiceAnswer(CELL_ACTIONS), cohort_resilient: choiceAnswer(CELL_ACTIONS), cohort_generalists: choiceAnswer(CELL_ACTIONS),
+    environment: choiceAnswer(ENVIRONMENT_ACTIONS),
+  }).strict(),
+}).passthrough();
+type EpochInput = { kind: "epoch"; summary: EpochStateSummary };
+type EpochSystemOneLike = { systemOne(request: { state: EpochStateSummary; questions: typeof epochQuestions }): Promise<unknown> };
+
+export async function decideEpoch(input: EpochInput, options: { apiKey?: string; client?: EpochSystemOneLike } = {}): Promise<EpochDecision> {
+  const fallback = () => deterministicEpochDecision(input.summary);
+  const apiKey = options.apiKey ?? process.env.TYPESAFE_API_KEY;
+  if (!apiKey) return fallback();
+  try {
+    const raw = options.client
+      ? await options.client.systemOne({ state: input.summary, questions: epochQuestions })
+      : await new TypeSafeClient({ apiKey, timeout: 5000, retry: { maxRetries: 1 } }).systemOne({
+        state: { ...input.summary, cohorts: input.summary.cohorts.map((cohort) => ({ ...cohort, meanTraits: [...cohort.meanTraits] })) },
+        questions: epochQuestions,
+      });
+    const parsed = epochResponseSchema.safeParse(raw);
+    if (!parsed.success) return fallback();
+    const { answers } = parsed.data;
+    const cohorts = Object.fromEntries(COHORT_IDS.map((id) => {
+      const answer = answers[`cohort_${id}` as keyof Omit<typeof answers, "environment">];
+      const { type: _type, ...validated } = answer;
+      void _type;
+      return [id, validated];
+    }));
+    const { type: _type, ...environment } = answers.environment;
+    void _type;
+    return validateEpochDecision({ generation: input.summary.generation, source: "jev", model: parsed.data.model, usage: parsed.data.usage, cohorts, environment });
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") console.error("[LifePot Jev] epoch request failed", error instanceof Error ? error.message : "unknown error");
     return fallback();
   }
 }

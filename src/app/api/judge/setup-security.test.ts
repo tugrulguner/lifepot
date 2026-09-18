@@ -26,6 +26,13 @@ describe("setup endpoint hardening", () => {
     const client = { systemOne: vi.fn().mockResolvedValue(rounded) };
     expect((await interpretSetup(input, { apiKey: "test-key", client: client as never })).source).toBe("jev");
   });
+  it("accepts a probability distribution rounded to 0.99", async () => {
+    const rounded = validSdkResponse();
+    rounded.answers.explore.score = 0.99;
+    rounded.answers.explore.probabilities = { "0": 0, "1": 0.99, "2": 0, "3": 0, "4": 0 };
+    const client = { systemOne: vi.fn().mockResolvedValue(rounded) };
+    expect((await interpretSetup(input, { apiKey: "test-key", client: client as never })).source).toBe("jev");
+  });
 
   it("recomputes and validates the canonical request hash", async () => {
     const decide = vi.fn(); const handler = createJudgeHandler({ decide });
@@ -36,7 +43,9 @@ describe("setup endpoint hardening", () => {
     const decide = vi.fn(async () => interpretSetup(input)); const handler = createJudgeHandler({ decide, maxRequests: 2 });
     expect((await handler(request(input))).status).toBe(200);
     expect((await handler(request(input))).status).toBe(200);
-    expect((await handler(request(input))).status).toBe(429);
+    const limited = await handler(request(input));
+    expect(limited.status).toBe(200);
+    expect((await limited.json()).source).toBe("fallback");
     expect(decide).toHaveBeenCalledTimes(2);
   });
   it("rejects overlong text, unknown fields, and oversized bodies", async () => {

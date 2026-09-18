@@ -109,7 +109,20 @@ button:disabled { cursor: not-allowed; opacity: .42; }
 .stat strong { font: 500 12px var(--mono); white-space: nowrap; }
 .stat-birth strong { color: var(--mint); }
 .stat-death strong { color: var(--coral); }
-.fitness-overlay { position: absolute; z-index: 3; right: clamp(16px, 2.4vw, 36px); top: 88px; width: 190px; padding: 12px 14px; border: 1px solid var(--line); background: rgba(3,16,14,.76); backdrop-filter: blur(10px); }
+.decision-overlay { position: absolute; z-index: 3; right: clamp(16px, 2.4vw, 36px); top: 88px; width: 290px; padding: 13px 14px; border: 1px solid var(--line-strong); background: rgba(3,16,14,.9); box-shadow: 0 18px 50px rgba(0,0,0,.24); backdrop-filter: blur(12px); }
+.decision-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.decision-heading p { margin: 0; color: var(--muted); font: 8px var(--mono); letter-spacing: .13em; }
+.decision-source { padding: 4px 6px; border: 1px solid var(--line); color: var(--muted); font: 7px var(--mono); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.decision-source.is-jev { border-color: rgba(121,235,195,.52); color: var(--mint); }.decision-source.is-fallback { border-color: rgba(255,141,128,.45); color: #ffc0b8; }
+.decision-source.is-deciding { border-color: var(--acid); color: var(--acid); box-shadow: 0 0 13px rgba(184,237,134,.14); }
+.decision-meta { display: grid; grid-template-columns: .7fr 1.25fr 1fr; gap: 7px; margin: 12px 0 10px; }
+.decision-meta div { min-width: 0; padding: 7px; border: 1px solid var(--line); background: rgba(7,27,23,.5); }
+.decision-meta dt { color: var(--dim); font: 6px var(--mono); letter-spacing: .08em; text-transform: uppercase; }.decision-meta dd { margin: 4px 0 0; overflow: hidden; color: var(--text); font: 8px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+.cohort-decisions { border-top: 1px solid var(--line); }
+.cohort-decisions > div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 1px; border-bottom: 1px solid var(--line); }
+.cohort-decisions span, .cohort-decisions strong { font: 7px var(--mono); text-transform: uppercase; }.cohort-decisions span { color: var(--muted); }.cohort-decisions small { margin-left: 3px; color: var(--dim); font-size: 6px; }.cohort-decisions strong { color: var(--acid); font-weight: 500; }
+.decision-usage { margin: 9px 0 0; color: var(--dim); font: 7px/1.55 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+.fitness-overlay { position: absolute; z-index: 3; right: clamp(16px, 2.4vw, 36px); top: 363px; width: 190px; padding: 12px 14px; border: 1px solid var(--line); background: rgba(3,16,14,.76); backdrop-filter: blur(10px); }
 .fitness-overlay > p { margin: 0 0 9px; color: var(--dim); font: 8px var(--mono); letter-spacing: .13em; }
 .legend { position: absolute; z-index: 3; left: clamp(16px, 2.4vw, 36px); bottom: 64px; display: flex; gap: 17px; padding: 8px 10px; background: rgba(3,16,14,.7); color: var(--muted); font: 8px var(--mono); text-transform: uppercase; }
 .legend span { display: flex; align-items: center; gap: 6px; }
@@ -145,7 +158,7 @@ button:disabled { cursor: not-allowed; opacity: .42; }
   .condition-list > div { grid-template-columns: 82px 1fr; gap: 10px; }.fitness-review { grid-template-columns: 1fr; gap: 16px; }
   .simulation-header { min-height: 58px; padding: 11px 13px; }.sim-brand small { display: none; }.environment-strip { max-width: 58%; overflow: hidden; text-overflow: ellipsis; }
   .stats-strip { top: 66px; left: 10px; right: 10px; overflow-x: auto; }.stat { min-width: 77px; padding: 8px; }.stat:nth-child(4), .stat:nth-child(5) { display: none; }
-  .fitness-overlay { right: 10px; top: 121px; width: 155px; padding: 9px; }.fitness-bars > div { grid-template-columns: 59px 1fr; }
+  .decision-overlay { right: 10px; top: 121px; width: min(210px, calc(100% - 20px)); padding: 10px; }.decision-meta { grid-template-columns: .65fr 1.35fr; }.decision-meta div:last-child { display: none; }.cohort-decisions > div { padding: 4px 1px; }.fitness-overlay { display: none; }.fitness-bars > div { grid-template-columns: 59px 1fr; }
   .legend { left: 10px; bottom: 106px; flex-direction: column; gap: 5px; }.controls { right: 10px; bottom: 61px; }.ticker { left: 10px; right: 10px; bottom: 13px; }.ticker p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .result-scrim { padding: 11px; align-items: center; }.result-card { padding: 26px 20px; }.result-card dl { grid-template-columns: repeat(2, 1fr); }.result-card dl div:nth-child(2) { border-right: 0; }.result-card dl div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
   .result-actions { flex-direction: column; }.result-actions button { width: 100%; }

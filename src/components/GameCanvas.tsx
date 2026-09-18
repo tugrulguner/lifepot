@@ -15,12 +15,21 @@ import {
   createSimulation,
   DEFAULT_GENERATIONS,
   GRID_SIZE,
-  stepSimulation,
   type FitnessKey,
   type LifeConfig,
   type SimulationState,
 } from "@/game/world";
 import { deathProgress, retainDeathTraces, type DeathTrace } from "@/game/visuals";
+import {
+  COHORT_IDS,
+  decisionEpochAt,
+  deterministicEpochDecision,
+  summarizeEpochState,
+  validateEpochDecision,
+  type EpochDecision,
+  type EpochLedger,
+} from "@/game/decisions";
+import { activeDecisionForGeneration, advanceUntilDecisionEpoch } from "@/game/runtime";
 
 /** The public state shared by the review and simulation views. */
 export type LifePotViewModel = {
@@ -101,6 +110,14 @@ function firstLineage(state: SimulationState): number {
 
 function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function usageForLedger(ledger: readonly EpochDecision[]) {
+  return ledger.reduce((total, decision) => ({
+    calls: total.calls + 1,
+    input: total.input + (decision.usage?.input_tokens ?? 0),
+    output: total.output + (decision.usage?.output_tokens ?? 0),
+  }), { calls: 0, input: 0, output: 0 });
 }
 
 function drawWorld(
@@ -273,18 +290,29 @@ export function GameCanvas() {
   const [setupError, setSetupError] = useState<string | null>(null);
   const [interpretation, setInterpretation] = useState<InterpretationProof | null>(null);
   const [notice, setNotice] = useState("");
+  const [ledger, setLedger] = useState<EpochLedger>([]);
+  const [deciding, setDeciding] = useState(false);
+  const [replayMode, setReplayMode] = useState(false);
+  const [runtimeUsage, setRuntimeUsage] = useState({ calls: 0, input: 0, output: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const ledgerRef = useRef<EpochLedger>([]);
   const replayRef = useRef<ReplayData | null>(null);
+  const simulationRef = useRef<SimulationState | null>(null);
+  const pendingEpochRef = useRef<number | null>(null);
+  const runIdRef = useRef(0);
 
   const currentQuestion = QUESTIONS[questionIndex];
   const isComplete = simulation ? simulation.outcome !== "running" : false;
 
-  const beginSimulation = useCallback((nextAnswers: SetupAnswers, nextConfig: LifeConfig, nextSeed: number) => {
+  const beginSimulation = useCallback((nextAnswers: SetupAnswers, nextConfig: LifeConfig, nextSeed: number, replay?: ReplayData) => {
     const initial = createSimulation({ seed: nextSeed, config: nextConfig });
-    replayRef.current = createReplay({ answers: nextAnswers, config: nextConfig, seed: nextSeed, requestHash: hashSetupRequest(nextAnswers) });
+    const nextLedger = replay?.ledger ?? [];
+    runIdRef.current += 1; simulationRef.current = initial; ledgerRef.current = nextLedger; replayRef.current = replay ?? null;
     setAnswers(nextAnswers); setConfig(nextConfig); setSeed(nextSeed); setPrevious(null); setSimulation(initial);
-    setPaused(false); setEvent("36 seeded cells are waking in the resource field"); setStage("simulation");
+    setLedger(nextLedger); setReplayMode(Boolean(replay)); setRuntimeUsage(usageForLedger(nextLedger));
+    pendingEpochRef.current = null; setDeciding(false);
+    setPaused(false); setEvent(replay ? "Replaying the recorded Jev decision ledger — no API calls" : "36 seeded cells are waiting for Jev’s first live decision"); setStage("simulation");
   }, []);
 
   useEffect(() => {
@@ -293,7 +321,7 @@ export function GameCanvas() {
     const timer = window.setTimeout(() => {
       try {
         const replay = decodeReplay(payload);
-        beginSimulation(replay.answers, replay.config, replay.seed);
+        beginSimulation(replay.answers, replay.config, replay.seed, replay);
         window.history.replaceState(null, "", `${window.location.pathname}?replay=${payload}`);
       } catch {
         setSetupError("This challenge link is invalid or has been changed.");
@@ -308,20 +336,75 @@ export function GameCanvas() {
   }, [stage, questionIndex]);
 
   useEffect(() => {
-    if (!simulation || paused || simulation.outcome !== "running") return;
+    if (!simulation || stage !== "simulation" || simulation.outcome !== "running") return;
+    const epoch = decisionEpochAt(simulation.generation);
+    if (epoch === null || ledgerRef.current.some((decision) => decision.generation === epoch)) return;
+    if (replayMode) {
+      const timer = window.setTimeout(() => {
+        setPaused(true);
+        setEvent(`Replay ledger is missing the required generation ${epoch} decision`);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+    if (pendingEpochRef.current === epoch) return;
+
+    const runId = runIdRef.current;
+    const summary = summarizeEpochState(simulation, answers);
+    pendingEpochRef.current = epoch; setDeciding(true);
+    setEvent(`Jev is deciding generation ${epoch} policies for the environment and five cohorts`);
+
+    void (async () => {
+      let decision: EpochDecision;
+      try {
+        const response = await fetch("/api/judge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: "epoch", summary }),
+        });
+        if (!response.ok) throw new Error("request");
+        const candidate = validateEpochDecision(await response.json());
+        if (candidate.generation !== epoch) throw new Error("stale generation");
+        decision = candidate;
+      } catch {
+        decision = deterministicEpochDecision(summary);
+      }
+
+      if (runIdRef.current !== runId || simulationRef.current?.generation !== epoch) return;
+      if (!ledgerRef.current.some((item) => item.generation === epoch)) {
+        const nextLedger = [...ledgerRef.current, decision];
+        ledgerRef.current = nextLedger; setLedger(nextLedger); setRuntimeUsage(usageForLedger(nextLedger));
+        setEvent(decision.source === "jev"
+          ? `Jev chose ${decision.environment.choice} for the environment at generation ${epoch}`
+          : `Deterministic fallback chose ${decision.environment.choice} at generation ${epoch}`);
+      }
+    })().finally(() => {
+      if (runIdRef.current === runId && pendingEpochRef.current === epoch) {
+        pendingEpochRef.current = null; setDeciding(false);
+      }
+    });
+  }, [answers, replayMode, simulation, stage]);
+
+  useEffect(() => {
+    if (!simulation || paused || deciding || simulation.outcome !== "running") return;
     const delay = speed === 3 ? 30 : 245;
     const timer = window.setTimeout(() => {
-      setSimulation((current) => {
-        if (!current || current.outcome !== "running") return current;
-        let next = current;
-        const steps = speed === 3 ? 3 : 1;
-        for (let i = 0; i < steps && next.outcome === "running"; i += 1) next = stepSimulation(next);
-        setPrevious(current); setEvent(eventFor(current, next));
-        return next;
-      });
+      const next = advanceUntilDecisionEpoch(simulation, ledgerRef.current, speed === 3 ? 3 : 1);
+      if (next === simulation) return;
+      simulationRef.current = next; setPrevious(simulation); setEvent(eventFor(simulation, next)); setSimulation(next);
     }, simulation.generation === 0 ? 520 : delay);
     return () => window.clearTimeout(timer);
-  }, [simulation, paused, speed]);
+  }, [deciding, ledger, paused, simulation, speed]);
+
+  useEffect(() => {
+    if (replayMode || !simulation || simulation.outcome === "running" || !ledgerRef.current.length) return;
+    replayRef.current = createReplay({
+      answers,
+      config: simulation.config,
+      seed: simulation.seed,
+      requestHash: hashSetupRequest(answers),
+      ledger: ledgerRef.current,
+    });
+  }, [answers, replayMode, simulation]);
 
   const requestSetup = useCallback(async (nextAnswers: SetupAnswers) => {
     const canonical = canonicalAnswers(nextAnswers); const requestHash = hashSetupRequest(canonical);
@@ -361,9 +444,10 @@ export function GameCanvas() {
   };
 
   const copyReplay = async () => {
-    if (!replayRef.current) return;
+    const replay = replayRef.current;
+    if (!replay) { setNotice("No complete decision ledger is available yet"); return; }
     const url = new URL(window.location.origin + window.location.pathname);
-    url.searchParams.set("replay", encodeReplay(replayRef.current));
+    url.searchParams.set("replay", encodeReplay(replay));
     try { await navigator.clipboard.writeText(url.toString()); setNotice("Challenge link copied"); }
     catch { setNotice("Copy failed — use your browser’s address controls"); }
   };
@@ -372,6 +456,8 @@ export function GameCanvas() {
     if (!config) return null;
     return FITNESS_ORDER.reduce((best, key) => config.fitness[key] > config.fitness[best] ? key : best, FITNESS_ORDER[0]);
   }, [config]);
+  const activeDecision = useMemo(() => activeDecisionForGeneration(ledger, simulation?.generation ?? 0), [ledger, simulation?.generation]);
+  const cohortCounts = useMemo(() => simulation ? Object.fromEntries(summarizeEpochState(simulation, answers).cohorts.map((cohort) => [cohort.id, cohort.count])) as Record<(typeof COHORT_IDS)[number], number> : null, [answers, simulation]);
 
   if (stage === "questions") {
     return (
@@ -452,6 +538,23 @@ export function GameCanvas() {
         <Stat label="Max lineage gen." value={simulation.stats.maxGeneration} testId="lineage-generation" />
         <Stat label="Outcome" value={titleCase(simulation.outcome)} testId="outcome" />
       </section>
+      <aside className="decision-overlay" aria-label="Jev decision state">
+        <div className="decision-heading">
+          <p>JEV DECISION LAYER</p>
+          <span className={`decision-source ${deciding ? "is-deciding" : activeDecision?.source === "jev" ? "is-jev" : "is-fallback"}`} role="status" aria-live="polite">
+            {deciding ? "Jev deciding…" : replayMode ? `Replay · recorded ${activeDecision?.source ?? "decision"}` : activeDecision?.source === "jev" ? "Jev live" : activeDecision ? "Fallback active" : "Waiting for Jev"}
+          </span>
+        </div>
+        <dl className="decision-meta">
+          <div><dt>Decision epoch</dt><dd>{deciding ? simulation.generation : activeDecision?.generation ?? "—"}</dd></div>
+          <div><dt>Environment</dt><dd>{activeDecision ? titleCase(activeDecision.environment.choice.replaceAll("_", " ")) : "Pending"}</dd></div>
+          <div><dt>Model</dt><dd>{activeDecision?.model ?? (activeDecision?.source === "fallback" ? "Deterministic" : "—")}</dd></div>
+        </dl>
+        <div className="cohort-decisions" aria-label="Cohort actions">
+          {COHORT_IDS.map((id) => <div key={id}><span>{titleCase(id.replaceAll("_", " "))} <small>{cohortCounts?.[id] ?? 0}</small></span><strong>{activeDecision ? titleCase(activeDecision.cohorts[id].choice) : "Pending"}</strong></div>)}
+        </div>
+        <p className="decision-usage">{replayMode ? "Recorded replay · zero live API calls" : `${runtimeUsage.calls} epoch ${runtimeUsage.calls === 1 ? "decision" : "decisions"}`}<br />{runtimeUsage.input} input / {runtimeUsage.output} output tokens</p>
+      </aside>
       <aside className="fitness-overlay" aria-label="Fitness weights"><p>FITNESS KEY</p><FitnessBars config={config} /></aside>
       <div className="legend"><span><i className="resource-key" />Resource</span><span><i className="birth-key" />Birth</span><span><i className="hazard-key" />{titleCase(config.environment.hazard)}</span></div>
       <div className="ticker" aria-live="polite"><span>EVENT</span><p>{event}</p></div>

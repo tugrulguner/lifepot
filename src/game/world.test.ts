@@ -10,6 +10,7 @@ import {
   stepSimulation,
   type LifeConfig,
 } from "./world";
+import { CELL_ACTIONS, COHORT_IDS, ENVIRONMENT_ACTIONS, type CellAction, type EnvironmentAction, type EpochDecision } from "./decisions";
 
 const balanced: LifeConfig = {
   environment: { abundance: "balanced", distribution: "scattered", hazard: "drought", volatility: "stable" },
@@ -18,6 +19,16 @@ const balanced: LifeConfig = {
 
 function organism(x: number, y: number, energy = 120) {
   return { x, y, energy, traits: [128, 128, 128, 128, 128] as const, lineage: 1, generation: 0 };
+}
+
+function policy(cell: CellAction, environment: EnvironmentAction = "hold"): EpochDecision {
+  const answer = <T extends string>(choice: T, options: readonly T[]) => ({ choice, confidence: 1, probabilities: Object.fromEntries(options.map((option) => [option, option === choice ? 1 : 0])) as Record<T, number> });
+  return {
+    generation: 0,
+    source: "fallback",
+    cohorts: Object.fromEntries(COHORT_IDS.map((id) => [id, answer(cell, CELL_ACTIONS)])) as EpochDecision["cohorts"],
+    environment: answer(environment, ENVIRONMENT_ACTIONS),
+  };
 }
 
 describe("deterministic 50x50 cellular life engine", () => {
@@ -103,5 +114,35 @@ describe("deterministic 50x50 cellular life engine", () => {
     expect(a.generation).toBeLessThanOrEqual(180);
     expect(["extinct", "surviving", "thriving"]).toContain(a.outcome);
     expect(a.stats).toMatchObject({ births: expect.any(Number), deaths: expect.any(Number), maxGeneration: expect.any(Number), lineages: expect.any(Number) });
+  });
+
+  it("applies bounded cohort actions to deterministic energy, movement, and reproduction mechanics", () => {
+    const options = { seed: 81, config: balanced, initialPopulation: [organism(25, 25, 175)], initialResources: [{ x: 25, y: 25, amount: 220 }] };
+    const forage = stepSimulation(createSimulation(options), policy("forage"));
+    const conserve = stepSimulation(createSimulation(options), policy("conserve"));
+    const reproduce = stepSimulation(createSimulation(options), policy("reproduce"));
+    const disperse = stepSimulation(createSimulation({ ...options, initialPopulation: [organism(25, 25, 80)] }), policy("disperse"));
+
+    expect(forage.resources[indexOf(25, 25)]).toBeLessThan(conserve.resources[indexOf(25, 25)]);
+    expect(conserve.energy[indexOf(25, 25)]).toBeGreaterThan(stepSimulation(createSimulation(options)).energy[indexOf(25, 25)]);
+    expect(reproduce.stats.births).toBeGreaterThan(0);
+    expect(disperse.occupied[indexOf(25, 25)]).toBe(0);
+    expect(disperse.stats.population).toBe(1);
+  });
+
+  it("applies every environment choice visibly and deterministically", () => {
+    const options = { seed: 44, config: balanced, initialPopulation: [organism(8, 8, 70)], initialResources: [{ x: 8, y: 8, amount: 70 }] };
+    const hold = stepSimulation(createSimulation(options), policy("conserve", "hold"));
+    const bloom = stepSimulation(createSimulation(options), policy("conserve", "bloom"));
+    const redistributed = stepSimulation(createSimulation(options), policy("conserve", "redistribute"));
+    const surge = stepSimulation(createSimulation(options), policy("conserve", "hazard_surge"));
+    const relief = stepSimulation(createSimulation(options), policy("conserve", "relief"));
+    const total = (values: Uint8Array) => values.reduce((sum, value) => sum + value, 0);
+
+    expect(total(bloom.resources)).toBeGreaterThan(total(hold.resources));
+    expect(Array.from(redistributed.resources)).not.toEqual(Array.from(hold.resources));
+    expect(total(surge.hazards)).toBeGreaterThan(total(hold.hazards));
+    expect(total(relief.hazards)).toBeLessThan(total(hold.hazards));
+    expect(stepSimulation(createSimulation(options), policy("conserve", "bloom"))).toEqual(bloom);
   });
 });

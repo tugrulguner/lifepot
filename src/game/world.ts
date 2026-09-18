@@ -1,7 +1,7 @@
 export const GRID_SIZE = 50;
 export const GRID_CELLS = GRID_SIZE * GRID_SIZE;
 export const TRAIT_COUNT = 5;
-export const ENGINE_VERSION = "lifepot-ca-1";
+export const ENGINE_VERSION = "lifepot-ca-2";
 export const DEFAULT_GENERATIONS = 180;
 
 export type ResourceAbundance = "scarce" | "balanced" | "rich";
@@ -24,6 +24,7 @@ export type SimulationState = {
   resources: Uint8Array; hazards: Uint8Array; stats: SimulationStats; outcome: SimulationOutcome;
 };
 export type CreateSimulationOptions = { seed: number; config: LifeConfig; initialPopulation?: readonly OrganismSeed[]; initialResources?: readonly ResourceSeed[] };
+import { cohortForCell, type CellAction, type EpochDecision } from "./decisions";
 
 export function indexOf(x: number, y: number): number {
   const nx = ((x % GRID_SIZE) + GRID_SIZE) % GRID_SIZE;
@@ -117,7 +118,7 @@ function environmentHazard(state: SimulationState, index: number): number {
   return Math.max(1, Math.round(base * (0.45 + pulse)));
 }
 
-export function stepSimulation(state: SimulationState): SimulationState {
+export function stepSimulation(state: SimulationState, decision?: EpochDecision): SimulationState {
   if (state.outcome === "extinct" || state.generation >= DEFAULT_GENERATIONS) return state;
   const next: SimulationState = {
     ...state, generation: state.generation + 1,
@@ -127,12 +128,19 @@ export function stepSimulation(state: SimulationState): SimulationState {
   let rng = state.rngState;
   const cap = resourceCapacity(state.config);
   const baseRegrowth = state.config.environment.abundance === "scarce" ? 1 : state.config.environment.abundance === "rich" ? 4 : 2;
+  const environmentAction = decision?.environment.choice ?? "hold";
+  if (environmentAction === "redistribute") {
+    const source = next.resources.slice();
+    for (let i = 0; i < GRID_CELLS; i += 1) next.resources[i] = Math.round(source[i] * 0.65 + source[(i + 73) % GRID_CELLS] * 0.35);
+  }
   for (let i = 0; i < GRID_CELLS; i += 1) {
     const volatility = volatilityAt(state.config, next.generation, i, state.seed);
     const seasonal = state.config.environment.distribution === "seasonal" ? 0.25 + 0.75 * ((Math.sin(next.generation / 11 + i % GRID_SIZE / 8) + 1) / 2) : 1;
     const drought = state.config.environment.hazard === "drought" ? 0.45 : 1;
-    next.resources[i] = Math.min(cap, next.resources[i] + Math.max(1, Math.round(baseRegrowth * seasonal * drought * (0.65 + volatility * 0.35))));
-    next.hazards[i] = environmentHazard(state, i);
+    const growthMultiplier = environmentAction === "bloom" ? 3 : environmentAction === "hazard_surge" ? 0.6 : 1;
+    next.resources[i] = Math.min(cap, next.resources[i] + Math.max(1, Math.round(baseRegrowth * growthMultiplier * seasonal * drought * (0.65 + volatility * 0.35))));
+    const hazardMultiplier = environmentAction === "hazard_surge" ? 1.65 : environmentAction === "relief" ? 0.45 : 1;
+    next.hazards[i] = Math.max(0, Math.min(255, Math.round(environmentHazard(state, i) * hazardMultiplier)));
   }
   let deaths = 0; let births = 0; let maxGeneration = state.stats.maxGeneration;
   for (let i = 0; i < GRID_CELLS; i += 1) {
@@ -140,25 +148,27 @@ export function stepSimulation(state: SimulationState): SimulationState {
     copyOrganism(state, next, i, i);
     next.age[i] = Math.min(65535, state.age[i] + 1);
     const local = neighbors(i); const occupiedNeighbors = local.filter((n) => state.occupied[n]).length;
+    const action: CellAction | undefined = decision?.cohorts[cohortForCell(state, i)].choice;
     const efficiency = state.traits[i * TRAIT_COUNT] / 255;
     const resilience = state.traits[i * TRAIT_COUNT + 3] / 255;
-    const consumed = Math.min(next.resources[i], Math.round(7 + efficiency * 10));
+    const intakeMultiplier = action === "forage" ? 1.55 : action === "conserve" ? 0.55 : 1;
+    const consumed = Math.min(next.resources[i], Math.max(1, Math.round((7 + efficiency * 10) * intakeMultiplier)));
     next.resources[i] -= consumed;
     const fit = state.config.fitness;
-    const cooperationBonus = occupiedNeighbors * (0.25 + fit.cooperate * 1.5);
+    const cooperationBonus = occupiedNeighbors * (0.25 + fit.cooperate * 1.5) * (action === "cluster" ? 1.8 : 1);
     const hazard = next.hazards[i] / 16;
     let hazardCost = hazard * (1.25 - resilience * 0.45 - fit.adapt * 0.45);
     if (state.config.environment.hazard === "crowding") hazardCost += occupiedNeighbors * (1.1 - fit.cooperate * 0.7);
     if (state.config.environment.hazard === "predator") hazardCost += Math.max(0, 4 - occupiedNeighbors) * (1.55 - fit.cooperate);
     if (state.config.environment.hazard === "toxin") hazardCost += consumed * 0.12;
     if (state.config.environment.hazard === "heat") hazardCost += 1.4;
-    const metabolism = 4.5 - fit.survive * 1.8 + (state.traits[i * TRAIT_COUNT + 1] / 255) * 0.8;
+    const metabolism = (4.5 - fit.survive * 1.8 + (state.traits[i * TRAIT_COUNT + 1] / 255) * 0.8) * (action === "conserve" ? 0.52 : action === "forage" ? 1.12 : 1);
     next.energy[i] = state.energy[i] + consumed * (0.75 + efficiency * 0.45) + cooperationBonus - metabolism - hazardCost;
     if (next.energy[i] <= 0 || next.age[i] > 150 + Math.round(fit.survive * 90)) {
       next.occupied[i] = 0; next.energy[i] = 0; deaths += 1; continue;
     }
     const empty = local.filter((n) => !state.occupied[n] && !next.occupied[n]);
-    const reproductionThreshold = 145 - fit.replicate * 70 - (state.traits[i * TRAIT_COUNT + 1] / 255) * 18;
+    const reproductionThreshold = 145 - fit.replicate * 70 - (state.traits[i * TRAIT_COUNT + 1] / 255) * 18 + (action === "reproduce" ? -55 : action === "conserve" ? 70 : 0);
     if (empty.length && next.energy[i] >= reproductionThreshold) {
       let roll: number; [roll, rng] = random(rng); const target = empty[Math.floor(roll * empty.length) % empty.length];
       const childEnergy = next.energy[i] * (0.38 + fit.replicate * 0.12); next.energy[i] -= childEnergy;
@@ -171,9 +181,9 @@ export function stepSimulation(state: SimulationState): SimulationState {
         next.traits[target * TRAIT_COUNT + t] = Math.max(0, Math.min(255, state.traits[i * TRAIT_COUNT + t] + mutation));
       }
       births += 1;
-    } else if (empty.length && fit.explore > 0.45 && next.energy[i] > 28) {
+    } else if (empty.length && (action === "disperse" || fit.explore > 0.45) && next.energy[i] > 28) {
       let roll: number; [roll, rng] = random(rng);
-      if (roll < fit.explore * 0.12) {
+      if (action === "disperse" || roll < fit.explore * 0.12) {
         const target = empty[Math.floor(roll * empty.length * 17) % empty.length]; copyOrganism(next, next, i, target);
         next.occupied[i] = 0; next.energy[i] = 0;
       }
