@@ -26,7 +26,8 @@ test("publishes canonical SEO and discovery endpoints without mobile overflow", 
   expect(response?.status()).toBe(200);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://lifepot.modepot.io");
   await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", "https://lifepot.modepot.io");
-  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary");
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", "https://lifepot.modepot.io/lifepot-social.png");
   const jsonLd = await page.locator('script[type="application/ld+json"]').textContent();
   expect(JSON.parse(jsonLd ?? "{}").name).toBe("LifePot");
   expect(await page.request.get("/robots.txt").then((r) => r.text())).toContain("Sitemap: https://lifepot.modepot.io/sitemap.xml");
@@ -37,7 +38,7 @@ test("publishes canonical SEO and discovery endpoints without mobile overflow", 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
- test("keyboard setup seeds a visibly advancing cellular world and pause stops it", async ({ page }) => {
+test("keyboard setup seeds a visibly advancing cellular world and pause stops it", async ({ page }) => {
   let setupCalls = 0;
   await page.route("**/api/judge", async (route) => {
     const request = route.request().postDataJSON();
