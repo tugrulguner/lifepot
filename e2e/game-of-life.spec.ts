@@ -7,13 +7,18 @@ const answers = {
   reward: "Replicate quickly, even if individuals live shorter lives.",
 };
 
+async function answerQuestion(page: Page, name: string, answer: string, nextName?: string) {
+  const input = page.getByRole("textbox", { name });
+  await input.fill(answer);
+  await expect(input).toHaveValue(answer);
+  await input.press("Enter");
+  if (nextName) await expect(page.getByRole("textbox", { name: nextName })).toBeVisible();
+}
+
 async function answerSetupWithKeyboard(page: Page) {
-  await page.getByRole("textbox", { name: "What exists in this world?" }).fill(answers.world);
-  await page.keyboard.press("Enter");
-  await page.getByRole("textbox", { name: "What threatens life here?" }).fill(answers.threat);
-  await page.keyboard.press("Enter");
-  await page.getByRole("textbox", { name: "What should life be rewarded for?" }).fill(answers.reward);
-  await page.keyboard.press("Enter");
+  await answerQuestion(page, "What exists in this world?", answers.world, "What threatens life here?");
+  await answerQuestion(page, "What threatens life here?", answers.threat, "What should life be rewarded for?");
+  await answerQuestion(page, "What should life be rewarded for?", answers.reward);
 }
 
 test("keyboard setup seeds a visibly advancing cellular world and pause stops it", async ({ page }) => {
@@ -45,7 +50,7 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
   await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
   await expect(page.getByTestId("population")).toContainText(/\d+/);
   await expect(page.getByTestId("births")).toContainText(/\d+/);
-  expect(judgeCalls).toBe(1);
+  expect(judgeCalls).toBe(2); // one setup interpretation plus the generation-zero decision epoch
 
   await page.getByRole("button", { name: "Pause" }).click();
   const pausedAt = await page.getByTestId("generation").textContent();
