@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">LifePot execution architecture</title>
+  <desc id="desc">User intent becomes a validated bounded rule graph, which drives a deterministic simulation and an auditable replay ledger.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06101b"/><stop offset=".5" stop-color="#0a2027"/><stop offset="1" stop-color="#071018"/></linearGradient>
+    <linearGradient id="flow" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#63e6be"/><stop offset=".55" stop-color="#67c7ff"/><stop offset="1" stop-color="#f5c451"/></linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#70dec4"/></marker>
+
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <circle cx="820" cy="440" r="360" fill="none" stroke="#2b8f80" stroke-opacity=".13" stroke-width="2"/>
+  <circle cx="820" cy="440" r="280" fill="none" stroke="#f5c451" stroke-opacity=".1" stroke-width="2"/>
+  <text x="100" y="105" font-family="Arial, sans-serif" font-size="56" font-weight="700" fill="#f5f2df">Intent becomes a bounded world.</text>
+  <text x="100" y="145" font-family="Arial, sans-serif" font-size="20" fill="#a8c7c4">Jev proposes typed choices. LifePot validates them. Deterministic code owns every cell step.</text>
+  <g stroke="url(#flow)" stroke-width="4" fill="none" marker-end="url(#arrow)" opacity=".9">
+    <path d="M370 365H495"/><path d="M765 365H890"/><path d="M1160 365H1285"/>
+    <path d="M1420 500V650H1125"/><path d="M955 705H770"/><path d="M600 705H410"/>
+  </g>
+  <g>
+    <rect x="90" y="255" width="280" height="220" rx="24" fill="#0b1b25" stroke="#327f75" stroke-width="2"/>
+    <text x="120" y="300" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#6ce3c4">01 · DEFINE</text><text x="120" y="340" font-family="Arial, sans-serif" font-size="25" font-weight="700" fill="#f5f2df">Three short answers</text>
+    <text x="120" y="380" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">World, pressure, and</text><text x="120" y="407" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">evolutionary reward.</text>
+    <text x="120" y="447" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="500" fill="#f4cb62">≤ 140 chars each</text>
+    <rect x="495" y="255" width="270" height="220" rx="24" fill="#0b1b25" stroke="#327f75" stroke-width="2"/>
+    <text x="525" y="300" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#6ce3c4">02 · INTERPRET</text><text x="525" y="340" font-family="Arial, sans-serif" font-size="25" font-weight="700" fill="#f5f2df">Typed Jev choices</text>
+    <text x="525" y="380" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">Roles, relationships,</text><text x="525" y="407" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">pressure, and priorities.</text>
+    <text x="525" y="447" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="500" fill="#f4cb62">fallback is labeled</text>
+    <rect x="890" y="255" width="270" height="220" rx="24" fill="#0b1b25" stroke="#327f75" stroke-width="2"/>
+    <text x="920" y="300" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#6ce3c4">03 · VALIDATE</text><text x="920" y="340" font-family="Arial, sans-serif" font-size="25" font-weight="700" fill="#f5f2df">Bounded rule graph</text>
+    <text x="920" y="380" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">2–4 species, canonical</text><text x="920" y="407" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">pairs, viable energy path.</text>
+    <text x="920" y="447" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="500" fill="#f4cb62">Zod + invariants</text>
+    <rect x="1285" y="255" width="250" height="245" rx="24" fill="#102229" stroke="#d3a943" stroke-width="2"/>
+    <text x="1315" y="300" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#f5c451">04 · SIMULATE</text><text x="1315" y="340" font-family="Arial, sans-serif" font-size="25" font-weight="700" fill="#f5f2df">50 × 50 world</text>
+    <text x="1315" y="380" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">Energy, movement,</text><text x="1315" y="407" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">feeding, birth, death.</text>
+    <text x="1315" y="447" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="500" fill="#f4cb62">code owns mechanics</text>
+    <rect x="955" y="610" width="330" height="190" rx="24" fill="#0b1b25" stroke="#327f75" stroke-width="2"/>
+    <text x="985" y="655" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#6ce3c4">05 · CO-EVOLVE</text><text x="985" y="695" font-family="Arial, sans-serif" font-size="25" font-weight="700" fill="#f5f2df">Bounded rule patches</text>
+    <text x="985" y="735" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">Validated changes activate</text><text x="985" y="762" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">at explicit decision points.</text>
+    <rect x="600" y="610" width="170" height="190" rx="24" fill="#102229" stroke="#d3a943" stroke-width="2"/>
+    <text x="630" y="655" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#6ce3c4">LEDGER</text><text x="630" y="697" font-family="Arial, sans-serif" font-size="25" font-weight="700" fill="#f5f2df">Record</text><text x="630" y="735" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">Decisions and</text><text x="630" y="762" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">provenance.</text>
+    <rect x="90" y="610" width="320" height="190" rx="24" fill="#0b1b25" stroke="#327f75" stroke-width="2"/>
+    <text x="120" y="655" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#6ce3c4">06 · REPLAY</text><text x="120" y="695" font-family="Arial, sans-serif" font-size="25" font-weight="700" fill="#f5f2df">No inference required</text>
+    <text x="120" y="735" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">Seed + config + engine +</text><text x="120" y="762" font-family="Arial, sans-serif" font-size="17" fill="#bed1cf">ledger reproduce the run.</text>
+  </g>
+  <g filter="url(#glow)"><circle cx="370" cy="365" r="5" fill="#63e6be"/><circle cx="765" cy="365" r="5" fill="#63e6be"/><circle cx="1160" cy="365" r="5" fill="#67c7ff"/><circle cx="1420" cy="500" r="5" fill="#f5c451"/><circle cx="955" cy="705" r="5" fill="#67c7ff"/><circle cx="600" cy="705" r="5" fill="#f5c451"/></g>
+  <text x="800" y="860" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#a8c7c4">Model output never becomes executable code. Invalid or unavailable decisions fall back visibly.</text>
+</svg>
