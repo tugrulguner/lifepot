@@ -18,6 +18,7 @@
 </p>
 
 <p align="center">
+  <a href="https://lifepot.modepot.io">Play LifePot</a> ·
   <a href="#why-lifepot">Why LifePot</a> ·
   <a href="#try-it-locally">Quick start</a> ·
   <a href="#what-ships-today">What ships</a> ·

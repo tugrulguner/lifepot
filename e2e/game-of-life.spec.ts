@@ -21,7 +21,23 @@ async function answerSetupWithKeyboard(page: Page) {
   await answerQuestion(page, "What should evolution favor?", answers.reward);
 }
 
-test("keyboard setup seeds a visibly advancing cellular world and pause stops it", async ({ page }) => {
+test("publishes canonical SEO and discovery endpoints without mobile overflow", async ({ page }) => {
+  const response = await page.goto("/");
+  expect(response?.status()).toBe(200);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://lifepot.modepot.io");
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", "https://lifepot.modepot.io");
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary");
+  const jsonLd = await page.locator('script[type="application/ld+json"]').textContent();
+  expect(JSON.parse(jsonLd ?? "{}").name).toBe("LifePot");
+  expect(await page.request.get("/robots.txt").then((r) => r.text())).toContain("Sitemap: https://lifepot.modepot.io/sitemap.xml");
+  expect(await page.request.get("/sitemap.xml").then((r) => r.text())).toContain("https://lifepot.modepot.io/");
+  expect(await page.request.get("/llms.txt").then((r) => r.text())).toContain("Replaying a challenge");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("textbox", { name: "What exists in this world?" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+ test("keyboard setup seeds a visibly advancing cellular world and pause stops it", async ({ page }) => {
   let setupCalls = 0;
   await page.route("**/api/judge", async (route) => {
     const request = route.request().postDataJSON();

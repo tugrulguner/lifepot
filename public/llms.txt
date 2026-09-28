@@ -1,0 +1,10 @@
+# LifePot
+
+LifePot is an interactive artificial-life game: describe a world and fitness priorities, then explore a cellular ecosystem in a deterministic 50×50 simulation. Jev proposes typed choices; LifePot validates them; deterministic code executes them. Replaying a challenge uses its recorded choices and makes no model call. This is a game and educational toy, not a biological forecast.
+
+- [Play LifePot](https://lifepot.modepot.io/)
+- [Sitemap](https://lifepot.modepot.io/sitemap.xml)
+- [Robots policy](https://lifepot.modepot.io/robots.txt)
+- [Source repository](https://github.com/tugrulguner/lifepot)
+
+LifePot is a ModePot experiment.
