@@ -1,5 +1,10 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
+.family-attribution{position:relative;z-index:2;max-width:640px;margin:28px auto 0;padding:0 18px;color:#71857d;font-size:11px;line-height:1.6;text-align:center}
+.family-attribution a{color:#8fa69d;text-underline-offset:3px}
+.family-attribution a:hover{color:#b9d4c8}
+.setup-shell .family-attribution{margin-top:24px}
+
 :root {
   --ink: #020a09;
   --deep: #061512;
