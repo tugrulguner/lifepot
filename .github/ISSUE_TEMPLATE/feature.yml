@@ -1,0 +1,31 @@
+name: Feature proposal
+description: Propose a bounded LifePot capability
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What experiment, inspection task, or contributor workflow is currently blocked?
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Proposed bounded behavior
+      description: Describe the finite inputs, validation, deterministic execution, and visible evidence.
+    validations:
+      required: true
+  - type: textarea
+    id: replay
+    attributes:
+      label: Determinism and replay impact
+      description: Explain whether snapshots or existing replay contracts would change.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include a smaller contract or application-owned alternative when possible.
