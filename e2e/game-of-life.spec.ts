@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { hashSetupRequest } from "../src/game/setup";
+import { deterministicSetup, hashSetupRequest } from "../src/game/setup";
 
 const answers = {
   world: "Rich mineral pools clustered in a few oases",
@@ -17,22 +17,21 @@ async function answerQuestion(page: Page, name: string, answer: string, nextName
 
 async function answerSetupWithKeyboard(page: Page) {
   await answerQuestion(page, "What exists in this world?", answers.world, "What threatens life here?");
-  await answerQuestion(page, "What threatens life here?", answers.threat, "What should life be rewarded for?");
-  await answerQuestion(page, "What should life be rewarded for?", answers.reward);
+  await answerQuestion(page, "What threatens life here?", answers.threat, "What should evolution favor?");
+  await answerQuestion(page, "What should evolution favor?", answers.reward);
 }
 
 test("keyboard setup seeds a visibly advancing cellular world and pause stops it", async ({ page }) => {
-  let judgeCalls = 0;
+  let setupCalls = 0;
   await page.route("**/api/judge", async (route) => {
-    judgeCalls += 1;
+    const request = route.request().postDataJSON();
+    if (request.kind === "evolution") return route.abort();
+    setupCalls += 1;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        config: {
-          environment: { abundance: "rich", distribution: "clustered", hazard: "toxin", volatility: "pulsing" },
-          fitness: { survive: 0.1, replicate: 0.6, cooperate: 0.1, explore: 0.1, adapt: 0.1 },
-        },
+        config: deterministicSetup(answers),
         source: "fallback",
         requestHash: hashSetupRequest(answers),
       }),
@@ -42,15 +41,16 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
   await page.goto("/");
   await answerSetupWithKeyboard(page);
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
-  await expect(page.getByText("RICH · CLUSTERED · TOXIN PULSES")).toBeVisible();
-  await page.getByRole("button", { name: "Seed life" }).click();
+  await expect(page.locator(".environment-code")).toHaveText("rich · clustered · toxin · balanced");
+  await page.getByRole("button", { name: /Seed ecosystem/ }).click();
 
-  const canvas = page.getByRole("img", { name: /cellular world/i });
+  const canvas = page.getByRole("img", { name: /ecosystem generation/i });
   await expect(canvas).toBeVisible();
   await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
-  await expect(page.getByTestId("population")).toContainText(/\d+/);
-  await expect(page.getByTestId("births")).toContainText(/\d+/);
-  expect(judgeCalls).toBe(2); // one setup interpretation plus the generation-zero decision epoch
+  await expect(page.getByTestId("prey")).toContainText(/\d+/);
+  await expect(page.getByTestId("predators")).toContainText(/\d+/);
+  await expect(page.getByTestId("species")).toContainText(/\d+/);
+  expect(setupCalls).toBe(1);
 
   await page.getByRole("button", { name: "Pause" }).click();
   const pausedAt = await page.getByTestId("generation").textContent();
@@ -63,12 +63,12 @@ test("copied replay opens at generation zero and never calls the judge", async (
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/");
   await answerSetupWithKeyboard(page);
-  await page.getByRole("button", { name: "Seed life" }).click();
+  await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("button", { name: "3× speed" }).click();
   await expect(page.getByRole("heading", { name: /Extinct|Surviving|Thriving/ })).toBeVisible({ timeout: 20_000 });
   await page.getByRole("button", { name: "Copy challenge link" }).click();
   const replayUrl = await page.evaluate(() => navigator.clipboard.readText());
-  expect(replayUrl).toContain("?replay=");
+  expect(replayUrl).toContain("#replay=");
 
   let replayJudgeCalls = 0;
   const replayPage = await context.newPage();
@@ -78,7 +78,7 @@ test("copied replay opens at generation zero and never calls the judge", async (
   });
   await replayPage.goto(replayUrl);
   await expect(replayPage.getByTestId("generation")).toHaveText("0 / 180");
-  await expect(replayPage.getByRole("img", { name: /cellular world/i })).toBeVisible();
+  await expect(replayPage.getByRole("img", { name: /ecosystem generation/i })).toBeVisible();
   await expect(replayPage.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
   expect(replayJudgeCalls).toBe(0);
 });
@@ -88,5 +88,6 @@ test("setup continues safely when the interpreter is offline", async ({ page }) 
   await page.goto("/");
   await answerSetupWithKeyboard(page);
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
-  await expect(page.getByText("RICH · CLUSTERED · TOXIN PULSES")).toBeVisible();
+  await expect(page.getByTestId("interpreter-source")).toContainText("Deterministic fallback");
+  await expect(page.locator(".environment-code")).toHaveText("rich · clustered · toxin · balanced");
 });

@@ -1,57 +1,13 @@
 import { z } from "zod";
 import { DEFAULT_GENERATIONS, ENGINE_VERSION, createSimulation, snapshotSimulation, type LifeConfig } from "./world";
-import { DECISION_EPOCHS, type EpochLedger } from "./decisions";
-import { runWithDecisionLedger, validateEpochLedger } from "./runtime";
+import type { EvolutionLedger } from "./decisions";
+import { runWithDecisionLedger, validateEvolutionLedger } from "./runtime";
 import { canonicalAnswers, hashReplayPayload, hashSetupRequest, lifeConfigSchema, setupAnswersSchema, type SetupAnswers } from "./setup";
-
-const replayBaseSchema = z.object({
-  version: z.literal(2), engineVersion: z.literal(ENGINE_VERSION), answers: setupAnswersSchema, config: lifeConfigSchema,
-  seed: z.number().int().min(0).max(0xffff_ffff), requestHash: z.string().regex(/^setup_[a-z0-9]+$/),
-  ledger: z.array(z.unknown()).min(1).max(DECISION_EPOCHS.length), contractHash: z.string().regex(/^replay_[a-z0-9]+$/),
-}).strict();
-export type ReplayData = {
-  version: 2; engineVersion: typeof ENGINE_VERSION; answers: SetupAnswers; config: LifeConfig; seed: number;
-  requestHash: string; ledger: EpochLedger; contractHash: string;
-};
-type ReplayBody = Omit<ReplayData, "contractHash">;
-function contractBody(value: ReplayBody): ReplayBody {
-  return { version: value.version, engineVersion: value.engineVersion, answers: canonicalAnswers(value.answers), config: value.config, seed: value.seed >>> 0, requestHash: value.requestHash, ledger: value.ledger };
-}
-function validateReplay(input: unknown): ReplayData {
-  try {
-    const parsed = replayBaseSchema.parse(input);
-    const ledger = validateEpochLedger(parsed.ledger);
-    if (ledger.some((decision, index) => decision.generation !== DECISION_EPOCHS[index])) throw new Error("noncanonical ledger");
-    const replay: ReplayData = { ...parsed, ledger };
-    const body = contractBody(replay);
-    if (replay.requestHash !== hashSetupRequest(replay.answers) || replay.contractHash !== hashReplayPayload(body)) throw new Error("tampered");
-    // A ledger prefix is valid only when the recorded decisions make all later
-    // epochs unreachable (currently, because the population became extinct).
-    runWithDecisionLedger(createSimulation({ seed: replay.seed, config: replay.config }), replay.ledger, DEFAULT_GENERATIONS);
-    return replay;
-  } catch {
-    throw new Error("Invalid, tampered, or noncanonical LifePot replay");
-  }
-}
-export function createReplay(input: { answers: SetupAnswers; config: LifeConfig; seed: number; requestHash: string; ledger: EpochLedger }): ReplayData {
-  const body = contractBody({ version: 2, engineVersion: ENGINE_VERSION, answers: input.answers, config: lifeConfigSchema.parse(input.config), seed: input.seed, requestHash: input.requestHash, ledger: validateEpochLedger(input.ledger) });
-  if (body.requestHash !== hashSetupRequest(body.answers)) throw new Error("Invalid request hash");
-  return validateReplay({ ...body, contractHash: hashReplayPayload(body) });
-}
-function toBase64Url(text: string): string {
-  const bytes = new TextEncoder().encode(text); let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-}
-function fromBase64Url(text: string): string {
-  const base64 = text.replaceAll("-", "+").replaceAll("_", "/");
-  const binary = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="));
-  return new TextDecoder().decode(Uint8Array.from(binary, (character) => character.charCodeAt(0)));
-}
-export function encodeReplay(input: ReplayData): string { return toBase64Url(JSON.stringify(validateReplay(input))); }
-export function decodeReplay(payload: string): ReplayData { try { return validateReplay(JSON.parse(fromBase64Url(payload))); } catch { throw new Error("Invalid or unsupported LifePot replay"); } }
-export async function playReplay(input: ReplayData, _interpreter?: (...args: never[]) => unknown) {
-  void _interpreter; const replay = validateReplay(input);
-  const state = runWithDecisionLedger(createSimulation({ seed: replay.seed, config: replay.config }), replay.ledger, 180);
-  return { replay, state, snapshot: snapshotSimulation(state) };
-}
+const base=z.object({version:z.literal(3),engineVersion:z.literal(ENGINE_VERSION),answers:setupAnswersSchema,config:lifeConfigSchema,seed:z.number().int().min(0).max(0xffffffff),requestHash:z.string().regex(/^setup_[a-z0-9]+$/),ledger:z.array(z.unknown()).max(8),contractHash:z.string().regex(/^replay_[a-z0-9]+$/)}).strict();
+export type ReplayData={version:3;engineVersion:typeof ENGINE_VERSION;answers:SetupAnswers;config:LifeConfig;seed:number;requestHash:string;ledger:EvolutionLedger;contractHash:string}; type Body=Omit<ReplayData,"contractHash">;
+function body(v:Body):Body{return{version:3,engineVersion:ENGINE_VERSION,answers:canonicalAnswers(v.answers),config:v.config,seed:v.seed>>>0,requestHash:v.requestHash,ledger:v.ledger};}
+function validate(input:unknown):ReplayData{try{const p=base.parse(input);const ledger=validateEvolutionLedger(p.ledger);const r={...p,ledger} as ReplayData;const b=body(r);if(r.requestHash!==hashSetupRequest(r.answers)||r.contractHash!==hashReplayPayload(b))throw new Error("tampered");runWithDecisionLedger(createSimulation({seed:r.seed,config:r.config}),ledger,DEFAULT_GENERATIONS,r.answers);return r;}catch{throw new Error("Invalid, tampered, or unsupported LifePot replay v3");}}
+export function createReplay(input:{answers:SetupAnswers;config:LifeConfig;seed:number;requestHash:string;ledger:EvolutionLedger}):ReplayData{const b=body({version:3,engineVersion:ENGINE_VERSION,answers:input.answers,config:lifeConfigSchema.parse(input.config),seed:input.seed,requestHash:input.requestHash,ledger:validateEvolutionLedger(input.ledger)});if(b.requestHash!==hashSetupRequest(b.answers))throw new Error("Invalid request hash");return validate({...b,contractHash:hashReplayPayload(b)});}
+function enc(text:string){const bytes=new TextEncoder().encode(text);let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary).replaceAll("+","-").replaceAll("/","_").replace(/=+$/," ").trim();} function dec(text:string){const b=text.replaceAll("-","+").replaceAll("_","/");const binary=atob(b.padEnd(Math.ceil(b.length/4)*4,"="));return new TextDecoder().decode(Uint8Array.from(binary,c=>c.charCodeAt(0)));}
+export function encodeReplay(input:ReplayData){return enc(JSON.stringify(validate(input)));} export function decodeReplay(payload:string){try{return validate(JSON.parse(dec(payload)));}catch{throw new Error("Invalid or unsupported LifePot replay");}}
+export async function playReplay(input:ReplayData,_interpreter?:(...args:never[])=>unknown){void _interpreter;const replay=validate(input);const state=runWithDecisionLedger(createSimulation({seed:replay.seed,config:replay.config}),replay.ledger,DEFAULT_GENERATIONS,replay.answers);return{replay,state,snapshot:snapshotSimulation(state)};}
