@@ -71,7 +71,7 @@ cp .env.example .env.local  # optional: add TYPESAFE_API_KEY
 npm run dev -- --hostname 127.0.0.1
 ```
 
-Open `http://127.0.0.1:3000`, answer three prompts, review the validated world, and seed the ecosystem.
+Open `http://127.0.0.1:3000`, answer three prompts, review the validated world, and seed the ecosystem. For local development only, `LIFEPOT_SHOWCASE_MODE=1` enables the larger in-process model-call budget; bind to loopback (`--hostname 127.0.0.1`) and never expose showcase mode through a tunnel or public proxy. It is disabled in production and does not bypass production limits.
 
 ## What ships today
 
@@ -82,6 +82,9 @@ Open `http://127.0.0.1:3000`, answer three prompts, review the validated world, 
 - Validated scheduled changes with explicit activation, duration, transition, and graph-version bindings.
 - A deterministic fallback for absent credentials, invalid responses, network failures, and exhausted limits.
 - Versioned replay data bound to the setup request, engine version, configuration, seed, decision ledger, and contract hash.
+- World Observatory metrics, trends, species relationships, lineage history, and event timeline.
+- Creature Inspector with cell facts, inherited traits, and lineage following.
+- Setup/runtime council provenance recorded with decisions and replay; see the [council contract](COUNCIL.md).
 - Unit, API/security, rule-engine, replay, and browser acceptance coverage.
 
 ## How it works

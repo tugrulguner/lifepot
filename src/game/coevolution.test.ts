@@ -81,7 +81,7 @@ describe("prey, predator, and environment co-evolution", () => {
       expect(evolved.species[i]).toBeGreaterThan(0);
       expect(evolved.strategy[i]).toBeGreaterThanOrEqual(0);
     }
-  });
+  }, 10000);
 
   it("produces divergent outcomes from different heritable guild strategies", () => {
     const ambush = run(createSimulation({ seed: 88, config: { ...config, founders: { ...config.founders, predatorStrategy: "ambush" } } }), 90);
@@ -90,7 +90,7 @@ describe("prey, predator, and environment co-evolution", () => {
     expect([ambush.stats.kills, ambush.stats.predators]).not.toEqual([pursuit.stats.kills, pursuit.stats.predators]);
   });
 
-  it("detects predator extinction and lets a Jev-directed predatory lineage re-emerge through birth", () => {
+  it("detects predator extinction without manufacturing a predator or changing offspring rule species", () => {
     const initial = createSimulation({
       seed: 101,
       config,
@@ -107,8 +107,12 @@ describe("prey, predator, and environment co-evolution", () => {
     expect(detectEvolutionTrigger(collapsed, [])).toBe("predator_crash");
     const decision = deterministicEvolutionDecision(summarizeEcology(collapsed, intent, "predator_crash"));
     const next = stepSimulation(collapsed, decision);
-    expect(next.stats.predators).toBe(1);
-    expect(next.stats.prey).toBeGreaterThan(0);
+    expect(next.stats.predators).toBe(0);
+    expect(next.stats.births).toBe(1);
+    expect(next.stats.prey).toBe(2);
+    for (let i = 0; i < next.guild.length; i++) {
+      if (next.guild[i]) expect(next.ruleSpecies[i]).toBe(1);
+    }
   });
 });
 

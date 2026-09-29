@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { deathProgress, retainDeathTraces, type DeathTrace } from "./visuals";
+import { isSurvivingNewborn, relationshipLabel, triggerLabel, deathProgress, retainDeathTraces, type DeathTrace } from "./visuals";
+
+describe("truthful world labels and newborn cues", () => {
+  it("resolves consumption directions against the actual pair", () => {
+    expect(relationshipLabel("C:D", "a_consumes_b")).toBe("Species C consumes species D");
+    expect(relationshipLabel("B:D", "b_consumes_a")).toBe("Species D consumes species B");
+    expect(triggerLabel("speciation")).toBe("Heritable variant increase");
+  });
+  it("marks only surviving newborns, never founders, empty cells or older organisms", () => {
+    expect(isSurvivingNewborn(1, 0, 1, 1)).toBe(true);
+    expect(isSurvivingNewborn(0, 0, 0, 1)).toBe(false);
+    expect(isSurvivingNewborn(1, 0, 0, 1)).toBe(false);
+    expect(isSurvivingNewborn(1, 0, 1, 0)).toBe(false);
+    expect(isSurvivingNewborn(2, 1, 1, 1)).toBe(false);
+  });
+});
 
 describe("death visual lifecycle", () => {
   it("keeps a dead cell visible through its 420ms shrink/fade window", () => {

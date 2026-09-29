@@ -1,0 +1,36 @@
+import { it, expect } from "vitest";
+import { loadEnvConfig } from "@next/env";
+import { interpretSetup, decideEvolution } from "./service";
+import { hashSetupRequest } from "@/game/setup";
+import { createSimulation, snapshotSimulation, stepSimulation } from "@/game/world";
+import { advanceUntilDecisionTrigger, runWithDecisionLedger } from "@/game/runtime";
+import { detectEvolutionTrigger, summarizeEcology, validateSpeciesDirectives } from "@/game/decisions";
+import { councilApplicable } from "@/game/council";
+
+it.skipIf(process.env.LIFEPOT_LIVE_COUNCIL !== "1")("live setup and runtime council", async () => {
+  loadEnvConfig(process.cwd());
+  process.loadEnvFile(".env.local");
+  const answers = { world: "A rich stable habitat with two species of cooperating grazers", threat: "Mild heat, no predators", reward: "Survival and diverse heritable strategies" };
+  let setupCalls = 0, runtimeCalls = 0;
+  const setup = await interpretSetup({ answers, requestHash: hashSetupRequest(answers) }, { beforeCall: async () => { setupCalls++; } });
+  expect(setup.source).toBe("jev");
+  expect(setupCalls).toBe(2);
+  const rules = setup.config.rules!;
+  expect(rules.council!.members.length).toBeGreaterThanOrEqual(2);
+  expect(rules.council!.members.length).toBe(Number(rules.councilSetup!.evidence.count.choice));
+  const initial = createSimulation({ seed: 17, config: setup.config });
+  const state = advanceUntilDecisionTrigger(initial, [], 180);
+  const trigger = detectEvolutionTrigger(state, []);
+  expect(trigger).toBeTruthy();
+  const decision = await decideEvolution({ kind: "evolution", summary: summarizeEcology(state, answers, trigger!) }, { beforeCall: async () => { runtimeCalls++; } });
+  expect(decision.source).toBe("jev");
+  validateSpeciesDirectives(decision, state.config.rules!);
+  const council = decision.council!;
+  expect(council.calls).toBe(runtimeCalls);
+  expect(council.members.map(m => m.id)).toEqual(council.manifest.members.filter(m => councilApplicable(m, trigger!) && council.orchestrator.evidence[`activate_${m.id}`].choice === "active").map(m => m.id));
+  const applied = stepSimulation(state, decision, [decision]);
+  const replayed = runWithDecisionLedger(initial, [decision], applied.generation, answers);
+  expect(snapshotSimulation(replayed)).toEqual(snapshotSimulation(applied));
+  expect(runtimeCalls).toBe(council.calls);
+  console.log(JSON.stringify({ setupModel: setup.model, manifest: rules.council, generation: state.generation, setupCalls, runtimeCalls, runtimeUsage: decision.usage, replayGeneration: replayed.generation, selectedPatch: council.selectedPatch }));
+}, 30000);
