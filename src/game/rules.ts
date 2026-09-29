@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { councilManifestSchema, councilRecordSchema, validateCouncilManifest, type CouncilManifest, type CouncilRecord } from "./council";
 
 export const SPECIES_IDS = ["A", "B", "C", "D"] as const;
 export const SPECIES_PAIRS = ["A:B", "A:C", "A:D", "B:C", "B:D", "C:D"] as const;
@@ -15,6 +16,13 @@ export const TRANSITIONS = ["abrupt", "ramp", "pulse"] as const;
 
 export type SpeciesId = (typeof SPECIES_IDS)[number];
 export type TrophicRole = (typeof TROPHIC_ROLES)[number];
+// Roles declare basal feeding; directional graph edges separately authorize live prey.
+// No role or population count implicitly creates a predation relationship.
+export const TROPHIC_CAPABILITIES: Record<TrophicRole, { basalFeeding: boolean }> = {
+  producer: { basalFeeding: true }, grazer: { basalFeeding: true },
+  omnivore: { basalFeeding: true }, hunter: { basalFeeding: false },
+  scavenger: { basalFeeding: false },
+};
 export type SelfInteraction = (typeof SELF_INTERACTIONS)[number];
 export type PairInteraction = (typeof PAIR_INTERACTIONS)[number];
 export type SpeciesPair = (typeof SPECIES_PAIRS)[number];
@@ -26,6 +34,8 @@ export type EnvironmentRules = {
   duration: (typeof DURATIONS)[number];
 };
 export type WorldRuleGraph = {
+  council?: CouncilManifest;
+  councilSetup?: CouncilRecord;
   version: number;
   species: Array<{ id: SpeciesId; role: TrophicRole; selfInteraction: SelfInteraction }>;
   interactions: Array<{ pair: SpeciesPair; mode: PairInteraction }>;
@@ -41,7 +51,7 @@ const environmentSchema = z.object({
   intensity: z.enum(INTENSITIES),
   duration: z.enum(DURATIONS),
 }).strict();
-export const worldRuleGraphSchema = z.object({ version: z.number().int().min(1), species: z.array(speciesSchema).min(2).max(4), interactions: z.array(interactionSchema).min(1).max(6), environment: environmentSchema }).strict();
+export const worldRuleGraphSchema = z.object({ council:councilManifestSchema.optional(), councilSetup:councilRecordSchema.optional(), version: z.number().int().min(1), species: z.array(speciesSchema).min(2).max(4), interactions: z.array(interactionSchema).min(1).max(6), environment: environmentSchema }).strict();
 
 function expectedPairs(ids: readonly SpeciesId[]): SpeciesPair[] {
   const pairs: SpeciesPair[] = [];
@@ -55,13 +65,14 @@ export function validateRuleGraph(input: unknown): WorldRuleGraph {
   const parsed = worldRuleGraphSchema.safeParse(input);
   if (!parsed.success) throw new Error("Invalid ecosystem rule graph");
   const graph = parsed.data as WorldRuleGraph;
+  if(graph.council) validateCouncilManifest(graph.council,graph);
   const ids = graph.species.map((species) => species.id);
   const expectedIds = SPECIES_IDS.slice(0, ids.length);
   if (ids.some((id, index) => id !== expectedIds[index])) throw new Error("Invalid ecosystem rule graph: species must be unique and canonical");
   const pairs = graph.interactions.map((interaction) => interaction.pair);
   const canonicalPairs = expectedPairs(ids);
   if (pairs.length !== canonicalPairs.length || pairs.some((pair, index) => pair !== canonicalPairs[index])) throw new Error("Invalid ecosystem rule graph: pair relationships must be complete and canonical");
-  if (!graph.species.some((species) => species.role === "producer" || species.role === "grazer" || species.role === "omnivore")) throw new Error("Invalid ecosystem rule graph: no viable basal energy path");
+  if (!graph.species.some((species) => TROPHIC_CAPABILITIES[species.role].basalFeeding)) throw new Error("Invalid ecosystem rule graph: no viable basal energy path");
   return structuredClone(graph);
 }
 
@@ -86,6 +97,7 @@ export function validateRulePatch(input: unknown): RulePatch {
 export function applyRulePatch(graphInput: WorldRuleGraph, patchInput: RulePatch): WorldRuleGraph {
   const graph = validateRuleGraph(graphInput);
   const patch = validateRulePatch(patchInput);
+  const before=JSON.stringify(graph);
   if (patch.kind === "pair") {
     const index = graph.interactions.findIndex((interaction) => interaction.pair === patch.pair);
     if (index < 0) throw new Error("Invalid ecosystem rule patch: unknown pair");
@@ -97,7 +109,7 @@ export function applyRulePatch(graphInput: WorldRuleGraph, patchInput: RulePatch
   } else {
     graph.environment = { ...graph.environment, [patch.field]: patch.value } as EnvironmentRules;
   }
-  graph.version += 1;
+  if(JSON.stringify(graph)!==before)graph.version += 1;
   return validateRuleGraph(graph);
 }
 

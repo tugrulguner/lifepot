@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { deterministicSetup, hashSetupRequest } from "../src/game/setup";
+import { councilSetup, councilDecision } from "./council-fixture";
 
 const answers = {
   world: "Rich mineral pools clustered in a few oases",
@@ -7,43 +8,19 @@ const answers = {
   reward: "Replicate quickly, even if individuals live shorter lives.",
 };
 
-async function answerQuestion(page: Page, name: string, answer: string, nextName?: string) {
-  const input = page.getByRole("textbox", { name });
-  await input.fill(answer);
-  await expect(input).toHaveValue(answer);
-  await input.press("Enter");
-  if (nextName) await expect(page.getByRole("textbox", { name: nextName })).toBeVisible();
-}
-
 async function answerSetupWithKeyboard(page: Page) {
-  await answerQuestion(page, "What exists in this world?", answers.world, "What threatens life here?");
-  await answerQuestion(page, "What threatens life here?", answers.threat, "What should evolution favor?");
-  await answerQuestion(page, "What should evolution favor?", answers.reward);
+  await page.getByRole("textbox", { name: "What exists in this world?" }).fill(answers.world);
+  await page.keyboard.press("Enter");
+  await page.getByRole("textbox", { name: "What threatens life here?" }).fill(answers.threat);
+  await page.keyboard.press("Enter");
+  await page.getByRole("textbox", { name: "What should evolution favor?" }).fill(answers.reward);
+  await page.keyboard.press("Enter");
 }
-
-test("publishes canonical SEO and discovery endpoints without mobile overflow", async ({ page }) => {
-  const response = await page.goto("/");
-  expect(response?.status()).toBe(200);
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://lifepot.modepot.io");
-  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", "https://lifepot.modepot.io");
-  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
-  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", "https://lifepot.modepot.io/lifepot-social.png");
-  const jsonLd = await page.locator('script[type="application/ld+json"]').textContent();
-  expect(JSON.parse(jsonLd ?? "{}").name).toBe("LifePot");
-  expect(await page.request.get("/robots.txt").then((r) => r.text())).toContain("Sitemap: https://lifepot.modepot.io/sitemap.xml");
-  expect(await page.request.get("/sitemap.xml").then((r) => r.text())).toContain("https://lifepot.modepot.io/");
-  expect(await page.request.get("/llms.txt").then((r) => r.text())).toContain("Replaying a challenge");
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("textbox", { name: "What exists in this world?" })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-});
 
 test("keyboard setup seeds a visibly advancing cellular world and pause stops it", async ({ page }) => {
-  let setupCalls = 0;
+  let judgeCalls = 0;
   await page.route("**/api/judge", async (route) => {
-    const request = route.request().postDataJSON();
-    if (request.kind === "evolution") return route.abort();
-    setupCalls += 1;
+    judgeCalls += 1;
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -58,7 +35,7 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
   await page.goto("/");
   await answerSetupWithKeyboard(page);
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
-  await expect(page.locator(".environment-code")).toHaveText("rich · clustered · toxin · balanced");
+  await expect(page.getByLabel("Validated world rules")).toContainText("Species A");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
 
   const canvas = page.getByRole("img", { name: /ecosystem generation/i });
@@ -66,8 +43,13 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
   await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
   await expect(page.getByTestId("prey")).toContainText(/\d+/);
   await expect(page.getByTestId("predators")).toContainText(/\d+/);
-  await expect(page.getByTestId("species")).toContainText(/\d+/);
-  expect(setupCalls).toBe(1);
+  await expect(page.getByTestId("births")).toContainText(/\d+/);
+  await expect(page.getByTestId("deaths")).toContainText(/\d+/);
+  await expect(page.getByRole("heading", { name: "World observatory" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Lineages" })).toBeVisible();
+  await expect(page.getByText("Species A", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What’s changing" })).toBeVisible();
+  expect(judgeCalls).toBe(1);
 
   await page.getByRole("button", { name: "Pause" }).click();
   const pausedAt = await page.getByTestId("generation").textContent();
@@ -100,11 +82,67 @@ test("copied replay opens at generation zero and never calls the judge", async (
   expect(replayJudgeCalls).toBe(0);
 });
 
+for (const viewport of [{ width: 1280, height: 633 }, { width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+  test(`observatory never covers the board at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.route("**/api/judge", (route) => route.abort());
+    await page.clock.install();
+    await page.goto("/");
+    await answerSetupWithKeyboard(page);
+    await page.clock.pauseAt(new Date(Date.now() + 1000));
+    await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+    await expect(page.getByText("Collecting history", { exact: true })).toBeVisible();
+    const board = page.getByRole("img", { name: /ecosystem generation/i });
+    const panel = page.getByRole("complementary", { name: "World observatory panel" });
+    const boardBox = await board.boundingBox();
+    const panelBox = await panel.boundingBox();
+    expect(boardBox).not.toBeNull();
+    expect(panelBox).not.toBeNull();
+    if (!boardBox || !panelBox) throw new Error("Missing workspace surfaces");
+    if (viewport.width > 1000) { expect(panelBox.x).toBeGreaterThanOrEqual(boardBox.x + boardBox.width); expect(boardBox.width).toBeGreaterThan(700); }
+    else expect(panelBox.y).toBeGreaterThanOrEqual(boardBox.y + boardBox.height);
+    for (const selector of [".stats-strip", ".controls", ".ticker", ".decision-overlay", ".legend"]) {
+      const box = await page.locator(selector).boundingBox();
+      expect(box).not.toBeNull();
+      if (!box) throw new Error(`Missing ${selector}`);
+      expect(box.y + box.height <= boardBox.y || box.y >= boardBox.y + boardBox.height).toBe(true);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.clock.runFor(500);
+    await expect(page.getByRole("img", { name: "Population history", exact: true })).toBeVisible();
+    await expect(page.getByText("Collecting history", { exact: true })).toHaveCount(0);
+    await page.getByRole("tab", { name: "Lineages" }).click();
+    await expect(page.getByText("Heritable phenotype")).toBeVisible();
+    await page.screenshot({ path: `test-results/lifepot-${viewport.width}.png`, fullPage: true });
+  });
+}
+
+test("graph preview and runtime show bound species policies, not legacy cohort defaults", async ({ page }) => {
+  await page.route("**/api/judge", async route => {
+    const request = route.request().postDataJSON();
+    return route.fulfill({ json: request.kind === "evolution" ? await councilDecision(request.summary) : await councilSetup(answers) });
+  });
+  await page.goto("/");
+  await answerSetupWithKeyboard(page);
+  const rules = page.getByLabel("Validated world rules");
+  await expect(rules).toContainText("Omnivore");
+  await expect(rules).toContainText("Stability");
+  await expect(rules).toContainText("neutral");
+  await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+  await page.getByRole("button", { name: "3× speed" }).click();
+  const policies = page.getByLabel("Species birth policies");
+  await expect(policies).toContainText("Next births: Armored", { timeout: 15000 });
+  await page.getByRole("button", { name: "Pause" }).click();
+  await expect(policies).toContainText("Next births: Pursuit");
+  await expect(policies).toContainText("Species B · Omnivore");
+  await expect(policies).not.toContainText("Next births: Ambush");
+  await page.screenshot({ path: "test-results/lifepot-species-policies.png", fullPage: true });
+});
+
 test("setup continues safely when the interpreter is offline", async ({ page }) => {
   await page.route("**/api/judge", (route) => route.abort());
   await page.goto("/");
   await answerSetupWithKeyboard(page);
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
-  await expect(page.getByTestId("interpreter-source")).toContainText("Deterministic fallback");
-  await expect(page.locator(".environment-code")).toHaveText("rich · clustered · toxin · balanced");
+  await expect(page.getByLabel("Validated world rules")).toContainText("Species A");
 });

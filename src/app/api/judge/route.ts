@@ -1,5 +1,40 @@
-import { NextResponse } from "next/server"; import { Ratelimit } from "@upstash/ratelimit"; import { Redis } from "@upstash/redis";
-import { deterministicSetup,hashSetupRequest } from "@/game/setup"; import { deterministicEvolutionDecision,type EvolutionDecision } from "@/game/decisions"; import { evolutionRequestSchema,setupRequestSchema,type EvolutionRequest,type SetupRequest } from "./schema"; import { decideEvolution,interpretSetup,type SetupInterpretation } from "./service";
-export const runtime="nodejs"; const MAX_BODY_BYTES=16384,MAX_IP_BUCKETS=1024,configured=Boolean(process.env.UPSTASH_REDIS_REST_URL&&process.env.UPSTASH_REDIS_REST_TOKEN),redis=configured?Redis.fromEnv():null,ipLimiter=redis?new Ratelimit({redis,limiter:Ratelimit.slidingWindow(10,"1 m"),prefix:"lifepot:judge:ip"}):null,spendLimiter=redis?new Ratelimit({redis,limiter:Ratelimit.fixedWindow(500,"1 d"),prefix:"lifepot:judge:daily"}):null;
-type Options={decide?:(i:SetupRequest)=>Promise<SetupInterpretation>;evolutionDecide?:(i:EvolutionRequest)=>Promise<EvolutionDecision>;maxRequests?:number;windowMs?:number;now?:()=>number}; type Bucket={count:number;resetAt:number}; type Input=SetupRequest|EvolutionRequest; const response=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}}); function ip(r:Request){if(process.env.VERCEL!=="1")return"non-vercel";const raw=r.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim()||"unknown";return/^[0-9a-fA-F:.]{1,45}$/.test(raw)?raw:"unknown";} function setupFallback(i:SetupRequest):SetupInterpretation{return{config:deterministicSetup(i.answers),source:"fallback",requestHash:hashSetupRequest(i.answers)}} function fallback(i:Input){return"kind" in i?deterministicEvolutionDecision(i.summary):setupFallback(i);}
-export function createJudgeHandler(o:Options={}){const setup=o.decide??interpretSetup,evolve=o.evolutionDecide??decideEvolution,max=o.maxRequests??10,window=o.windowMs??60000,now=o.now??Date.now,rates=new Map<string,Bucket>();const limited=(key:string)=>{const t=now();let b=rates.get(key);if(!b||t>=b.resetAt){if(!b&&rates.size>=MAX_IP_BUCKETS)rates.delete(rates.keys().next().value as string);b={count:0,resetAt:t+window};rates.set(key,b);}return++b.count>max;};return async(r:Request)=>{const client=ip(r);try{const declared=Number(r.headers.get("content-length")??0);if(declared>MAX_BODY_BYTES)return response({error:"Request is too large"},413);const raw=await r.text();if(new TextEncoder().encode(raw).byteLength>MAX_BODY_BYTES)return response({error:"Request is too large"},413);const json:unknown=JSON.parse(raw),ep=evolutionRequestSchema.safeParse(json),sp=ep.success?null:setupRequestSchema.safeParse(json);let input:Input;if(ep.success)input=ep.data;else if(sp?.success)input=sp.data;else return response({error:"Invalid judge request"},400);if(!("kind" in input)&&input.requestHash!==hashSetupRequest(input.answers))return response({error:"Setup hash mismatch"},400);if(limited(client))return response(fallback(input));const injected="kind" in input?o.evolutionDecide:o.decide;if(!injected){if(!process.env.TYPESAFE_API_KEY)return response(fallback(input));if(process.env.NODE_ENV==="production")try{if(!redis||!ipLimiter||!spendLimiter)return response(fallback(input));const[a,b]=await Promise.all([ipLimiter.limit(client),spendLimiter.limit("global")]);if(!a.success||!b.success)return response(fallback(input));}catch{return response(fallback(input));}}try{return response("kind" in input?await evolve(input):await setup(input));}catch{return response(fallback(input));}}catch{return response({error:"Invalid judge request"},400);}}} export const POST=createJudgeHandler();
+import { NextResponse } from "next/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { deterministicSetup,hashSetupRequest } from "@/game/setup";
+import { deterministicEvolutionDecision,type EvolutionDecision } from "@/game/decisions";
+import { evolutionRequestSchema,setupRequestSchema,type EvolutionRequest,type SetupRequest } from "./schema";
+import { decideEvolution,interpretSetup,type SetupInterpretation } from "./service";
+export const runtime="nodejs";
+const MAX_BODY_BYTES=16384;
+type CloudflareRateLimit={limit:(input:{key:string})=>Promise<{success:boolean}>};
+async function cloudflareRateLimit(key:string){
+ const {env}=getCloudflareContext();
+ const binding=(env as typeof env & {JUDGE_RATE_LIMIT?:CloudflareRateLimit}).JUDGE_RATE_LIMIT;
+ if(!binding)throw new Error("Cloudflare rate-limit binding unavailable");
+ return (await binding.limit({key})).success;
+}
+async function cloudflareGlobalRateLimit(key:string){const {env}=getCloudflareContext();const binding=(env as typeof env & {JUDGE_GLOBAL_RATE_LIMIT?:CloudflareRateLimit}).JUDGE_GLOBAL_RATE_LIMIT;if(!binding)throw new Error("Cloudflare global rate-limit binding unavailable");return (await binding.limit({key})).success;}
+type Options={decide?:(i:SetupRequest)=>Promise<SetupInterpretation>;evolutionDecide?:(i:EvolutionRequest)=>Promise<EvolutionDecision>;rateLimit?:(key:string)=>Promise<boolean>;globalRateLimit?:(key:string)=>Promise<boolean>;maxRequests?:number;windowMs?:number;now?:()=>number};
+type Input=SetupRequest|EvolutionRequest;
+const response=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}});
+async function readBoundedBody(r:Request){const reader=r.body?.getReader();if(!reader)return "";const chunks:Uint8Array[]=[];let total=0;try{while(true){const {done,value}=await reader.read();if(done)break;total+=value.byteLength;if(total>MAX_BODY_BYTES){await reader.cancel();throw new RangeError("Request too large");}chunks.push(value);}}finally{reader.releaseLock();}const bytes=new Uint8Array(total);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}return new TextDecoder().decode(bytes);}
+function ip(r:Request){const raw=r.headers.get("cf-connecting-ip")?.trim();return raw&&/^[0-9a-fA-F:.]{1,45}$/.test(raw)?raw:"unknown";}
+function fallback(i:Input){return "kind" in i?deterministicEvolutionDecision(i.summary):{config:deterministicSetup(i.answers),source:"fallback",requestHash:hashSetupRequest(i.answers)};}
+// Explicit development-only opt-in. Host checks are not authentication: bind dev to loopback.
+function localShowcase(r:Request){return process.env.LIFEPOT_SHOWCASE_MODE==="1"&&(process.env.NODE_ENV==="development"||process.env.NODE_ENV==="test")&&process.env.VERCEL===undefined&&["localhost","127.0.0.1","[::1]"].includes(new URL(r.url).hostname);}
+export function createCallBudget(max=10,window=60000,now=Date.now){const rates=new Map<string,{count:number;reset:number}>();return async(key:string)=>{const time=now();let b=rates.get(key);if(!b||time>=b.reset){if(rates.size>=1024&&!b)throw new Error("Quota store full");b={count:0,reset:time+window};rates.set(key,b);}if(b.count>=max)throw new Error("Model call quota exceeded");b.count++;};}
+export function createJudgeHandler(o:Options={}){
+ const reserve=createCallBudget(o.maxRequests??10,o.windowMs??60000,o.now??Date.now);
+ const showcaseReserve=createCallBudget(o.maxRequests??120,o.windowMs??60000,o.now??Date.now);
+ return async(r:Request)=>{try{
+ if(Number(r.headers.get("content-length")??0)>MAX_BODY_BYTES)return response({error:"Request is too large"},413);
+ let raw:string;try{raw=await readBoundedBody(r);}catch(e){if(e instanceof RangeError)return response({error:"Request is too large"},413);throw e;}
+ const json:unknown=JSON.parse(raw),ep=evolutionRequestSchema.safeParse(json),sp=ep.success?null:setupRequestSchema.safeParse(json);let input:Input;
+ if(ep.success)input=ep.data;else if(sp?.success)input=sp.data;else return response({error:"Invalid judge request"},400);
+ if(!("kind" in input)&&input.requestHash!==hashSetupRequest(input.answers))return response({error:"Setup hash mismatch"},400);
+ const beforeCall=async()=>{if(process.env.NODE_ENV==="production"){if(!o.rateLimit||!o.globalRateLimit)throw new Error("Cloudflare rate-limit binding unavailable");if(!await o.rateLimit(`judge:${ip(r)}`))throw new Error("Quota exceeded");if(!await o.globalRateLimit("judge:global"))throw new Error("Global quota exceeded");}else await (localShowcase(r)?showcaseReserve:reserve)(ip(r));};
+ try{if("kind" in input){if(o.evolutionDecide){await beforeCall();return response(await o.evolutionDecide(input));}return response(await decideEvolution(input,{beforeCall}));}
+ if(o.decide){await beforeCall();return response(await o.decide(input));}return response(await interpretSetup(input,{beforeCall}));}catch{return response(fallback(input));}
+ }catch{return response({error:"Invalid judge request"},400);}};
+}
+export const POST=createJudgeHandler({rateLimit:cloudflareRateLimit,globalRateLimit:cloudflareGlobalRateLimit});

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { hashSetupRequest, type SetupAnswers } from "@/game/setup";
 import { createJudgeHandler } from "./route";
 import { interpretSetup } from "./service";
-import { validSdkResponse } from "./setup-route.test";
+import { validSdkResponse, councilSdkResponse } from "./setup-route.test";
 
 const answers: SetupAnswers = { world: "Rich scattered light", threat: "Heat is stable", reward: "Reward exploration" };
 const input = { answers, requestHash: hashSetupRequest(answers) };
@@ -23,14 +23,14 @@ describe("setup endpoint hardening", () => {
   it("accepts SDK score rounding within one hundredth", async () => {
     const rounded = validSdkResponse();
     rounded.answers.cooperate.score = 2.01;
-    const client = { systemOne: vi.fn().mockResolvedValue(rounded) };
+    const client = { systemOne: vi.fn().mockResolvedValueOnce(rounded).mockImplementation(councilSdkResponse) };
     expect((await interpretSetup(input, { apiKey: "test-key", client: client as never })).source).toBe("jev");
   });
   it("accepts a probability distribution rounded to 0.99", async () => {
     const rounded = validSdkResponse();
     rounded.answers.explore.score = 0.99;
     rounded.answers.explore.probabilities = { "0": 0, "1": 0.99, "2": 0, "3": 0, "4": 0 };
-    const client = { systemOne: vi.fn().mockResolvedValue(rounded) };
+    const client = { systemOne: vi.fn().mockResolvedValueOnce(rounded).mockImplementation(councilSdkResponse) };
     expect((await interpretSetup(input, { apiKey: "test-key", client: client as never })).source).toBe("jev");
   });
 
@@ -54,5 +54,16 @@ describe("setup endpoint hardening", () => {
     expect((await handler(request({ ...input, executableRules: "eval()" }, "203.0.113.9"))).status).toBe(400);
     expect((await handler(request({ ...input, padding: "x".repeat(20_000) }, "203.0.113.10"))).status).toBe(413);
     expect(decide).not.toHaveBeenCalled();
+  });
+  it("cancels an oversized streaming body before consuming its remainder", async () => {
+    let pulls = 0; let canceled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) { pulls++; if (pulls <= 8) controller.enqueue(new Uint8Array(8192)); else controller.close(); },
+      cancel() { canceled = true; },
+    });
+    const res = await createJudgeHandler({ decide: vi.fn() })(new Request("http://localhost/api/judge", { method: "POST", body, duplex: "half" } as RequestInit & { duplex: "half" }));
+    expect(res.status).toBe(413);
+    expect(pulls).toBeLessThan(4);
+    expect(canceled).toBe(true);
   });
 });

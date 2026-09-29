@@ -103,7 +103,7 @@ describe("Jev-built rule graph execution", () => {
     state = stepSimulation(state, decision);
     expect(state.config.rules?.version).toBe(2);
     expect(state.config.rules?.environment.pressure).toBe("drought");
-    expect(state.config.rules?.environment.intensity).toBe("medium");
+    expect(state.config.rules?.environment.intensity).toBe(decision.environmentIntensity.choice);
     for (let generation = 0; generation < 6; generation += 1) state = stepSimulation(state, decision);
     expect(state.config.rules?.version).toBe(3);
     expect(state.config.rules?.environment.pressure).toBe("stability");
