@@ -1,11 +1,23 @@
 # LifePot
 
-LifePot is an interactive artificial-life game: describe a world and fitness priorities, then explore a cellular ecosystem in a deterministic 50×50 simulation. Jev proposes typed choices; LifePot validates them; deterministic code executes them. Replaying a challenge uses its recorded choices and makes no model call. This is a game and educational toy, not a biological forecast.
+> LifePot is an open-source artificial-life game and educational experiment. Describe a world and fitness priorities, then explore a cellular ecosystem in a deterministic 50×50 simulation.
 
-- [Play LifePot](https://lifepot.modepot.io/)
-- [Sitemap](https://lifepot.modepot.io/sitemap.xml)
-- [Robots policy](https://lifepot.modepot.io/robots.txt)
-- [Source repository](https://github.com/tugrulguner/lifepot)
-- [ModePot](https://modepot.io/)
+Jev proposes typed ecology choices; LifePot validates them; deterministic code executes them. Replaying a challenge uses its recorded choices and makes no model call.
 
-LifePot is a ModePot experiment.
+## Play and inspect
+
+- [Play LifePot](https://lifepot.modepot.io/): create and replay an artificial-life world.
+- [Source repository](https://github.com/tugrulguner/lifepot): application code, deterministic simulation rules, tests, and deployment configuration.
+- [Sitemap](https://lifepot.modepot.io/sitemap.xml): public crawlable routes.
+- [Robots policy](https://lifepot.modepot.io/robots.txt): crawler access policy.
+- [ModePot](https://modepot.io/): return to the open-source project family.
+
+## Architecture and boundaries
+
+- The world is a deterministic 50×50 cellular simulation after the initial choices are accepted.
+- Model output is typed data, never executable code.
+- LifePot validates proposed choices before the simulation runs.
+- Replays use recorded choices and make no model call.
+- LifePot is a game and educational toy, not a biological forecast.
+- There is no installable package or public API; the supported interface is the hosted web game.
+- License: MIT.
