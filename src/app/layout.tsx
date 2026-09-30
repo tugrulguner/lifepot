@@ -46,8 +46,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               applicationCategory: "EducationalApplication",
               operatingSystem: "Any",
               description,
-              isPartOf: { "@type": "Organization", name: "ModePot", url: "https://modepot.io" },
-              creator: { "@type": "Organization", name: "ModePot", url: "https://modepot.io" },
+              isPartOf: { "@type": "Organization", name: "ModePot", url: "https://modepot.io/" },
+              creator: { "@type": "Organization", name: "ModePot", url: "https://modepot.io/" },
             }).replace(/</g, "\\u003c"),
           }}
         />

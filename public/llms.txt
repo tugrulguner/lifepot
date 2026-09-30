@@ -6,5 +6,6 @@ LifePot is an interactive artificial-life game: describe a world and fitness pri
 - [Sitemap](https://lifepot.modepot.io/sitemap.xml)
 - [Robots policy](https://lifepot.modepot.io/robots.txt)
 - [Source repository](https://github.com/tugrulguner/lifepot)
+- [ModePot](https://modepot.io/)
 
 LifePot is a ModePot experiment.

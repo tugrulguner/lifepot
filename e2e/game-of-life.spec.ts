@@ -17,6 +17,16 @@ async function answerSetupWithKeyboard(page: Page) {
   await page.keyboard.press("Enter");
 }
 
+test("links every game stage back to ModePot", async ({ page }) => {
+  await page.route("**/api/judge", (route) => route.abort());
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "MODEPOT ↗" })).toHaveAttribute("href", "https://modepot.io/");
+  await answerSetupWithKeyboard(page);
+  await expect(page.getByRole("link", { name: "MODEPOT ↗" })).toHaveAttribute("href", "https://modepot.io/");
+  await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+  await expect(page.getByRole("link", { name: "MODEPOT ↗" })).toHaveAttribute("href", "https://modepot.io/");
+});
+
 test("keyboard setup seeds a visibly advancing cellular world and pause stops it", async ({ page }) => {
   let judgeCalls = 0;
   await page.route("**/api/judge", async (route) => {
