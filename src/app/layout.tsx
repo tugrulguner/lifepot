@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PostHogProvider } from "./posthog-provider";
 import "./globals.css";
 
 const siteUrl = "https://lifepot.modepot.io";
@@ -51,7 +52,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           }}
         />
       </head>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <PostHogProvider>{children}</PostHogProvider>
+      </body>
     </html>
   );
 }
