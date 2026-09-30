@@ -19,5 +19,5 @@ Jev proposes typed ecology choices; LifePot validates them; deterministic code e
 - LifePot validates proposed choices before the simulation runs.
 - Replays use recorded choices and make no model call.
 - LifePot is a game and educational toy, not a biological forecast.
-- There is no installable package or public API; the supported interface is the hosted web game.
+- There is no installable package or supported public API. `/api/judge` is an internal application endpoint; the supported user interface is the hosted web game.
 - License: MIT.
