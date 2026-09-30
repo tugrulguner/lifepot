@@ -421,6 +421,7 @@ export function GameCanvas() {
         <header className="brand-bar">
           <span className="brand-orbit" />
           <Link href="/">LIFEPOT</Link>
+          <a className="modepot-link" href="https://modepot.io/">MODEPOT ↗</a>
           <span>Co-evolution laboratory</span>
         </header>
         <section className="question-panel">
@@ -492,6 +493,7 @@ export function GameCanvas() {
         <header className="brand-bar">
           <span className="brand-orbit" />
           <Link href="/">LIFEPOT</Link>
+          <a className="modepot-link" href="https://modepot.io/">MODEPOT ↗</a>
           <span>Interpretation complete</span>
         </header>
         <section className="review-card">
@@ -539,6 +541,7 @@ export function GameCanvas() {
           <span className="brand-orbit" />
           <strong>LIFEPOT</strong>
           <small>CO-EVOLUTION</small>
+          <a className="modepot-link" href="https://modepot.io/">MODEPOT ↗</a>
         </div>
         <div className="simulation-header-actions">
           <div className="environment-strip">
