@@ -7,6 +7,9 @@ test("publishes the canonical LifePot domain and share metadata", () => {
   expect(metadata.alternates?.canonical).toBe("/");
   expect(metadata.openGraph?.url).toBe("https://lifepot.modepot.io");
   expect(metadata.openGraph?.siteName).toBe("LifePot");
+  expect(JSON.stringify(metadata.openGraph?.images)).toContain("/lifepot-lockup.png");
+  expect(JSON.stringify(metadata.openGraph?.images)).not.toContain("lifepot-social.png");
+  expect(JSON.stringify(metadata.twitter)).toContain("/lifepot-lockup.png");
   expect(metadata.twitter).toBeDefined();
   expect(metadata.alternates?.types).toEqual({ "text/plain": "/llms.txt" });
   expect(metadata.description?.length).toBeLessThanOrEqual(160);
