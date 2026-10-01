@@ -1,7 +1,7 @@
 # LifePot
 
 <p align="center">
-  <img src="lifepot.png" alt="LifePot — a bounded artificial-life ecosystem in a potion bottle" width="600">
+  <img src="lifepot.png" alt="LifePot — deterministic artificial life with replayable evolution" width="600">
 </p>
 
 <p align="center"><strong>Describe a world. Let Jev propose its ecology. Watch deterministic life adapt inside explicit boundaries.</strong></p>
