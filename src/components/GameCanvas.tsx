@@ -425,6 +425,20 @@ export function GameCanvas() {
           <span>Co-evolution laboratory</span>
         </header>
         <section className="question-panel">
+          {qi === 0 && (
+            <div className="setup-intro">
+              <p>
+                Three answers shape your world. Jev proposes ecology, LifePot turns
+                validated rules into a deterministic artificial-life simulation
+                you can inspect and replay. A deterministic fallback is available
+                when Jev is not.
+              </p>
+              <p className="setup-boundary">
+                An experimental game, not a biological forecast.{' '}
+                <a href="https://github.com/tugrulguner/lifepot/tree/main/docs" target="_blank" rel="noopener noreferrer">About LifePot ↗</a>
+              </p>
+            </div>
+          )}
           <div className="step-label">QUESTION {qi + 1} / 3</div>
           <div className="progress-track">
             <i style={{ width: `${((qi + 1) / 3) * 100}%` }} />
