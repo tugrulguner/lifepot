@@ -17,7 +17,7 @@
 }
 
 * { box-sizing: border-box; }
-html { background: var(--ink); color-scheme: dark; }
+html { background: var(--ink); color-scheme: dark; scroll-padding-top: 84px; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--ink); color: var(--text); font-family: var(--sans); }
 button, input { font: inherit; }
 button { color: inherit; }

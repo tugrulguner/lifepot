@@ -38,29 +38,34 @@ test("deterministic preset enters the existing review and simulation without jud
 });
 
 test("explains the bounded Jev-to-simulation flow on the first question", async ({ page }) => {
-  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 390 }, { width: 320, height: 844 }]) {
     await page.setViewportSize(viewport);
     await page.route("**/api/judge", (route) => route.abort());
     await page.goto("/");
     await expect(page.getByText("QUESTION 1 / 3")).toBeVisible();
     await expect(page.getByRole("heading", { name: "What exists in this world?" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "What exists in this world?" })).toBeFocused();
+    // Native autofocus scrolls asynchronously; assert after the browser has settled.
+    await page.waitForTimeout(300);
     await expect(page.getByText(/three answers.*Jev.*validated.*deterministic/i)).toBeVisible();
     await expect(page.getByText(/not a biological forecast/i)).toBeVisible();
     const about = page.getByRole("link", { name: /About LifePot/i });
     await expect(about).toHaveAttribute("href", "https://github.com/tugrulguner/lifepot/tree/main/docs");
     await expect(about).toHaveAttribute("target", "_blank");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const continueButton = page.getByRole("button", { name: "Continue" });
-    await expect(continueButton).toBeVisible();
-    const buttonBounds = await continueButton.boundingBox();
-    expect(buttonBounds).not.toBeNull();
-    expect(buttonBounds!.y).toBeGreaterThanOrEqual(0);
-    expect(buttonBounds!.y + buttonBounds!.height).toBeLessThanOrEqual(viewport.height);
     const headerBounds = await page.locator(".brand-bar").boundingBox();
     const headingBounds = await page.getByRole("heading", { name: "What exists in this world?" }).boundingBox();
     expect(headerBounds).not.toBeNull();
     expect(headingBounds).not.toBeNull();
     expect(headingBounds!.y).toBeGreaterThanOrEqual(headerBounds!.y + headerBounds!.height);
+    if (viewport.height >= 600) {
+      const continueButton = page.getByRole("button", { name: "Continue" });
+      await expect(continueButton).toBeVisible();
+      const buttonBounds = await continueButton.boundingBox();
+      expect(buttonBounds).not.toBeNull();
+      expect(buttonBounds!.y).toBeGreaterThanOrEqual(0);
+      expect(buttonBounds!.y + buttonBounds!.height).toBeLessThanOrEqual(viewport.height);
+    }
     await page.screenshot({ path: `test-results/onboarding-${viewport.width}.png`, fullPage: true });
   }
 });
