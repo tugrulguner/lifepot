@@ -84,6 +84,11 @@ const QUESTIONS: Array<{
   },
 ];
 const EMPTY: SetupAnswers = { world: "", threat: "", reward: "" };
+const RECORDED_PRESET: SetupAnswers = {
+  world: "Rich mineral pools with abundant prey",
+  threat: "Predator packs hunt through pulsing droughts",
+  reward: "Diversify while prey and predators coexist",
+};
 const RESPONSE = z
   .object({
     config: lifeConfigSchema,
@@ -414,6 +419,15 @@ export function GameCanvas() {
     setSeed(seedFromHash(hash));
     setStage("review");
   }
+  function loadDeterministicPreset() {
+    const preset = canonicalAnswers(RECORDED_PRESET), hash = hashSetupRequest(preset);
+    setAnswers(preset);
+    setConfig(deterministicSetup(preset));
+    setProof({ source: "fallback" });
+    setSeed(seedFromHash(hash));
+    setReplayMode(false);
+    setStage("review");
+  }
   if (stage === "questions") {
     const q = QUESTIONS[qi];
     return (
@@ -439,6 +453,7 @@ export function GameCanvas() {
               </p>
             </div>
           )}
+          {qi === 0 && <button type="button" className="back-button" onClick={loadDeterministicPreset}>Explore deterministic preset</button>}
           <div className="step-label">QUESTION {qi + 1} / 3</div>
           <div className="progress-track">
             <i style={{ width: `${((qi + 1) / 3) * 100}%` }} />
