@@ -24,6 +24,19 @@ async function expectModePotLinkFitsViewport(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 
+test("deterministic preset enters the existing review and simulation without judge calls", async ({ page }) => {
+  let judgeCalls = 0;
+  await page.route("**/api/judge", async (route) => { judgeCalls += 1; await route.abort(); });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Explore deterministic preset" }).click();
+  await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
+  await expect(page.getByTestId("interpreter-source")).toHaveText("Deterministic fallback");
+  await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+  await expect(page.getByRole("img", { name: /ecosystem generation/i })).toBeVisible();
+  await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
+  expect(judgeCalls).toBe(0);
+});
+
 test("explains the bounded Jev-to-simulation flow on the first question", async ({ page }) => {
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
     await page.setViewportSize(viewport);
