@@ -56,6 +56,11 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
     expect(buttonBounds).not.toBeNull();
     expect(buttonBounds!.y).toBeGreaterThanOrEqual(0);
     expect(buttonBounds!.y + buttonBounds!.height).toBeLessThanOrEqual(viewport.height);
+    const headerBounds = await page.locator(".brand-bar").boundingBox();
+    const headingBounds = await page.getByRole("heading", { name: "What exists in this world?" }).boundingBox();
+    expect(headerBounds).not.toBeNull();
+    expect(headingBounds).not.toBeNull();
+    expect(headingBounds!.y).toBeGreaterThanOrEqual(headerBounds!.y + headerBounds!.height);
     await page.screenshot({ path: `test-results/onboarding-${viewport.width}.png`, fullPage: true });
   }
 });
