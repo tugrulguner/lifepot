@@ -24,6 +24,50 @@ async function expectModePotLinkFitsViewport(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }
 
+test("mobile simulation keeps every stat label and value inside the viewport", async ({ page }) => {
+  for (const viewport of [{ width: 320, height: 390 }, { width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+    await page.setViewportSize(viewport);
+    await page.route("**/api/judge", (route) => route.abort());
+    await page.goto("/");
+    await page.getByRole("button", { name: "Explore deterministic preset" }).click();
+    await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+    await expect(page.getByRole("img", { name: /ecosystem generation/i })).toBeVisible();
+    await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
+    await expect(page.locator(".stat").filter({ visible: true })).toHaveCount(viewport.width <= 760 ? 6 : 8);
+    const measurements = await page.locator(".stats-strip").evaluate((strip) => {
+      const bounds = (element: Element) => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, width: rect.width, scrollWidth: element.scrollWidth, clientWidth: element.clientWidth };
+      };
+      return {
+        viewport: innerWidth,
+        root: document.documentElement.scrollWidth,
+        body: document.body.scrollWidth,
+        strip: bounds(strip),
+        stats: Array.from(strip.querySelectorAll(".stat"))
+          .filter((stat) => stat.getClientRects().length > 0)
+          .map((stat) => ({
+            label: bounds(stat.querySelector("span")!),
+            value: bounds(stat.querySelector("strong")!),
+          })),
+      };
+    });
+    expect(measurements.root).toBeLessThanOrEqual(viewport.width);
+    expect(measurements.body).toBeLessThanOrEqual(viewport.width);
+    for (const stat of measurements.stats) {
+      expect(stat.label.left).toBeGreaterThanOrEqual(measurements.strip.left);
+      expect(stat.label.right).toBeLessThanOrEqual(measurements.strip.right);
+      expect(stat.value.left).toBeGreaterThanOrEqual(measurements.strip.left);
+      expect(stat.value.right).toBeLessThanOrEqual(measurements.strip.right);
+    }
+    await page.screenshot({ path: `test-results/simulation-${viewport.width}-running.png`, fullPage: true });
+    if (viewport.width !== 1440) {
+      await page.getByRole("button", { name: "Pause" }).click();
+      await page.screenshot({ path: `test-results/simulation-${viewport.width}-paused.png`, fullPage: true });
+    }
+  }
+});
+
 test("deterministic preset enters the existing review and simulation without judge calls", async ({ page }) => {
   let judgeCalls = 0;
   await page.route("**/api/judge", async (route) => { judgeCalls += 1; await route.abort(); });

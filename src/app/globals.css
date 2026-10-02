@@ -252,7 +252,13 @@ button:disabled { cursor: not-allowed; opacity: .42; }
   .simulation-shell { padding: 0 16px 20px; grid-template-columns: minmax(0, 1fr); grid-template-areas: "header" "stats" "controls" "board" "legend" "inspector" "event" "result" "observatory" "decision"; gap: 12px; }
   .life-canvas { width: 100%; }
   .world-observatory { position: static; max-height: none; }.observatory-content { overflow: visible; }
-  .stats-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }.stat { padding: 12px 8px; border-bottom: 1px solid var(--line); }.stat:nth-child(4), .stat:nth-child(5) { display: block; }.stat:nth-child(4n) { border-right: 0; }
+  .simulation-shell, .simulation-shell > * { min-width: 0; }
+  .stats-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat { min-width: 0; padding: 12px 8px; border-bottom: 1px solid var(--line); }
+  .stat:nth-child(2n) { border-right: 0; }
+  .stat span { overflow-wrap: anywhere; line-height: 1.4; }
+  .stat strong { display: block; max-width: 100%; white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
+  .simulation-header-actions, .environment-strip { min-width: 0; max-width: 100%; }
   .simulation-header { gap: 12px; flex-wrap: wrap; }.environment-strip { max-width: none; }.decision-meta { grid-template-columns: repeat(3, minmax(0, 1fr)); }.decision-meta div:last-child { display: block; }
 }
 
