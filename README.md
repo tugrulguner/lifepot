@@ -4,7 +4,7 @@
   <img src="lifepot.png" alt="LifePot — deterministic artificial life with replayable evolution" width="600">
 </p>
 
-<p align="center">Part of <a href="https://modepot.io/">ModePot</a>.</p>
+<p align="center">Part of <a href="https://modepot.io/">ModePot</a>. &nbsp; <a href="https://lifepot.modepot.io/">Project website</a></p>
 
 <p align="center"><strong>Describe a world. Let Jev propose its ecology. Watch deterministic life adapt inside explicit boundaries.</strong></p>
 
