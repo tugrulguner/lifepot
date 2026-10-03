@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createElement, Fragment } from "react";
+import { FamilyHeader } from "@/components/FamilyHeader";
 import { guideMarkdown, guides, renderMarkdown } from "../content";
 import { renderInline } from "../inline";
 
@@ -19,7 +20,7 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
   const { slug } = await params; const markdown = await guideMarkdown(slug); const guide = guides.find((item) => item.slug === slug);
   if (!markdown || !guide) notFound();
   const blocks = renderMarkdown(markdown);
-  return <main className="learn-shell"><header className="learn-head"><Link href="/" className="learn-brand">LifePot</Link><a className="learn-family" href="https://modepot.io/">ModePot ↗</a><span>FIELD NOTES / DOCUMENTATION</span></header><div className="learn-toolbar"><Link href="/learn">← All guides</Link><a href={`/learn/${slug}/markdown`}>Download source Markdown ↓</a></div><article className="learn-document"><nav className="learn-docnav"><Link href="/learn/player-guide">Player guide</Link><Link href="/learn/developer-reference">Developer reference</Link></nav><div className="learn-prose">{blocks.map((block, i) => {
+  return <main className="learn-shell"><FamilyHeader /><div className="learn-toolbar"><Link href="/learn">← All guides</Link><a href={`/learn/${slug}/markdown`}>Download source Markdown ↓</a></div><article className="learn-document"><nav className="learn-docnav"><Link href="/learn/player-guide">Player guide</Link><Link href="/learn/developer-reference">Developer reference</Link></nav><div className="learn-prose">{blocks.map((block, i) => {
     if (block.kind === "code") return <pre key={i} data-language={block.lang}><code>{block.text}</code></pre>;
     if (block.kind === "ul") return <ul key={i}>{(JSON.parse(block.text) as string[]).map((item, j) => <li key={j}>{renderInline(item)}</li>)}</ul>;
     if (block.kind === "table") return <Fragment key={i}>{table(JSON.parse(block.text) as string[])}</Fragment>;
