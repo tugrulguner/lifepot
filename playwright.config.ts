@@ -14,8 +14,8 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],
   webServer: {
-    command: "npm run dev -- --port 3100",
-    url: "http://127.0.0.1:3100",
+    command: `npm run dev -- --port ${process.env.PLAYWRIGHT_PORT ?? "3100"}`,
+    url: `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? "3100"}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

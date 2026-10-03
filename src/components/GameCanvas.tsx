@@ -48,6 +48,10 @@ export type LifePotViewModel = {
   simulation: SimulationState;
 };
 type Stage = "questions" | "review" | "simulation";
+type Theme = "light" | "dark" | "auto";
+function ThemeControl({ theme, onChange }: { theme: Theme; onChange: (theme: Theme) => void }) {
+  return <label className="theme-control">Theme <select aria-label="Color theme" value={theme} onChange={event => onChange(event.target.value as Theme)}><option value="auto">Auto</option><option value="light">Light</option><option value="dark">Dark</option></select></label>;
+}
 type QuestionKey = keyof SetupAnswers;
 const QUESTIONS: Array<{
   key: QuestionKey;
@@ -120,7 +124,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   const c = canvas.getContext("2d");
   if (!c) return;
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
-  c.fillStyle = "#03110f";
+  c.fillStyle = getComputedStyle(canvas).getPropertyValue("--mp-canvas").trim() || "#03110f";
   c.fillRect(0, 0, rect.width, rect.height);
   const pad = 18,
     cw = (rect.width - pad * 2) / GRID_SIZE,
@@ -206,7 +210,9 @@ function World({ state, selected, followed, onInspect }: { state: SimulationStat
     const paint=()=>{const now=performance.now();effects.current=updateEventEffects(effects.current,[],now,reduced);if(ref.current)draw(ref.current,state,selected,followed,effects.current,now);if(effects.current.length)frame=requestAnimationFrame(paint);};
     paint();
     const o = new ResizeObserver(paint);o.observe(ref.current);
-    return () => {o.disconnect();cancelAnimationFrame(frame);};
+    const themeObserver = new MutationObserver(() => paint());
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => {o.disconnect();themeObserver.disconnect();cancelAnimationFrame(frame);};
   }, [state, selected, followed]);
   return (
     <canvas
@@ -226,6 +232,26 @@ function World({ state, selected, followed, onInspect }: { state: SimulationStat
   );
 }
 export function GameCanvas() {
+  const [theme, setTheme] = useState<Theme>("auto");
+  useEffect(() => {
+    const media = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+    const sync = () => {
+      const stored = localStorage.getItem("lifepot-theme");
+      const choice = stored === "light" || stored === "dark" || stored === "auto" ? stored : "auto";
+      setTheme(choice);
+      document.documentElement.dataset.theme = choice === "auto" ? (media?.matches ? "dark" : "light") : choice;
+    };
+    sync();
+    media?.addEventListener("change", sync);
+    return () => media?.removeEventListener("change", sync);
+  }, []);
+  const changeTheme = (choice: Theme) => {
+    setTheme(choice);
+    localStorage.setItem("lifepot-theme", choice);
+    const isDark = typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const dark = choice === "dark" || (choice === "auto" && isDark);
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+  };
   const [stage, setStage] = useState<Stage>("questions"),
     [answers, setAnswers] = useState(EMPTY),
     [qi, setQi] = useState(0),
@@ -435,8 +461,9 @@ export function GameCanvas() {
         <header className="brand-bar">
           <span className="brand-orbit" />
           <Link href="/">LIFEPOT</Link>
-          <a className="modepot-link" href="https://modepot.io/">MODEPOT ↗</a>
-          <span>Co-evolution laboratory</span>
+          <a className="modepot-link" href="https://modepot.io/">ModePot ↗</a>
+          <span className="header-detail">Co-evolution laboratory</span>
+          <ThemeControl theme={theme} onChange={changeTheme} />
         </header>
         <section className="question-panel">
           {qi === 0 && (
@@ -522,8 +549,9 @@ export function GameCanvas() {
         <header className="brand-bar">
           <span className="brand-orbit" />
           <Link href="/">LIFEPOT</Link>
-          <a className="modepot-link" href="https://modepot.io/">MODEPOT ↗</a>
-          <span>Interpretation complete</span>
+          <a className="modepot-link" href="https://modepot.io/">ModePot ↗</a>
+          <span className="header-detail">Interpretation complete</span>
+          <ThemeControl theme={theme} onChange={changeTheme} />
         </header>
         <section className="review-card">
           <p className="eyebrow">Founder ecology</p>
@@ -570,13 +598,14 @@ export function GameCanvas() {
           <span className="brand-orbit" />
           <strong>LIFEPOT</strong>
           <small>CO-EVOLUTION</small>
-          <a className="modepot-link" href="https://modepot.io/">MODEPOT ↗</a>
+          <a className="modepot-link" href="https://modepot.io/">ModePot ↗</a>
         </div>
         <div className="simulation-header-actions">
           <div className="environment-strip">
             {title(simulation.config.rules!.environment.pressure)} ·{" "}
             {title(simulation.config.rules!.environment.volatility)}
           </div>
+          <ThemeControl theme={theme} onChange={changeTheme} />
         </div>
       </header>
       <WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} />
