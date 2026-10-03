@@ -1,0 +1,66 @@
+# Player guide: shape a world, read its history
+
+LifePot is a bounded artificial-life game. Describe an environment, review the proposed ecology, then watch a deterministic simulation. The model may propose typed choices; it cannot write rules or control organisms. Extinction is a valid outcome, and this is not a biological forecast.
+
+## Start from the questions
+
+The setup asks three short questions. Each answer is trimmed, must contain 1–140 characters, and is interpreted into a fixed vocabulary—not compiled as a rule.
+
+- **What exists in this world?** Resource abundance and distribution; phrases such as “rich,” “scarce,” “clustered,” “oasis,” “seasonal,” and “cycle” map to configured environment choices. Founder balance can also be inferred from “prey heavy” or “abundant prey.”
+- **What threatens life here?** Selects a hazard (`drought`, `toxin`, `heat`, `crowding`), volatility (`stable`, `pulsing`, `chaotic`), and related pressure. “toxic,” “heat,” “competition,” “pulse,” and “unpredictable” are examples recognized by deterministic setup.
+- **What should evolution favor?** Weights five priorities: `survive`, `replicate`, `cooperate`, `explore`, `adapt`. Words such as “endure,” “offspring,” “share,” “spread,” and “diversify” influence the mapping. Weights are normalized to sum to one.
+
+The mapping is deliberately literal and limited. For example, “toxic” selects the toxin hazard, but does not create a new chemical simulation. Unmatched prose falls back to the documented defaults; it is not an instruction to the engine.
+
+## Try the recorded preset
+
+The in-game **Explore deterministic preset** button fills these exact answers:
+
+```text
+World: Rich mineral pools with abundant prey
+Threat: Predator packs hunt through pulsing droughts
+Reward: Diversify while prey and predators coexist
+```
+
+Review the resulting setup before starting. The preset is an example, not a guaranteed winning strategy. With no server API key, the game still runs using labeled deterministic fallback choices; a live interpretation may vary among allowed values.
+
+## Review before starting
+
+The review step exposes the generated configuration and its source/provenance. Check resource conditions, fitness weights, founder balance and strategies, and the species interaction graph. Setup establishes initial conditions; it does not guarantee population survival.
+
+**Restart** in the running world's controls reruns the current answers, config, and seed; it is not a new randomized setup. At completion, **Change objective** returns to the third setup question; reload the page to begin again with all three answers. To share/replay an accepted completed run, use **Copy challenge link**. Replay starts from the recorded choices and seed instead of asking the model to interpret them again.
+
+## Observe and inspect
+
+The world is a 50×50 toroidal grid: movement across an edge wraps to the opposite edge. The canvas depicts organisms, species colors, and resource patches. Use **Pause** before close inspection: a paused run keeps the state stable while you select an organism. On a narrow screen, the interface stacks the world, controls, inspector, event feed, statistics, and observatory vertically; scroll to reach them.
+
+Select a living organism to open the Creature Inspector. It describes the selected individual's current species, guild, strategy, energy/age/traits, and lineage context where available. Selection is an observation, not an intervention: it does not change the simulation. A selected organism may die as the world advances, so inspect its status again after resuming.
+
+The World Observatory summarizes population, prey/predator counts, births, deaths, kills, resources, species richness, lineages, and the recent ecological history. These are aggregate simulation counters, not estimates of real-world populations. The decision ledger records accepted evolution decisions and their evidence/source. A fallback entry is not Jev evidence.
+
+## Read outcomes without overclaiming
+
+A simulation can finish as `extinct`, `surviving`, or `thriving`. Extinction means the simulated population reached zero; `thriving` is an engine-defined end state, not a biological judgment. Runs stop at generation 180 at the latest. The world may end earlier if it becomes extinct.
+
+Resources regenerate and can be depleted; organisms feed, move, reproduce, mutate, age, and die according to engine rules. Fitness weights influence bounded mechanics; they do not promise that the named priority wins. Mutation can be neutral or harmful. The engine does not rescue a population to make a better story.
+
+## Replay and its limits
+
+A replay carries the engine version, canonical answers, validated config, unsigned 32-bit seed, setup hash, ordered decision ledger, and contract hash. Replay validation re-runs the deterministic engine against that ledger. It does not call the interpretation model. Modified, incomplete, reordered, unreachable, unsupported, or tampered replay data is rejected rather than “best effort” played.
+
+Replay compatibility is versioned: a replay recorded for another engine version may be unsupported. A valid replay establishes reproducibility under its recorded engine contract; it does not prove the model's ecological explanation is true.
+
+## If something looks wrong
+
+- **Choices differ from what I wrote:** setup maps prose to finite values; inspect the normalized review rather than assuming every phrase has a direct mechanic.
+- **The world ends quickly:** extinction is an allowed result. Try different resources, hazard, founder balance, or priorities, then start a new run.
+- **No live model interpretation:** the game can use deterministic fallback. Check the displayed provenance; never label fallback as a model response.
+- **Replay rejected:** check for truncation/tampering and supported engine version; replay validation intentionally rejects unsupported payloads.
+- **Controls or inspector are off-screen:** pause, scroll, and use the vertically stacked mobile layout.
+
+## Further reading
+
+- [Developer reference and engine internals](/learn/developer-reference)
+- [Architecture](https://github.com/tugrulguner/lifepot/blob/main/docs/architecture.md)
+- [Simulation contract](https://github.com/tugrulguner/lifepot/blob/main/docs/simulation-contract.md)
+- [Deployment and protection](https://github.com/tugrulguner/lifepot/blob/main/docs/deployment.md)
