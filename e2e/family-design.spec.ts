@@ -11,7 +11,7 @@ test("family foundation renders shared typography, neutral surfaces, and accessi
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await settle(page);
-  const header = page.locator(".brand-bar");
+  const header = page.locator(".family-header");
   await expect(header).toBeVisible();
   expect(await header.evaluate((el) => getComputedStyle(el).height)).toBe("64px");
   expect(await page.locator("body").evaluate((el) => getComputedStyle(el).fontFamily)).toContain("Avenir Next");

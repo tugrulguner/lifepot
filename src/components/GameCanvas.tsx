@@ -36,6 +36,7 @@ import {
   advanceUntilDecisionTrigger,
 } from "@/game/runtime";
 import { CreatureInspector } from "./CreatureInspector";
+import { FamilyHeader } from "./FamilyHeader";
 import { cellAtPoint } from "@/game/inspection";
 import { updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
 import { WorldObservatory } from "./WorldObservatory";
@@ -458,13 +459,7 @@ export function GameCanvas() {
     const q = QUESTIONS[qi];
     return (
       <main className="setup-shell">
-        <header className="brand-bar">
-          <span className="brand-orbit" />
-          <Link href="/">LIFEPOT</Link>
-          <a className="modepot-link" href="https://modepot.io/">ModePot ↗</a>
-          <span className="header-detail">Co-evolution laboratory</span>
-          <ThemeControl theme={theme} onChange={changeTheme} />
-        </header>
+        <FamilyHeader><span className="header-detail">Co-evolution laboratory</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
         <section className="question-panel">
           {qi === 0 && (
             <div className="setup-intro">
@@ -479,6 +474,7 @@ export function GameCanvas() {
                 <Link href="/learn">Player & developer guides ↗</Link>{' · '}
                 <a href="https://github.com/tugrulguner/lifepot/tree/main/docs" target="_blank" rel="noopener noreferrer">About LifePot ↗</a>
               </p>
+              <p className="creator-attribution">Created by <a aria-label="Created by Tugrul Guner" href="https://tugrul.modepot.io/">Tugrul Guner</a></p>
             </div>
           )}
           {qi === 0 && <button type="button" className="back-button" onClick={loadDeterministicPreset}>Explore deterministic preset</button>}
@@ -547,13 +543,7 @@ export function GameCanvas() {
   if (stage === "review" && config)
     return (
       <main className="review-shell">
-        <header className="brand-bar">
-          <span className="brand-orbit" />
-          <Link href="/">LIFEPOT</Link>
-          <a className="modepot-link" href="https://modepot.io/">ModePot ↗</a>
-          <span className="header-detail">Interpretation complete</span>
-          <ThemeControl theme={theme} onChange={changeTheme} />
-        </header>
+        <FamilyHeader><span className="header-detail">Interpretation complete</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
         <section className="review-card">
           <p className="eyebrow">Founder ecology</p>
           <h1>World conditions</h1>
@@ -594,21 +584,7 @@ export function GameCanvas() {
     <main className="simulation-shell">
       <World state={simulation} selected={selected} followed={followed} onInspect={index => { setSelected(index); setPaused(true); }} />
       <CreatureInspector state={simulation} index={selected} followed={followed} onFollow={setFollowed} onClear={() => setSelected(null)} onPick={() => { const index = simulation.guild.findIndex(value => value > 0); if (index >= 0) { setSelected(index); setPaused(true); } }} />
-      <header className="simulation-header">
-        <div className="sim-brand">
-          <span className="brand-orbit" />
-          <strong>LIFEPOT</strong>
-          <small>CO-EVOLUTION</small>
-          <a className="modepot-link" href="https://modepot.io/">ModePot ↗</a>
-        </div>
-        <div className="simulation-header-actions">
-          <div className="environment-strip">
-            {title(simulation.config.rules!.environment.pressure)} ·{" "}
-            {title(simulation.config.rules!.environment.volatility)}
-          </div>
-          <ThemeControl theme={theme} onChange={changeTheme} />
-        </div>
-      </header>
+      <FamilyHeader><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
       <WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} />
       <section className="stats-strip" aria-label="Live ecosystem statistics">
         <Stat
