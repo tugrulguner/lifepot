@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { guideMarkdown, guides, renderMarkdown } from "./app/learn/content";
+import { defaultRuleGraph, validateRuleGraph } from "./game/rules";
 import { describe, expect, it } from "vitest";
 
 const root = resolve(import.meta.dirname, "..");
@@ -20,6 +22,32 @@ function pngDimensions(path: string): [number, number] {
 }
 
 describe("project presentation", () => {
+  it("renders and downloads both guides from the same canonical Markdown sources", async () => {
+    expect(guides.map((guide) => guide.slug)).toEqual(["player-guide", "developer-reference"]);
+    for (const guide of guides) {
+      const source = readFileSync(resolve(root, "docs/learn", `${guide.slug}.md`), "utf8");
+      expect(await guideMarkdown(guide.slug)).toBe(source);
+      const blocks = renderMarkdown(source);
+      expect(blocks[0]).toMatchObject({ kind: "h1" });
+      expect(blocks.some((block) => block.kind === "code")).toBe(true);
+      expect(source.endsWith("\n")).toBe(true);
+    }
+    expect(await guideMarkdown("missing")).toBeNull();
+  });
+
+  it("keeps deep guides linked, anchored, and truthful to executable rule validation", () => {
+    const player = read("docs/learn/player-guide.md");
+    const developer = read("docs/learn/developer-reference.md");
+    const llms = read("public/llms.txt");
+    expect(player).toContain("[Developer reference and engine internals](/learn/developer-reference)");
+    expect(developer).toContain("ENGINE_VERSION");
+    expect(developer).toContain("JUDGE_RATE_LIMIT");
+    expect(llms).toContain("https://lifepot.modepot.io/learn/player-guide");
+    expect(llms).toContain("https://lifepot.modepot.io/learn/developer-reference/markdown");
+    expect(validateRuleGraph(defaultRuleGraph()).species).toHaveLength(2);
+    expect(() => validateRuleGraph({ ...defaultRuleGraph(), surprise: true })).toThrow("Invalid ecosystem rule graph");
+  });
+
   it("keeps the family documentation set", () => {
     for (const path of [
       "README.md",

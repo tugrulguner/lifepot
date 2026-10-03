@@ -7,6 +7,10 @@ Jev proposes typed ecology choices; LifePot validates them; deterministic code e
 ## Play and inspect
 
 - [Play LifePot](https://lifepot.modepot.io/): create and replay an artificial-life world.
+- [Player guide](https://lifepot.modepot.io/learn/player-guide): learn setup vocabulary, controls, observation, outcomes, and replay limits.
+- [Developer reference](https://lifepot.modepot.io/learn/developer-reference): exact schemas, rule graph, engine ownership, decision ledger, replay validation, and deployment boundaries.
+- [Agent guide Markdown](https://lifepot.modepot.io/learn/developer-reference/markdown): canonical downloadable developer guide.
+- [Agent documentation index](https://lifepot.modepot.io/learn): page map for humans and coding agents; canonical guides can be read online or downloaded as Markdown.
 - [Source repository](https://github.com/tugrulguner/lifepot): application code, deterministic simulation rules, tests, and deployment configuration.
 - [Sitemap](https://lifepot.modepot.io/sitemap.xml): public crawlable routes.
 - [Robots policy](https://lifepot.modepot.io/robots.txt): crawler access policy.
