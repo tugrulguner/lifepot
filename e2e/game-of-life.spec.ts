@@ -18,7 +18,7 @@ async function answerSetupWithKeyboard(page: Page) {
 }
 
 async function expectModePotLinkFitsViewport(page: Page) {
-  const link = page.getByRole("link", { name: "MODEPOT ↗" });
+  const link = page.getByRole("link", { name: "ModePot" });
   await expect(link).toBeVisible();
   await expect(link).toHaveAttribute("href", "https://modepot.io/");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -97,7 +97,7 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
     await expect(about).toHaveAttribute("href", "https://github.com/tugrulguner/lifepot/tree/main/docs");
     await expect(about).toHaveAttribute("target", "_blank");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const headerBounds = await page.locator(".brand-bar").boundingBox();
+    const headerBounds = await page.locator(".family-header").boundingBox();
     const headingBounds = await page.getByRole("heading", { name: "What exists in this world?" }).boundingBox();
     expect(headerBounds).not.toBeNull();
     expect(headingBounds).not.toBeNull();

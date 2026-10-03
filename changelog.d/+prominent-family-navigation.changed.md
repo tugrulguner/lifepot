@@ -1,0 +1,1 @@
+Added shared desktop family links and an accessible compact navigation menu to LifePot setup, review, simulation, Learn, and 404 surfaces. Added first-fold creator attribution and responsive navigation acceptance coverage; simulation and deterministic fallback behavior remain unchanged.
