@@ -7,7 +7,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "list",
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? "3100"}`,
     trace: "on-first-retry",
   },
   projects: [
@@ -16,7 +16,7 @@ export default defineConfig({
   webServer: {
     command: `npm run dev -- --port ${process.env.PLAYWRIGHT_PORT ?? "3100"}`,
     url: `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? "3100"}`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

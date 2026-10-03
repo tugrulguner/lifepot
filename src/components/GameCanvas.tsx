@@ -476,6 +476,7 @@ export function GameCanvas() {
               </p>
               <p className="setup-boundary">
                 An experimental game, not a biological forecast.{' '}
+                <Link href="/learn">Player & developer guides ↗</Link>{' · '}
                 <a href="https://github.com/tugrulguner/lifepot/tree/main/docs" target="_blank" rel="noopener noreferrer">About LifePot ↗</a>
               </p>
             </div>
