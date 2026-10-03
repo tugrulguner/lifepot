@@ -1,14 +1,12 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { embeddedGuides } from "./generated-content";
 
 export const guides = [
   { slug: "player-guide", title: "Player guide", description: "Shape a world, inspect the ecosystem, and understand outcomes and replays." },
   { slug: "developer-reference", title: "Developer reference", description: "Schemas, deterministic mechanics, decisions, replay, and operations." },
 ] as const;
 
-export async function guideMarkdown(slug: string) {
-  if (!guides.some((guide) => guide.slug === slug)) return null;
-  return readFile(join(process.cwd(), "docs", "learn", `${slug}.md`), "utf8");
+export function guideMarkdown(slug: string) {
+  return slug in embeddedGuides ? embeddedGuides[slug as keyof typeof embeddedGuides] : null;
 }
 
 export function renderMarkdown(source: string) {

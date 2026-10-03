@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
 test("learn index and canonical guide pages render and serve matching Markdown", async ({ page, request }) => {
@@ -15,6 +17,8 @@ test("learn index and canonical guide pages render and serve matching Markdown",
     expect(response.status()).toBe(200);
     expect(response.headers()["content-type"]).toContain("text/markdown");
     const markdown = await response.text();
+    const canonical = await readFile(resolve(process.cwd(), "docs/learn", `${slug}.md`), "utf8");
+    expect(markdown).toBe(canonical);
     await page.goto(`/learn/${slug}`);
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
     await expect(page.getByText(marker, { exact: false }).first()).toBeVisible();
