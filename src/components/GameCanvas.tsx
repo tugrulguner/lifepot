@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { z } from "zod";
 import {
@@ -278,8 +278,14 @@ export function GameCanvas() {
     initialConfigRef = useRef<LifeConfig | null>(null),
     replayRef = useRef<ReplayData | null>(null),
     pending = useRef<number | null>(null),
-    runId = useRef(0);
+    runId = useRef(0),
+    pendingArrival = useRef(false);
   const complete = simulation && simulation.outcome !== "running";
+  useLayoutEffect(() => {
+    if (stage !== "simulation" || !pendingArrival.current) return;
+    pendingArrival.current = false;
+    window.scrollTo(0, 0);
+  }, [stage]);
   const begin = useCallback(
     (a: SetupAnswers, c: LifeConfig, s: number, replay?: ReplayData) => {
       const initial = createSimulation({ seed: s, config: c }),
@@ -305,6 +311,7 @@ export function GameCanvas() {
           ? "Replay v3 loaded — zero live Jev calls"
           : `${initial.stats.population} founders seeded across ${initial.config.rules!.species.length} configured species`,
       );
+      pendingArrival.current = true;
       setStage("simulation");
     },
     [],

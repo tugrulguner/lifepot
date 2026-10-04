@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type TestInfo } from "@playwright/test";
+import { deterministicSetup, hashSetupRequest } from "../src/game/setup";
 
 function evidenceFile(testInfo: TestInfo, filename: string) {
   const directory = process.env.LIFEPOT_EVIDENCE_DIR ?? testInfo.outputDir;
@@ -19,6 +20,82 @@ async function seedPreset(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   return () => modelCalls;
 }
+
+test("setup arrivals begin at the gameplay header before any operating control is scrolled into view", async ({ page }, testInfo) => {
+  const runtimeErrors: string[] = [];
+  page.on("pageerror", error => runtimeErrors.push(error.message));
+  page.on("console", message => { if (message.type() === "error") runtimeErrors.push(message.text()); });
+  let modelCalls = 0;
+  await page.route("**/api/judge**", async route => { modelCalls++; await route.abort(); });
+  for (const viewport of [
+    { width: 1280, height: 850 }, { width: 1280, height: 633 },
+    { width: 768, height: 850 }, { width: 390, height: 850 }, { width: 320, height: 850 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Explore deterministic preset" }).click();
+    await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+    await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    });
+    const arrival = await page.evaluate(() => ({
+      scrollY,
+      header: document.querySelector(".family-header")!.getBoundingClientRect().toJSON(),
+      stats: document.querySelector(".stats-strip")!.getBoundingClientRect().toJSON(),
+      controls: document.querySelector(".controls")!.getBoundingClientRect().toJSON(),
+      board: document.querySelector("canvas.life-canvas")!.getBoundingClientRect().toJSON(),
+      population: document.querySelector('[aria-label="Live ecosystem statistics"]')!.textContent,
+      generation: document.querySelector('[data-testid="generation"]')!.textContent,
+    }));
+    writeFileSync(evidenceFile(testInfo, `arrival-preset-${viewport.width}x${viewport.height}.json`), JSON.stringify({ ...arrival, viewport }, null, 2));
+    expect(arrival.scrollY, `arrival scroll ${viewport.width}x${viewport.height}`).toBe(0);
+    expect(arrival.header.y).toBeGreaterThanOrEqual(0);
+    expect(arrival.stats.y).toBeGreaterThanOrEqual(arrival.header.bottom);
+    expect(arrival.controls.bottom).toBeLessThanOrEqual(viewport.height - 12);
+    expect(arrival.board.bottom).toBeLessThanOrEqual(viewport.height - 12);
+    expect(arrival.population).toContain("Living variants");
+    expect(Number.parseInt(arrival.generation!.split(" ")[0], 10)).toBeGreaterThan(0);
+    await page.screenshot({ path: evidenceFile(testInfo, `arrival-preset-${viewport.width}x${viewport.height}.png`) });
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+  }
+  expect(modelCalls).toBe(0);
+  expect(runtimeErrors).toEqual([]);
+});
+
+test("ordinary three-question setup arrives at gameplay without retained review scroll", async ({ page }, testInfo) => {
+  let fixtureCalls = 0;
+  await page.route("**/api/judge**", async route => {
+    const request = route.request().postDataJSON() as { answers?: Parameters<typeof deterministicSetup>[0]; kind?: string };
+    if (!request.answers) return route.abort();
+    fixtureCalls++;
+    await route.fulfill({ json: { config: deterministicSetup(request.answers), source: "fallback", requestHash: hashSetupRequest(request.answers) } });
+  });
+  await page.setViewportSize({ width: 390, height: 850 });
+  await page.goto("/");
+  for (let question = 0; question < 3; question++) {
+    const input = page.getByRole("textbox");
+    await input.fill(`A balanced ecosystem answer ${question + 1}`);
+    await page.getByRole("button", { name: question === 2 ? "Review ecosystem" : "Continue" }).click();
+  }
+  await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeVisible();
+  await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+  await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
+  const arrival = await page.evaluate(() => ({ scrollY, header: document.querySelector(".family-header")!.getBoundingClientRect().toJSON(), stats: document.querySelector(".stats-strip")!.getBoundingClientRect().toJSON(), controls: document.querySelector(".controls")!.getBoundingClientRect().toJSON(), board: document.querySelector("canvas.life-canvas")!.getBoundingClientRect().toJSON(), generation: document.querySelector('[data-testid="generation"]')!.textContent }));
+  writeFileSync(evidenceFile(testInfo, "arrival-normal-390x850.json"), JSON.stringify(arrival, null, 2));
+  expect(arrival.scrollY).toBe(0);
+  expect(arrival.stats.y).toBeGreaterThanOrEqual(arrival.header.bottom);
+  expect(arrival.controls.bottom).toBeLessThanOrEqual(838);
+  expect(arrival.board.bottom).toBeLessThanOrEqual(838);
+  expect(Number.parseInt(arrival.generation!.split(" ")[0], 10)).toBeGreaterThan(0);
+  await page.screenshot({ path: evidenceFile(testInfo, "arrival-normal-390x850.png") });
+  expect(fixtureCalls).toBe(1);
+});
 
 async function settle(page: import("@playwright/test").Page) {
   await page.evaluate(async () => {

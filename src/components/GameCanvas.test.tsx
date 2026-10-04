@@ -18,6 +18,7 @@ vi.mock("next/link", () => ({ default: ({ children, ...props }: React.AnchorHTML
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); captured.length = 0; });
 
 test("theme repaint while paused preserves every engine field and deterministic continuation", async () => {
+  vi.stubGlobal("scrollTo", vi.fn());
   const contextCalls = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
   class TestResizeObserver { observe() {} disconnect() {} }
   vi.stubGlobal("ResizeObserver", TestResizeObserver);

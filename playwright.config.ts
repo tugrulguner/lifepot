@@ -13,10 +13,12 @@ export default defineConfig({
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],
-  webServer: {
-    command: `npm run dev -- --port ${process.env.PLAYWRIGHT_PORT ?? "3100"}`,
-    url: `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? "3100"}`,
-    reuseExistingServer: false,
-    timeout: 120_000,
-  },
+  ...(process.env.PLAYWRIGHT_BASE_URL ? {} : {
+    webServer: {
+      command: `npm run dev -- --port ${process.env.PLAYWRIGHT_PORT ?? "3100"}`,
+      url: `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? "3100"}`,
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+  }),
 });
