@@ -4,12 +4,12 @@
   <img src="lifepot.png" alt="LifePot — deterministic artificial life with replayable evolution" width="600">
 </p>
 
-<p align="center">Part of <a href="https://modepot.io/">ModePot</a>. &nbsp; <a href="https://lifepot.modepot.io/">Project website</a></p>
+<p align="center">Part of <a href="https://modepot.io/">ModePot</a>. &nbsp; <a href="https://lifepot.modepot.io/">Project website</a> &nbsp; <a href="https://tugrul.modepot.io/">Created by Tugrul Guner</a></p>
 
-<p align="center"><strong>Describe a world. Let Jev propose its ecology. Watch deterministic life adapt inside explicit boundaries.</strong></p>
+<p align="center"><strong>Three answers shape your world. Jev proposes ecology; LifePot turns validated rules into deterministic artificial life you can inspect and replay.</strong></p>
 
 <p align="center">
-  LifePot is a replayable 50 × 50 artificial-life laboratory where model decisions become validated ecosystem rules—not executable code.
+  An experimental game, not a biological forecast. Jev proposes ecology, and model decisions become validated ecosystem rules—not executable code; the same world can be inspected and replayed.
 </p>
 
 <p align="center">
@@ -20,7 +20,9 @@
 </p>
 
 <p align="center">
-  <a href="https://lifepot.modepot.io">Play LifePot</a> ·
+  <a href="https://lifepot.modepot.io/">Play LifePot</a> ·
+  <a href="https://lifepot.modepot.io/learn/player-guide">Player guide</a> ·
+  <a href="https://lifepot.modepot.io/learn/developer-reference">Developer / agent guide</a> ·
   <a href="#why-lifepot">Why LifePot</a> ·
   <a href="#try-it-locally">Quick start</a> ·
   <a href="#what-ships-today">What ships</a> ·
