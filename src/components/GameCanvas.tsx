@@ -686,6 +686,8 @@ export function GameCanvas() {
           {speed}×
         </button>
         <button onClick={() => begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined)}>Restart</button>
+        <button onClick={() => { const index = simulation.guild.findIndex(value => value > 0); if (index >= 0) { setSelected(index); setPaused(true); document.getElementById("creature-inspector")?.scrollIntoView({ behavior: "smooth", block: "start" }); } }}>Inspect living organism</button>
+        <button onClick={() => document.getElementById("world-observatory")?.scrollIntoView({ behavior: "smooth", block: "start" })}>World observatory</button>
       </div>
       {complete && (
         <div className="result-scrim">

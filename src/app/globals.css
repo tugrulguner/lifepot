@@ -397,6 +397,119 @@ html[data-theme="dark"] .primary-button { background: #73cfc0; color: #181a1d; }
   .simulation-header-actions { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 }
 html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-footer .primary-button, html[data-theme="dark"] .primary-button:hover:not(:disabled) { background: #73cfc0 !important; color: #181a1d !important; }
+
+/* Keep the family theme on its shell; gameplay retains LifePot's dark visual language. */
+.simulation-shell {
+  gap: 12px;
+  --ink: #020a09;
+  --deep: #061512;
+  --panel: rgba(6, 20, 17, 0.94);
+  --line: rgba(170, 231, 211, 0.19);
+  --line-strong: rgba(170, 231, 211, 0.36);
+  --text: #edf7f2;
+  --muted: #8fa8a0;
+  --dim: #607871;
+  --mint: #79ebc3;
+  --acid: #b8ed86;
+  --coral: #ff8d80;
+  --mp-canvas: var(--ink);
+  --mp-ink: var(--text);
+  --mp-muted: var(--muted);
+  --mp-border: var(--line);
+  --mp-surface: var(--panel);
+  --mp-raised: var(--deep);
+  --mp-accent: var(--mint);
+  --mp-error: var(--coral);
+  --mp-control-boundary: var(--line-strong);
+  position: relative;
+  inset: auto;
+  min-height: 100svh;
+  overflow: visible;
+  padding: 80px 24px 24px;
+  background: var(--ink);
+  color: var(--text);
+  grid-template-areas: "stats stats" "controls controls" "board observatory" "legend observatory" "inspector observatory" "event observatory" "decision observatory" "result result";
+}
+.simulation-shell .stats-strip,
+.simulation-shell .decision-overlay,
+.simulation-shell .fitness-overlay,
+.simulation-shell .ticker,
+.simulation-shell .controls,
+.simulation-shell .world-observatory,
+.simulation-shell .creature-inspector {
+  border-color: var(--line);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .24);
+}
+.simulation-shell .stat span,
+.simulation-shell .decision-heading p,
+.simulation-shell .decision-meta dt,
+.simulation-shell .decision-usage,
+.simulation-shell .cohort-decisions span,
+.simulation-shell .observatory-metric span,
+.simulation-shell .observatory-section-title b,
+.simulation-shell .species-row small,
+.simulation-shell .lineage-card header span,
+.simulation-shell .lineage-card dt,
+.simulation-shell .trait-stack span,
+.simulation-shell .trait-stack em,
+.simulation-shell .environment-status span,
+.simulation-shell .environment-status small,
+.simulation-shell .world-facts span,
+.simulation-shell .relationship-list span,
+.simulation-shell .world-timeline small { color: var(--muted); }
+.simulation-shell .stat strong,
+.simulation-shell .decision-meta dd,
+.simulation-shell .cohort-decisions strong,
+.simulation-shell .decision-brief,
+.simulation-shell .ticker p,
+.simulation-shell .creature-inspector p,
+.simulation-shell .creature-inspector h2,
+.simulation-shell .creature-inspector h3,
+.simulation-shell .lineage-card header strong,
+.simulation-shell .lineage-card dd,
+.simulation-shell .world-facts strong,
+.simulation-shell .relationship-list strong,
+.simulation-shell .world-timeline strong,
+.simulation-shell .observatory-header h2,
+.simulation-shell .observatory-section-title span,
+.simulation-shell .observatory-metric strong,
+.simulation-shell .species-row strong,
+.simulation-shell .species-row > b,
+.simulation-shell .environment-status strong,
+.simulation-shell .world-timeline p,
+.simulation-shell .timeline-empty strong,
+.simulation-shell .timeline-empty p { color: var(--text); }
+.simulation-shell .controls button { border-color: var(--line); color: #c9d9d4; }
+.simulation-shell .controls button:hover,
+.simulation-shell .controls button[aria-pressed="true"] { color: var(--mint); background: rgba(121, 235, 195, .08); }
+.simulation-shell .creature-inspector button { border-color: #496b57; color: #eeffd9; background: #102b20; }
+.simulation-shell .decision-source.is-jev { border-color: rgba(121, 235, 195, .52); color: var(--mint); }
+.simulation-shell .decision-source.is-fallback { border-color: rgba(255, 141, 128, .45); color: #ffc0b8; }
+.simulation-shell .decision-source.is-deciding { border-color: var(--acid); color: var(--acid); }
+.simulation-shell .ticker span { color: var(--mint); }
+.simulation-shell .observatory-tabs button { color: #a9beb6; }
+.simulation-shell .observatory-tabs button[aria-selected="true"] { color: var(--mint); background: rgba(121, 235, 195, .08); }
+.simulation-shell .observatory-tabs button[aria-selected="true"]::after { background: var(--acid); }
+.simulation-shell .observatory-header p { color: var(--acid); }
+.simulation-shell .world-observatory { background: rgba(2, 13, 11, .97); }
+.simulation-shell .life-canvas { background: var(--ink); }
+
+@media (min-width: 1001px) {
+  .simulation-shell .life-canvas { width: min(100%, 70svh, calc(100svh - 252px)); height: auto; }
+}
+@media (max-width: 1000px) {
+  .simulation-shell { grid-template-areas: "stats" "controls" "board" "legend" "inspector" "event" "observatory" "decision" "result"; padding: 80px 16px 20px; }
+  .simulation-shell .life-canvas { width: min(100%, calc(100svh - 413px)); }
+}
+@media (max-width: 760px) {
+  .simulation-shell { grid-template-areas: "stats" "controls" "board" "legend" "inspector" "event" "observatory" "decision" "result"; padding: 76px 12px 16px; }
+  .simulation-shell .life-canvas { width: min(100%, 62svh); justify-self: center; }
+  .simulation-shell #creature-inspector,
+  .simulation-shell #world-observatory { scroll-margin-top: 76px; }
+  .simulation-shell .controls { flex-wrap: wrap; }
+}
 .learn-shell { min-height: 100vh; padding: 28px clamp(18px, 5vw, 76px) 36px; color: #d8e9e1; background: radial-gradient(ellipse at 70% 0%, #123a30 0, #071712 42%, #05100d 100%); font-family: Arial, sans-serif; }
 .learn-head, .learn-toolbar, .learn-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1180px; margin: 0 auto; }
 .learn-head { min-height: 48px; border-bottom: 1px solid #274239; color: #9db6aa; font: 11px ui-monospace, monospace; letter-spacing: .14em; }
