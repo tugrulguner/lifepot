@@ -115,9 +115,18 @@ test("running game keeps its intended dark canvas and semantic game colors under
 });
 
 test("gameplay header, stats, controls, and useful board geometry do not overlap at desktop and narrow widths", async ({ page }, testInfo) => {
+  const runtimeErrors: string[] = [];
+  page.on("pageerror", error => runtimeErrors.push(error.message));
+  page.on("console", message => { if (message.type() === "error") runtimeErrors.push(message.text()); });
   const measurements: Array<Record<string, unknown>> = [];
-  for (const width of [1280, 768, 390, 320]) {
-    await page.setViewportSize({ width, height: 850 });
+  for (const { width, height } of [
+    { width: 1280, height: 850 },
+    { width: 1280, height: 633 },
+    { width: 768, height: 850 },
+    { width: 390, height: 850 },
+    { width: 320, height: 850 },
+  ]) {
+    await page.setViewportSize({ width, height });
     const modelCalls = await seedPreset(page);
     await settle(page);
     const geometry = await page.evaluate(() => {
@@ -125,12 +134,15 @@ test("gameplay header, stats, controls, and useful board geometry do not overlap
         const r = document.querySelector(s)!.getBoundingClientRect();
         return { x: r.x, y: r.y, width: r.width, height: r.height, bottom: r.bottom, right: r.right };
       };
-      return { header: rect(".family-header"), stats: rect(".stats-strip"), controls: rect(".controls"), board: rect("canvas.life-canvas"), shell: rect(".simulation-shell"), viewport: innerWidth };
+      return { header: rect(".family-header"), stats: rect(".stats-strip"), controls: rect(".controls"), board: rect("canvas.life-canvas"), shell: rect(".simulation-shell"), viewport: { width: innerWidth, height: innerHeight } };
     });
-    expect(geometry.stats.y, `stats below header at ${width}`).toBeGreaterThanOrEqual(geometry.header.bottom);
-    expect(geometry.controls.y, `controls below stats at ${width}`).toBeGreaterThanOrEqual(geometry.stats.bottom);
-    expect(geometry.board.width, `useful canvas at ${width}`).toBeGreaterThanOrEqual(width <= 390 ? width - 40 : 300);
-    expect(geometry.board.height).toBeGreaterThanOrEqual(260);
+    expect(geometry.stats.y, `stats below header at ${width}x${height}`).toBeGreaterThanOrEqual(geometry.header.bottom);
+    expect(geometry.stats.bottom, `complete stats visible at ${width}x${height}`).toBeLessThanOrEqual(height - 12);
+    expect(geometry.controls.y, `controls below stats at ${width}x${height}`).toBeGreaterThanOrEqual(geometry.stats.bottom);
+    expect(geometry.controls.bottom, `complete controls visible at ${width}x${height}`).toBeLessThanOrEqual(height - 12);
+    expect(geometry.board.width, `useful canvas at ${width}x${height}`).toBeGreaterThanOrEqual(width <= 390 ? width - 40 : 300);
+    expect(geometry.board.height).toBeGreaterThanOrEqual(width <= 390 ? 260 : 300);
+    expect(geometry.board.bottom, `complete world and bottom breathing room at ${width}x${height}`).toBeLessThanOrEqual(height - 12);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const buttonCenters = await page.locator(".controls button").evaluateAll((buttons) => buttons.map(button => {
       const r = button.getBoundingClientRect();
@@ -149,4 +161,5 @@ test("gameplay header, stats, controls, and useful board geometry do not overlap
     expect(modelCalls()).toBe(0);
   }
   writeFileSync(evidenceFile(testInfo, "geometry.json"), JSON.stringify(measurements, null, 2));
+  expect(runtimeErrors, "browser console and uncaught runtime errors").toEqual([]);
 });
