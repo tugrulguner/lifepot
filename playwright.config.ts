@@ -18,6 +18,7 @@ export default defineConfig({
       command: `npm run dev -- --port ${process.env.PLAYWRIGHT_PORT ?? "3100"}`,
       url: `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? "3100"}`,
       reuseExistingServer: false,
+      env: { LIFEPOT_E2E: "1" },
       timeout: 120_000,
     },
   }),
