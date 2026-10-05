@@ -20,6 +20,8 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); captur
 test("theme repaint while paused preserves every engine field and deterministic continuation", async () => {
   vi.stubGlobal("scrollTo", vi.fn());
   const contextCalls = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+  // jsdom has no layout; provide a drawable board for repaint assertions.
+  vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
   class TestResizeObserver { observe() {} disconnect() {} }
   vi.stubGlobal("ResizeObserver", TestResizeObserver);
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
