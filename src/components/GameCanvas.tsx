@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { publicDocuments } from "@/app/project-docs/content";
 import { z } from "zod";
 import {
   createReplay,
@@ -479,6 +480,7 @@ export function GameCanvas() {
               <p className="setup-boundary">
                 An experimental game, not a biological forecast.{' '}
                 <Link href="/learn">Player & developer guides ↗</Link>{' · '}
+                {publicDocuments.some((document) => document.slug === "roadmap") && <><Link href="/project-docs/roadmap">Roadmap ↗</Link>{' · '}</>}
                 <a href="https://github.com/tugrulguner/lifepot/tree/main/docs" target="_blank" rel="noopener noreferrer">About LifePot ↗</a>
               </p>
               <p className="creator-attribution">Created by <a aria-label="Created by Tugrul Guner" href="https://tugrul.modepot.io/">Tugrul Guner</a></p>
