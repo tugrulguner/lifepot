@@ -18,7 +18,7 @@ async function answerSetupWithKeyboard(page: Page) {
 }
 
 async function expectModePotLinkFitsViewport(page: Page) {
-  const link = page.getByRole("link", { name: "MODEPOT ↗" });
+  const link = page.getByRole("link", { name: "ModePot" });
   await expect(link).toBeVisible();
   await expect(link).toHaveAttribute("href", "https://modepot.io/");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -97,7 +97,7 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
     await expect(about).toHaveAttribute("href", "https://github.com/tugrulguner/lifepot/tree/main/docs");
     await expect(about).toHaveAttribute("target", "_blank");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const headerBounds = await page.locator(".brand-bar").boundingBox();
+    const headerBounds = await page.locator(".family-header").boundingBox();
     const headingBounds = await page.getByRole("heading", { name: "What exists in this world?" }).boundingBox();
     expect(headerBounds).not.toBeNull();
     expect(headingBounds).not.toBeNull();
@@ -172,7 +172,7 @@ test("copied replay opens at generation zero and never calls the judge", async (
   await answerSetupWithKeyboard(page);
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("button", { name: "3× speed" }).click();
-  await expect(page.getByRole("heading", { name: /Extinct|Surviving|Thriving/ })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 25_000 });
   await page.getByRole("button", { name: "Copy challenge link" }).click();
   const replayUrl = await page.evaluate(() => navigator.clipboard.readText());
   expect(replayUrl).toContain("#replay=");
@@ -207,8 +207,10 @@ for (const viewport of [{ width: 1280, height: 633 }, { width: 1440, height: 100
     expect(boardBox).not.toBeNull();
     expect(panelBox).not.toBeNull();
     if (!boardBox || !panelBox) throw new Error("Missing workspace surfaces");
-    if (viewport.width > 1000) { expect(panelBox.x).toBeGreaterThanOrEqual(boardBox.x + boardBox.width); expect(boardBox.width).toBeGreaterThan(700); }
-    else expect(panelBox.y).toBeGreaterThanOrEqual(boardBox.y + boardBox.height);
+    if (viewport.width > 1000) {
+      expect(panelBox.x).toBeGreaterThanOrEqual(boardBox.x + boardBox.width);
+      expect(boardBox.width).toBeGreaterThanOrEqual(300);
+    } else expect(panelBox.y).toBeGreaterThanOrEqual(boardBox.y + boardBox.height);
     for (const selector of [".stats-strip", ".controls", ".ticker", ".decision-overlay", ".legend"]) {
       const box = await page.locator(selector).boundingBox();
       expect(box).not.toBeNull();

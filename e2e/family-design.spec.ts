@@ -11,7 +11,7 @@ test("family foundation renders shared typography, neutral surfaces, and accessi
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await settle(page);
-  const header = page.locator(".brand-bar");
+  const header = page.locator(".family-header");
   await expect(header).toBeVisible();
   expect(await header.evaluate((el) => getComputedStyle(el).height)).toBe("64px");
   expect(await page.locator("body").evaluate((el) => getComputedStyle(el).fontFamily)).toContain("Avenir Next");
@@ -78,7 +78,7 @@ test("theme controls and layout fit narrow screens and follow live OS Auto chang
   }
 });
 
- test("paused ecosystem canvas repaints for explicit and live Auto theme changes without advancing", async ({ page }) => {
+ test("paused ecosystem canvas remains game-dark across shell themes without advancing", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
@@ -93,15 +93,15 @@ test("theme controls and layout fit narrow screens and follow live OS Auto chang
     const data = el.getContext("2d")!.getImageData(2, 2, 1, 1).data;
     return Array.from(data).slice(0, 3).join(",");
   });
-  expect(await pixel()).toBe("248,247,244");
+  expect(await pixel()).toBe("2,10,9");
   const theme = page.getByRole("combobox", { name: "Color theme" });
   await theme.selectOption("dark");
-  await expect.poll(pixel).toBe("22,24,27");
+  await expect.poll(pixel).toBe("2,10,9");
   await expect(page.getByTestId("generation")).toHaveText(before ?? "");
   await expect(page.getByLabel("Live ecosystem statistics")).toHaveText(population ?? "");
   await theme.selectOption("auto");
   await page.emulateMedia({ colorScheme: "dark" });
-  await expect.poll(pixel).toBe("22,24,27");
+  await expect.poll(pixel).toBe("2,10,9");
   await expect(page.getByTestId("generation")).toHaveText(before ?? "");
   await expect(page.getByLabel("Live ecosystem statistics")).toHaveText(population ?? "");
 });

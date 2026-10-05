@@ -1,0 +1,1 @@
+Restore LifePot’s original dark simulation palette and reflow the gameplay workspace below the family header for visible, usable world and monitoring surfaces.

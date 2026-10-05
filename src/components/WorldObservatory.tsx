@@ -40,7 +40,7 @@ export function WorldObservatory({ state, ledger, replay = false }: { state: Sim
   const report = useMemo(() => buildWorldReport(state, ledger), [state, ledger]);
   const activeRule = state.activeRuleChange;
 
-  return <aside className="world-observatory" aria-label="World observatory panel">
+  return <aside id="world-observatory" className="world-observatory" aria-label="World observatory panel">
     <header className="observatory-header">
       <div><p>LIVE WORLD MODEL</p><h2>World observatory</h2></div>
       <span className="observatory-generation">GEN {state.generation}</span>
