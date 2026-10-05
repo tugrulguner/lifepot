@@ -41,7 +41,7 @@ import { SpeciesFocus } from "./SpeciesFocus";
 import WorldPreview from "./WorldPreview";
 import { RunResults } from "./RunResults";
 import ResultImageShare from "./ResultImageShare";
-import { createRunEvidence, observeRun, type RunEvidence } from "@/game/run-evidence";
+import { createRunEvidence, followRunLineage, observeRun, type RunEvidence } from "@/game/run-evidence";
 import type { SpeciesId } from "@/game/rules";
 import { FamilyHeader } from "./FamilyHeader";
 import { cellAtPoint } from "@/game/inspection";
@@ -664,9 +664,15 @@ export function GameCanvas() {
       <section className="run-status" aria-label="Run status"><strong role="status">{complete ? simulation.stats.population === 0 ? "World empty" : "Observation complete" : deciding ? "Waiting for a bounded ecology decision — the world is held still" : paused ? "Paused — inspect life or step one generation" : "Running — watch, inspect, or pause"}</strong><span>{replayMode ? "Exact recorded replay · no inference" : policy === "fixed" ? "Fixed world rules" : "Adaptive ecology"}{question ? ` · Your question: ${question}` : ""}</span></section>
       <World state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onInspect={index => { setSelected(index); setPaused(true); }} />
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
-      <CreatureInspector state={simulation} index={selected} followed={followed} onFollow={setFollowed} onClear={() => setSelected(null)} onPick={() => { const index = simulation.guild.findIndex(value => value > 0); if (index >= 0) { setSelected(index); setPaused(true); } }} />
+      <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={lineage => {
+        setFollowed(lineage);
+        if (evidenceRef.current) {
+          evidenceRef.current = followRunLineage(evidenceRef.current, simulation, lineage);
+          setEvidence(evidenceRef.current);
+        }
+      }} onClear={() => setSelected(null)} onPick={() => { const index = simulation.guild.findIndex(value => value > 0); if (index >= 0) { setSelected(index); setPaused(true); } }} />
       <FamilyHeader><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
-      <WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} />
+      <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} /></div>
       <section className="stats-strip" aria-label="Live ecosystem statistics">
         <Stat
           id="generation"

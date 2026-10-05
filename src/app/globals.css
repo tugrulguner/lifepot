@@ -637,3 +637,7 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .organism-family-summary { display: grid; gap: 4px; margin: 14px 0; padding: 12px 14px; border-left: 3px solid var(--mint); background: color-mix(in srgb, var(--mint) 9%, var(--panel)); overflow-wrap: anywhere; }
 .organism-family-summary strong { font-size: 14px; }
 .organism-family-summary span { color: var(--muted); font-size: 13px; }
+
+/* Bound sticky travel to the observatory grid area, above full-width results. */
+.observatory-boundary { grid-area: observatory; min-width: 0; }
+.extinction-milestones { overflow-wrap: anywhere; }

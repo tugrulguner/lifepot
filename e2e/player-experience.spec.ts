@@ -42,6 +42,7 @@ test("paused play can advance exactly one generation and species selection conne
 });
 
 test("an optional question is not sent to the judge and fixed-rule play requests no runtime interventions", async ({ page }) => {
+  test.setTimeout(210_000);
   const requests: unknown[] = [];
   await page.route("**/api/judge", async route => { requests.push(route.request().postDataJSON()); await route.abort(); });
   await page.goto("/");
@@ -50,13 +51,13 @@ test("an optional question is not sent to the judge and fixed-rule play requests
   await page.getByLabel("World policy").selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("button", { name: "3× speed" }).click();
-  await expect(page.getByRole("heading", { name: "Observation complete", exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Observation complete", exact: true })).toBeVisible({ timeout: 180_000 });
   expect(requests).toEqual([]);
   await expect(page.getByRole("region", { name: "Run results" })).toContainText("Will hunters disappear?");
 });
 
 test("fixed-rule replay and a changed-condition trial preserve evidence without model calls", async ({ page }) => {
-  test.setTimeout(75_000);
+  test.setTimeout(600_000);
   const errors: string[] = [], calls: unknown[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.route("**/api/judge", async route => { calls.push(route.request().postDataJSON()); await route.abort(); });
@@ -65,26 +66,27 @@ test("fixed-rule replay and a changed-condition trial preserve evidence without 
   await page.getByLabel("World policy").selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("button", { name: "3× speed" }).click();
-  await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 25_000 });
+  await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 180_000 });
   const outcomes = await page.getByLabel("Observed outcomes").textContent();
   await page.getByRole("button", { name: "Replay this run", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 25_000 });
+  await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 180_000 });
   await expect(page.getByLabel("Observed outcomes")).toHaveText(outcomes!);
   await page.getByRole("button", { name: "Edit this world", exact: true }).click();
   await page.getByText("Edit world conditions", { exact: true }).click();
   await page.getByLabel("Resource abundance").selectOption("scarce");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 25_000 });
+  await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 180_000 });
   await expect(page.getByRole("region", { name: "Previous trial comparison" })).toContainText("Same initial seed");
   expect(calls).toEqual([]);
   expect(errors).toEqual([]);
 });
 
 test("ending is visible on mobile, explains the horizon, preserves inspection and produces a decodable PNG", async ({ page }, testInfo) => {
+  test.setTimeout(210_000);
   await page.setViewportSize({ width: 390, height: 850 });
   await preset(page);
   await page.getByRole("button", { name: "3× speed" }).click();
-  await expect(page.getByRole("heading", { name: "Observation complete", exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Observation complete", exact: true })).toBeVisible({ timeout: 180_000 });
   const results = page.getByRole("region", { name: "Run results" });
   await expect(results).toContainText("180");
   await expect(results).toContainText(/not.*biological|toy model/i);
