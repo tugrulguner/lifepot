@@ -5,7 +5,7 @@ type Props = { state: SimulationState; index: number | null; followed: number | 
 export function CreatureInspector({ state, index, followed, onFollow, onClear, onPick }: Props) {
   const cell = index === null ? null : inspectCell(state, index);
   const living = lineageCells(state, followed);
-  return <section className="creature-inspector" aria-label="Creature inspector">
+  return <section id="creature-inspector" className="creature-inspector" aria-label="Creature inspector">
     <header><div><p className="eyebrow">FIELD NOTES</p><h2>Meet an organism</h2></div><button onClick={onPick}>Inspect a living organism</button></header>
     {!cell ? <p>Tap a creature to pause and inspect it. Pin its founder lineage, then resume to watch its family spread or disappear. Resuming clears the cell inspection; your lineage pin stays.</p> : <>
       <h3>{cell.occupied ? `Species ${cell.species?.id ?? "?"} · ${cell.species?.role ?? "unknown role"}` : "Empty cell"} <small>({index! % 50}, {Math.floor(index! / 50)})</small></h3>

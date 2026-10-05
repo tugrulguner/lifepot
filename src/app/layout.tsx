@@ -4,7 +4,7 @@ import "./globals.css";
 
 const siteUrl = "https://lifepot.modepot.io";
 const title = "LifePot — Artificial life shaped by your world";
-const description = "Define an environment and fitness priorities, then watch artificial cellular populations evolve across a deterministic 50×50 world. Jev proposes typed choices; LifePot validates them; deterministic code executes them.";
+const description = "Shape a deterministic artificial-life world. Jev proposes typed ecology, LifePot validates it, and replayable code runs the simulation.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -12,20 +12,20 @@ export const metadata: Metadata = {
   description,
   applicationName: "LifePot",
   category: "science education",
-  alternates: { canonical: "/" },
+  alternates: { canonical: "/", types: { "text/plain": "/llms.txt", "text/markdown": "/learn/developer-reference/markdown" } },
   openGraph: {
     type: "website",
     url: siteUrl,
     siteName: "LifePot",
     title,
     description,
-    images: [{ url: "/lifepot-social.png", width: 1200, height: 900, alt: "LifePot: bounded artificial life and replayable evolution" }],
+    images: [{ url: "/lifepot-lockup.png", width: 1200, height: 900, alt: "LifePot: bounded artificial life and replayable evolution" }],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: [{ url: "/lifepot-social.png", width: 1200, height: 900, alt: "LifePot: bounded artificial life and replayable evolution" }],
+    images: [{ url: "/lifepot-lockup.png", width: 1200, height: 900, alt: "LifePot: bounded artificial life and replayable evolution" }],
   },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
   icons: { icon: "/lifepot-mark.svg" },
@@ -33,8 +33,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('lifepot-theme')||'auto';var d=t==='dark'||(t==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light'}catch(_){document.documentElement.dataset.theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}})()` }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -46,8 +47,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               applicationCategory: "EducationalApplication",
               operatingSystem: "Any",
               description,
-              isPartOf: { "@type": "Organization", name: "ModePot", url: "https://modepot.io" },
-              creator: { "@type": "Organization", name: "ModePot", url: "https://modepot.io" },
+              codeRepository: "https://github.com/tugrulguner/lifepot",
+              license: "https://opensource.org/license/mit",
+              isPartOf: { "@type": "Organization", name: "ModePot", url: "https://modepot.io/" },
+              creator: { "@type": "Organization", name: "ModePot", url: "https://modepot.io/" },
             }).replace(/</g, "\\u003c"),
           }}
         />
