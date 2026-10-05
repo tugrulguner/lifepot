@@ -5,10 +5,13 @@ type Props = { state: SimulationState; index: number | null; followed: number | 
 export function CreatureInspector({ state, index, followed, onFollow, onClear, onPick }: Props) {
   const cell = index === null ? null : inspectCell(state, index);
   const living = lineageCells(state, followed);
+  const family = cell?.occupied ? lineageCells(state, cell.lineage) : [];
   return <section id="creature-inspector" className="creature-inspector" aria-label="Creature inspector">
     <header><div><p className="eyebrow">FIELD NOTES</p><h2>Meet an organism</h2></div><button onClick={onPick}>Inspect a living organism</button></header>
     {!cell ? <p>Tap a creature to pause and inspect it. Pin its founder lineage, then resume to watch its family spread or disappear. Resuming clears the cell inspection; your lineage pin stays.</p> : <>
+      {cell.occupied && <section className="organism-family-summary" aria-label="Organism and family summary"><strong>Species {cell.species?.id ?? "?"} · {cell.species?.role ?? "unknown role"} · founder lineage #{cell.lineage}</strong><span>{family.length} living family {family.length === 1 ? "member" : "members"}</span></section>}
       <h3>{cell.occupied ? `Species ${cell.species?.id ?? "?"} · ${cell.species?.role ?? "unknown role"}` : "Empty cell"} <small>({index! % 50}, {Math.floor(index! / 50)})</small></h3>
+      {cell.occupied && <h4 className="sr-only">Detailed organism inspection</h4>}
       {cell.occupied ? <>
         <dl className="creature-facts"><div><dt>Organism</dt><dd>#{state.organismId[index!]}</dd></div><div><dt>Parent</dt><dd>{state.parentId[index!] ? `#${state.parentId[index!]}` : "Founder"}</dd></div><div><dt>Energy</dt><dd>{cell.energy.toFixed(1)} / 255</dd></div><div><dt>Age</dt><dd>{cell.age} ticks</dd></div><div><dt>Inherited generation</dt><dd>{cell.generation} · founders = 0</dd></div><div><dt>Founder lineage</dt><dd>#{cell.lineage}</dd></div><div><dt>Diet allowed by graph</dt><dd>{cell.diet.join("; ") || "No feeding path"}</dd></div><div><dt>Inherited strategy</dt><dd>{cell.strategy.replaceAll("_", " ")}</dd></div><div><dt>Within-species rule</dt><dd>{cell.species?.selfInteraction}</dd></div><div><dt>Heritable variant</dt><dd>#{cell.variant} · not a new species</dd></div></dl>
         <div className="creature-traits">{cell.traits.map(trait => <label key={trait.label}>{trait.label}<meter min={0} max={255} value={trait.value}/><span>{trait.value}</span></label>)}</div>
