@@ -559,6 +559,41 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .learn-prose blockquote { border-color: var(--mp-accent); color: var(--mp-muted); }
 @media (max-width: 650px) { .learn-shell { padding: 0 16px 26px; } .learn-head { gap: 8px; } .learn-head > span { display: none; } }
 
+/* Session-local exploration and results: no overlays obscure the final world. */
+.run-status { grid-area: status; display: grid; gap: 4px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+.run-status span { font-size: 12px; overflow-wrap: anywhere; }
+.simulation-shell { grid-template-areas: "stats stats" "controls controls" "board observatory" "status observatory" "legend observatory" "focus observatory" "inspector observatory" "event observatory" "decision observatory" "result result"; }
+@media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "board" "status" "legend" "focus" "inspector" "event" "observatory" "decision" "result"; } }
+.species-focus { grid-area: focus; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.species-focus button, .run-results button, .result-image-share button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; background: var(--mp-surface); color: inherit; }
+.species-focus button[aria-pressed="true"] { outline: 2px solid var(--mint); }
+.run-results { position: relative; z-index: 4; grid-area: result; min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 8px; scroll-margin-top: 80px; background: var(--mp-surface); }
+.run-results:focus { outline: 2px solid var(--mint); outline-offset: 3px; }
+.run-results p { line-height: 1.6; overflow-wrap: anywhere; }
+.run-results svg { max-width: 100%; height: auto; }
+.run-results__axis { stroke: var(--mp-border); }
+.run-results__population { stroke: #62c99c; stroke-width: 3; }
+.run-results__resources { stroke: #cc9f42; stroke-width: 2; stroke-dasharray: 5 3; }
+.run-results__graph text { fill: currentColor; font-size: 11px; }
+.run-results__legend { display: flex; flex-wrap: wrap; gap: 20px; font-size: 12px; }
+.run-results table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.run-results th, .run-results td { padding: 7px; border-bottom: 1px solid var(--line); text-align: left; }
+.run-results details { overflow-x: auto; margin: 16px 0; }
+.run-results summary, .setup-evidence summary, .world-preview summary { cursor: pointer; min-height: 44px; padding-block: 12px; }
+.result-image-share { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.result-image-share img { display: block; width: 100%; max-width: 800px; height: auto; margin: 16px 0; }
+.world-preview, .experiment-intent { margin: 20px 0; padding: 18px; border: 1px solid var(--mp-border); border-radius: 8px; }
+.world-preview p, .experiment-intent p { font-size: 13px; line-height: 1.6; }
+.world-preview-species { padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.world-preview-species li { display: grid; grid-template-columns: 12px 1fr; gap: 5px 10px; }
+.world-preview-species i { height: 10px; width: 10px; border-radius: 50%; margin-top: 5px; }
+.world-preview-species span { grid-column: 2; font-size: 13px; }
+.world-preview fieldset { display: grid; gap: 12px; border: 0; padding: 0; }
+.world-preview label, .experiment-intent label { display: grid; gap: 6px; margin: 12px 0; font-size: 13px; }
+.world-preview select, .experiment-intent select, .experiment-intent input { width: 100%; min-width: 0; min-height: 44px; padding: 8px; border: 1px solid var(--mp-border); border-radius: 5px; background: var(--mp-raised); color: var(--mp-ink); }
+.baseline-notice, .run-comparison { padding: 14px; border-left: 3px solid var(--mint); line-height: 1.6; }
+@media(max-width: 600px) { .run-results { padding: 16px; } .world-preview-species { grid-template-columns: 1fr; } }
+
 /* Shared LifePot shell navigation; compact layout keeps the family group first. */
 .family-header { position: fixed; z-index: 20; inset: 0 0 auto; height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 max(16px, calc((100vw - 1200px) / 2)); border-bottom: 1px solid var(--mp-border); background: var(--mp-raised); color: var(--mp-ink); font: 14px/1.4 var(--mp-font); }
 .family-product { flex: 0 0 auto; color: var(--mp-ink); font-size: 16px; font-weight: 700; text-decoration: none; }

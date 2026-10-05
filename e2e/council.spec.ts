@@ -40,11 +40,11 @@ test("exact council replay and restart never call the API", async ({ page }) => 
   await expect(page.getByLabel("Runtime council")).toContainText("runtime_orchestrator", { timeout: 15000 });
   await page.getByRole("button", { name: "Pause" }).click();
   await expect(page.getByLabel("Runtime council")).toContainText("zero live API calls");
-  await page.getByRole("button", { name: "Restart", exact: true }).click();
+  await page.getByRole("button", { name: "Restart replay", exact: true }).click();
   await expect(page.getByTestId("generation")).toHaveText("0 / 180");
   await expect(page.getByLabel("Runtime council")).toContainText("No runtime judgment yet");
   await expect(page.getByLabel("Runtime council")).toContainText("runtime_orchestrator", { timeout: 15000 });
-  await expect(page.getByRole("heading", { name: /Extinct|Surviving|Thriving/ })).toBeVisible({ timeout: 40000 });
+  await expect(page.getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 40000 });
   await expect(page.getByText("Replay ledger verification failed", { exact: true })).toHaveCount(0);
   expect(calls).toBe(0);
 });
@@ -64,6 +64,7 @@ for (const width of [1280, 390]) test(`council provenance and reconciled changes
   await expect(setup).toContainText("6 specialists");
   await expect(setup).toContainText("setup_orchestrator");
   await expect(setup).toContainText("predation spike");
+  await page.getByText("Validated mechanics and original setup evidence", { exact: true }).click();
   await setup.getByText("Setup orchestrator provenance", { exact: true }).click();
   await expect(setup.getByText("setup_orchestrator", { exact: true })).toBeVisible();
   await expect(page.getByTestId("interpreter-source")).toContainText("Jev API");
