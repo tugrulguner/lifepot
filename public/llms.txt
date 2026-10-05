@@ -11,6 +11,8 @@ Jev proposes typed ecology choices; LifePot validates them; deterministic code e
 - [Developer reference](https://lifepot.modepot.io/learn/developer-reference): exact schemas, rule graph, engine ownership, decision ledger, replay validation, and deployment boundaries.
 - [Agent guide Markdown](https://lifepot.modepot.io/learn/developer-reference/markdown): canonical downloadable developer guide.
 - [Agent documentation index](https://lifepot.modepot.io/learn): page map for humans and coding agents; canonical guides can be read online or downloaded as Markdown.
+- [Project README](https://lifepot.modepot.io/project-docs/readme): source-driven public rendering of repository `README.md` with commit provenance.
+- [Roadmap](https://lifepot.modepot.io/project-docs/roadmap): source-driven rendering of optional `ROADMAP.md`; planned work is clearly not shipped.
 - [Source repository](https://github.com/tugrulguner/lifepot): application code, deterministic simulation rules, tests, and deployment configuration.
 - [Sitemap](https://lifepot.modepot.io/sitemap.xml): public crawlable routes.
 - [Robots policy](https://lifepot.modepot.io/robots.txt): crawler access policy.
