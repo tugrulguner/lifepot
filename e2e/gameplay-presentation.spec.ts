@@ -225,8 +225,8 @@ test("gameplay header, stats, controls, and useful board geometry do not overlap
       const r = button.getBoundingClientRect();
       return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === button;
     }));
-    expect(buttonCenters.length).toBe(5);
-    expect(buttonCenters, `unobstructed gameplay controls at ${width}`).toEqual(Array(5).fill(true));
+    expect(buttonCenters.length).toBe(6);
+    expect(buttonCenters, `unobstructed gameplay controls at ${width}`).toEqual(Array(6).fill(true));
     measurements.push({ ...geometry, controlCentersUnobstructed: buttonCenters });
     const theme = page.getByRole("combobox", { name: "Color theme" });
     for (const [mode, os] of [["light", "light"], ["dark", "dark"], ["auto", "light"], ["auto", "dark"]] as const) {
