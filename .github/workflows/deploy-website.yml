@@ -6,6 +6,9 @@ on:
     paths:
       - "src/**"
       - "public/**"
+      - "README.md"
+      - "ROADMAP.md"
+      - "scripts/embed-learn-guides.mjs"
       - "package.json"
       - "package-lock.json"
       - "next.config.ts"

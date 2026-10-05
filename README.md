@@ -23,6 +23,8 @@
   <a href="https://lifepot.modepot.io/">Play LifePot</a> ·
   <a href="https://lifepot.modepot.io/learn/player-guide">Player guide</a> ·
   <a href="https://lifepot.modepot.io/learn/developer-reference">Developer / agent guide</a> ·
+  <a href="https://lifepot.modepot.io/project-docs/readme">Public README</a> ·
+  <a href="https://lifepot.modepot.io/project-docs/roadmap">Roadmap</a> ·
   <a href="#why-lifepot">Why LifePot</a> ·
   <a href="#try-it-locally">Quick start</a> ·
   <a href="#what-ships-today">What ships</a> ·
