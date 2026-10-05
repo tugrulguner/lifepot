@@ -225,6 +225,7 @@ button:disabled { cursor: not-allowed; opacity: .42; }
 @media (max-width: 760px) {
   .brand-bar { height: 60px; padding: 0 18px; }.brand-bar > span:last-child { display: none; }
   .question-panel { width: calc(100% - 36px); margin: 0 18px; padding: 96px 0 34px; justify-content: flex-end; }
+  .setup-intro .setup-boundary { font-size: 10px; }
   .progress-track { margin-bottom: 32px; }.question-panel h1 { font-size: clamp(40px, 12vw, 58px); }
   .question-note { margin: 14px 0 23px; }.answer-field input { height: 58px; }.chips { flex-direction: column; margin-bottom: 23px; }.chips button { max-width: none; }
   .question-footer { align-items: flex-end; }.question-footer > span { max-width: 80px; line-height: 1.4; }.question-footer > div { gap: 12px; }
