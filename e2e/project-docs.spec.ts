@@ -28,3 +28,21 @@ test("project docs expose the roadmap link and missing roadmap route stays unava
   const missing = await page.request.get("/project-docs/not-a-document/markdown");
   expect(missing.status()).toBe(404);
 });
+
+test("homepage offers the source-backed roadmap beside its local guide action", async ({ page }) => {
+  for (const width of [1280, 390, 320]) {
+    await page.setViewportSize({ width, height: 850 });
+    await page.goto("/");
+    for (const theme of ["auto", "light", "dark"] as const) {
+      await page.getByLabel("Color theme").selectOption(theme);
+      await page.goto("/");
+      const roadmap = page.getByRole("link", { name: "Roadmap ↗" });
+      await expect(roadmap).toBeVisible();
+      await expect(roadmap).toHaveAttribute("href", "/project-docs/roadmap");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+  }
+  await page.getByRole("link", { name: "Roadmap ↗" }).click();
+  await expect(page).toHaveURL(/\/project-docs\/roadmap$/);
+  await expect(page.getByRole("heading", { name: "Roadmap", exact: true })).toBeVisible();
+});
