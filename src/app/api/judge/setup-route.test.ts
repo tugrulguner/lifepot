@@ -31,9 +31,10 @@ describe("POST /api/judge setup interpretation", () => {
     expect(body).toMatchObject({ source: "fallback", requestHash: input.requestHash, config: { environment: { abundance: "scarce", distribution: "clustered", hazard: "toxin", volatility: "pulsing" } } });
   });
   it("batches world questions then selects a dynamic council in a dependent call", async () => {
-    const client = { systemOne: vi.fn().mockResolvedValueOnce(validSdkResponse()).mockImplementation(councilSdkResponse) };
-    const result = await interpretSetup(input, { apiKey: "test-key", client });
-    expect(client.systemOne).toHaveBeenCalledTimes(2);
+    const fidelity = { model: "jev-test", usage: { input_tokens: 1, output_tokens: 1 }, answers: { verdict: { type: "choice", choice: "approve", confidence: 1, probabilities: { approve: 1, reselect: 0, reject: 0, needs_clarification: 0 } } } };
+    const client = { systemOne: vi.fn().mockResolvedValueOnce(validSdkResponse()).mockImplementationOnce(councilSdkResponse).mockResolvedValueOnce(fidelity) };
+    const result = await interpretSetup(input, { apiKey: "test", client });
+    expect(client.systemOne).toHaveBeenCalledTimes(3);
     expect(Object.keys(client.systemOne.mock.calls[0][0].questions)).toEqual(["abundance", "distribution", "hazard", "volatility", "balance", "diversity", "preyStrategy", "predatorStrategy", "speciesCount", "roleA", "roleB", "roleC", "roleD", "selfA", "selfB", "selfC", "selfD", "pairAB", "pairAC", "pairAD", "pairBC", "pairBD", "pairCD", "regeneration", "rulePressure", "ruleIntensity", "ruleDuration", "survive", "replicate", "cooperate", "explore", "adapt"]);
     const questions = client.systemOne.mock.calls[0][0].questions;
     for (const key of ["speciesCount", "roleA", "roleB", "roleC", "roleD", "pairAB", "pairAC", "pairAD", "pairBC", "pairBD", "pairCD"]) {
@@ -45,6 +46,18 @@ describe("POST /api/judge setup interpretation", () => {
     expect(JSON.stringify(questions.pairAB)).toContain("a_consumes_b");
     expect(result.source).toBe("jev");
     expect(result.config.rules).toMatchObject({ species: [{ id: "A", role: "grazer" }, { id: "B", role: "hunter" }, { id: "C", role: "hunter" }], interactions: [{ pair: "A:B", mode: "b_consumes_a" }, { pair: "A:C", mode: "b_consumes_a" }, { pair: "B:C", mode: "competition" }] });
+  });
+
+  it("returns explicit fidelity verdict and never silently approves a reselected graph", async () => {
+    const firstGraph = validSdkResponse();
+    firstGraph.answers.pairAB = { ...firstGraph.answers.pairAB, choice: "neutral", probabilities: { a_consumes_b: 0, b_consumes_a: 0, competition: 0, mutualism: 0, avoidance: 0, neutral: 1 } };
+    const fidelity = { model: "jev-test", usage: { input_tokens: 5, output_tokens: 1 }, answers: { verdict: { type: "choice", choice: "reselect", confidence: 1, probabilities: { approve: 0, reselect: 1, reject: 0, needs_clarification: 0 } } } };
+    const client = { systemOne: vi.fn().mockResolvedValueOnce(firstGraph).mockImplementationOnce(councilSdkResponse).mockResolvedValueOnce(fidelity) };
+    const response = await (await import("./route")).createJudgeHandler({ decide: (i) => interpretSetup(i, { apiKey: "test", client: client as never }) })(new Request("http://localhost/api/judge", { method: "POST", body: JSON.stringify(input) }));
+    const body = await response.json();
+    expect(client.systemOne).toHaveBeenCalledTimes(3);
+    expect(body).toMatchObject({ source: "jev", fidelity: { verdict: "reselect" }, provenance: { outcome: "reselect" } });
+    expect(body.fidelity.verdict).not.toBe("approve");
   });
 
   it("fails closed to the deterministic setup when interpretation throws", async () => {

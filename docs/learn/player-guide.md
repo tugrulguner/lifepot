@@ -60,6 +60,18 @@ Replay compatibility is versioned: a replay recorded for another engine version 
 - **Replay rejected:** check for truncation/tampering and supported engine version; replay validation intentionally rejects unsupported payloads.
 - **Controls or inspector are off-screen:** pause, scroll, and use the vertically stacked mobile layout.
 
+## Jev review and next experiments
+
+After interpreting your setup, Jev checks the assembled species roles and food web against your original description. A mismatch or ambiguity blocks seeding until you clarify the setup and reinterpret it. The game does not silently add feeding links to make the story fit.
+
+At runtime, the orchestrator and active scoped specialists use at most two provider requests per council observation. Specialist questions share a grouped inference request; responsibilities remain bounded, but these are not separate independent model calls. Token usage for the group is counted once. Existing separate-call replay records remain supported.
+
+Reported adaptive abstentions distinguish rate limiting, unavailable service, invalid output, missing credentials, and unknown failures. An abstention applies no new policy; inherited behavior continues. A live setup does not guarantee every later decision is live.
+
+Completed results include individual species histories. Edited follow-up trials compare recorded conditions, aligned species trajectories and observed extinction timing. Initial environmental hazard and graph pressure are separate conditions; changing one does not remove the other. Fresh adaptive decisions can differ even with the same initial seed, so comparisons do not establish causality.
+
+Use “Ask Jev about this run” to request a model-selected turning point and supported next experiment. Jev selects among recorded evidence and bounded condition changes; displayed measurements come from the engine. Your optional private question is not sent. “Review suggested experiment” opens editable conditions without starting a run. If the service fails, no invented explanation is substituted. Evidence remains session-local; asking Jev sends numerical evidence and configuration to the server and model for that request.
+
 ## Further reading
 
 - [Developer reference and engine internals](/learn/developer-reference)

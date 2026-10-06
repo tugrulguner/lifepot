@@ -27,7 +27,6 @@ import {
   detectEvolutionTrigger,
   deterministicEvolutionDecision,
   summarizeEcology,
-  validateEvolutionDecision,
   validateSpeciesDirectives,
   type EvolutionDecision,
   type EvolutionLedger,
@@ -40,6 +39,9 @@ import { CreatureInspector } from "./CreatureInspector";
 import { SpeciesFocus } from "./SpeciesFocus";
 import WorldPreview from "./WorldPreview";
 import { RunResults } from "./RunResults";
+import { RunReflectionPanel } from "./RunReflectionPanel";
+import { RunComparison } from "./RunComparison";
+import { decodeDecisionResponse, failureReasonSchema, failureLabels, type FailureReason } from "@/game/decision-status";
 import ResultImageShare from "./ResultImageShare";
 import { createRunEvidence, followRunLineage, observeRun, type RunEvidence } from "@/game/run-evidence";
 import type { SpeciesId } from "@/game/rules";
@@ -114,6 +116,9 @@ const RESPONSE = z
       })
       .optional(),
     evidence: z.record(z.string(), z.unknown()).optional(),
+    fidelity: z.object({ verdict: z.enum(["approve", "reselect", "reject", "needs_clarification"]), model: z.string(), usage: z.object({ input_tokens: z.number(), output_tokens: z.number() }) }).optional(),
+    fallbackReason: failureReasonSchema.optional(),
+    provenance: z.object({ outcome: z.string(), reason: z.string().optional() }).optional(),
   })
   .strict();
 function seedFromHash(hash: string) {
@@ -245,10 +250,12 @@ function World({ state, selected, followed, focusedSpecies, onInspect }: { state
 }
 export function GameCanvas() {
   const [question, setQuestion] = useState("");
+  const [initialConfig, setInitialConfig] = useState<LifeConfig | null>(null);
+  const [decisionReasons, setDecisionReasons] = useState<Record<number, FailureReason>>({});
   const [policy, setPolicy] = useState<"adaptive" | "fixed">("adaptive");
   const [evidence, setEvidence] = useState<RunEvidence | null>(null);
   const evidenceRef = useRef<RunEvidence | null>(null);
-  const [baseline, setBaseline] = useState<{ evidence: RunEvidence; policy: "adaptive" | "fixed" } | null>(null);
+  const [baseline, setBaseline] = useState<{ evidence: RunEvidence; config: LifeConfig; policy: "adaptive" | "fixed" } | null>(null);
   const [showResults, setShowResults] = useState(true);
   const completionSeen = useRef(false);
   const [interpreting, setInterpreting] = useState(false);
@@ -282,6 +289,8 @@ export function GameCanvas() {
       source: "jev" | "fallback";
       model?: string;
       usage?: { input_tokens: number; output_tokens: number };
+      fidelity?: { verdict: "approve" | "reselect" | "reject" | "needs_clarification" };
+      fallbackReason?: FailureReason;
     } | null>(null),
     [seed, setSeed] = useState(0),
     [simulation, setSimulation] = useState<SimulationState | null>(null),
@@ -326,6 +335,8 @@ export function GameCanvas() {
       replayRef.current = replay ?? null;
       setAnswers(a);
       setConfig(c);
+      setInitialConfig(structuredClone(c));
+      setDecisionReasons({});
       setSeed(s);
       setSimulation(initial);
       const observations = createRunEvidence(initial);
@@ -397,7 +408,9 @@ export function GameCanvas() {
           signal: AbortSignal.timeout(20_000),
         });
         if (!r.ok) throw 0;
-        d = validateEvolutionDecision(await r.json());
+        const decoded = decodeDecisionResponse(await r.json());
+        d = decoded.decision;
+        if (decoded.reason && id === runId.current) setDecisionReasons(previous => ({ ...previous, [simulation.generation]: decoded.reason! }));
         validateSpeciesDirectives(d, simulation.config.rules!);
         if (
           d.generation !== simulation.generation ||
@@ -490,7 +503,7 @@ export function GameCanvas() {
         p = RESPONSE.parse(await r.json());
       if (p.requestHash !== hash) throw 0;
       setConfig(p.config);
-      setProof({ source: p.source, model: p.model, usage: p.usage });
+      setProof({ source: p.source, model: p.model, usage: p.usage, fidelity: p.fidelity, fallbackReason: p.fallbackReason });
     } catch {
       setConfig(deterministicSetup(ca));
       setProof({ source: "fallback" });
@@ -627,6 +640,8 @@ export function GameCanvas() {
               ? `Jev API · ${proof.model ?? "jev-latest"}`
               : "Deterministic fallback"}
           </p>
+          {proof?.fidelity && proof.fidelity.verdict !== "approve" && <section aria-label="Setup needs clarification" role="alert"><p>Jev found a mismatch or ambiguity between your description and the assembled food web ({title(proof.fidelity.verdict)}). This world has not been approved for seeding. Clarify the species and who consumes whom, then ask Jev again.</p><button disabled={interpreting} onClick={() => interpret(answers)}>Ask Jev to reinterpret</button></section>}
+          {proof?.fallbackReason && <p role="status">Setup interpretation unavailable: {failureLabels[proof.fallbackReason]}. This preview is a fallback, not a Jev-approved interpretation.</p>}
           <WorldPreview config={config} answers={answers} onChange={next => { setConfig(next); setManuallyEdited(true); }} />
           <div className="experiment-intent">
             <label>Your question or prediction (optional)<input aria-label="Your question or prediction (optional)" value={question} maxLength={240} placeholder="What would you like to investigate?" onChange={event => setQuestion(event.target.value)}/></label>
@@ -649,7 +664,8 @@ export function GameCanvas() {
           <p className="review-note">These are the validated mechanics, not unrestricted interpretations of your prose. Roles do not imply feeding links: consumption follows the relationship graph. Extinct species are not automatically restored.</p>
           <button
             className="primary-button seed-button"
-            onClick={() => begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined)}
+            disabled={!!proof?.fidelity && proof.fidelity.verdict !== "approve"}
+            onClick={() => { if (proof?.fidelity && proof.fidelity.verdict !== "approve") return; begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined); }}
           >
             Seed ecosystem <span>→</span>
           </button>
@@ -662,6 +678,7 @@ export function GameCanvas() {
   return (
     <main className="simulation-shell">
       <section className="run-status" aria-label="Run status"><strong role="status">{complete ? simulation.stats.population === 0 ? "World empty" : "Observation complete" : deciding ? "Waiting for a bounded ecology decision — the world is held still" : paused ? "Paused — inspect life or step one generation" : "Running — watch, inspect, or pause"}</strong><span>{replayMode ? "Exact recorded replay · no inference" : policy === "fixed" ? "Fixed world rules" : "Adaptive ecology"}{question ? ` · Your question: ${question}` : ""}</span></section>
+      {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
       <World state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onInspect={index => { setSelected(index); setPaused(true); }} />
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
       <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={lineage => {
@@ -781,9 +798,22 @@ export function GameCanvas() {
       {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} question={question}
         onInspect={() => { setShowResults(false); document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus(); }}
         onReplay={() => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); }}
-        onEdit={() => { setBaseline({ evidence, policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); }}
+        onEdit={() => { setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); }}
         onNew={() => { setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setStage("questions"); window.scrollTo(0, 0); }}>
-        {baseline && <section className="run-comparison" aria-label="Previous trial comparison"><h3>Compared with your previous trial</h3><p>Final population: {baseline.evidence.samples.at(-1)?.population} → {simulation.stats.population}. Peak population: {baseline.evidence.peakPopulation} → {evidence.peakPopulation}.</p><p>{baseline.policy === "fixed" && policy === "fixed" ? "Same initial seed; both trials have no runtime AI interventions. These observations apply only within this toy model." : "Adaptive policies may differ between trials. This difference alone does not establish which condition caused it."}</p></section>}
+        {baseline && <RunComparison before={baseline} after={{ evidence, config: initialConfig ?? config }} adaptive={baseline.policy === "adaptive" || policy === "adaptive"}/>}
+        <RunReflectionPanel key={`reflection-${simulation.seed}-${simulation.generation}`} evidence={evidence} config={initialConfig ?? config} onExperiment={experiment => {
+          const next = structuredClone(initialConfigRef.current ?? config);
+          for (const change of experiment.changes) {
+            const keys = change.path.split(".");
+            let target: Record<string, unknown> = next as unknown as Record<string, unknown>;
+            for (const key of keys.slice(0, -1)) target = target[key] as Record<string, unknown>;
+            target[keys.at(-1)!] = change.value;
+          }
+          const validated = lifeConfigSchema.parse(next);
+          setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), policy });
+          setConfig(validated); setReplayMode(false); setManuallyEdited(true); setStage("review"); window.scrollTo(0, 0);
+        }}/>
+
         <ResultImageShare key={`${simulation.seed}-${simulation.generation}`} state={simulation} question={question} evidence={evidence}/>
         <button className="back-button" onClick={async () => { try { if (!replayRef.current) return setNotice("Replay not ready"); const url = new URL(location.origin + location.pathname); url.hash = new URLSearchParams({ replay: encodeReplay(replayRef.current) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
         {notice && <p role="status">{notice}</p>}

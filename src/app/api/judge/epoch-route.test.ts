@@ -73,8 +73,14 @@ describe("evolution decision API", () => {
     const failedResult = await decideEvolution(request, { apiKey: "test-key", client: { systemOne: vi.fn().mockRejectedValue(new Error("offline")) } });
     const noKeyResult = await decideEvolution(request, { apiKey: "" });
     expect(invalidResult.source).toBe("fallback");
-    expect(failedResult).toEqual(invalidResult);
-    expect(noKeyResult).toEqual(invalidResult);
+    const { fallbackReason: invalidReason, ...invalidDecision } = invalidResult;
+    const { fallbackReason: failedReason, ...failedDecision } = failedResult;
+    const { fallbackReason: missingReason, ...missingDecision } = noKeyResult;
+    expect(failedDecision).toEqual(invalidDecision);
+    expect(missingDecision).toEqual(invalidDecision);
+    expect(invalidReason).toBe("invalid_response");
+    expect(failedReason).toBe("unknown");
+    expect(missingReason).toBe("missing_credentials");
   });
 
   it("uses the installed SDK wire contract for scoped questions", async () => {

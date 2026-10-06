@@ -9,6 +9,15 @@ import { defaultConfig } from "@/game/setup";
 
 afterEach(cleanup);
 
+it("shows separate configured species trajectories rather than hiding them in a total", () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  const evidence = createRunEvidence(state);
+  render(<RunResults state={state} evidence={evidence} question="" onEdit={vi.fn()} onNew={vi.fn()} onReplay={vi.fn()} onInspect={vi.fn()} />);
+  const graph = screen.getByRole("img", { name: "Whole-run species population history" });
+  expect(graph.querySelectorAll("polyline")).toHaveLength(state.config.rules!.species.length);
+  for (const species of state.config.rules!.species) expect(graph.querySelector(`[aria-label="Species ${species.id}: ${species.role}"]`)).not.toBeNull();
+});
+
 it("renders an accessible, compact observation summary without treating survivors as a win", () => {
   const state = createSimulation({ seed: 7, config: defaultConfig() });
   const evidence = createRunEvidence(state);
