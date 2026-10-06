@@ -9,6 +9,23 @@ import { CreatureInspector } from "./CreatureInspector";
 
 describe("creature inspector summary", () => {
   afterEach(cleanup);
+  it("keeps current energy and age in the compact summary", () => {
+    const state = createSimulation({ seed: 17, config: defaultConfig() });
+    const index = state.guild.findIndex(Boolean);
+    render(<CreatureInspector state={state} index={index} followed={null} onFollow={() => {}} onClear={() => {}} onPick={() => {}} />);
+    expect(screen.getByRole("region", { name: "Organism and family summary" })).toHaveTextContent(`Energy ${state.energy[index].toFixed(1)} / 255`);
+    expect(screen.getByRole("region", { name: "Organism and family summary" })).toHaveTextContent(`Age ${state.age[index]} ticks`);
+  });
+  it("keeps following available while detailed measurements start collapsed", () => {
+    const state = createSimulation({ seed: 17, config: defaultConfig() });
+    const index = state.guild.findIndex(Boolean);
+    render(<CreatureInspector state={state} index={index} followed={null} onFollow={() => {}} onClear={() => {}} onPick={() => {}} />);
+    const measurements = screen.getByText("Heritable variant").closest("details");
+    expect(measurements).not.toBeNull();
+    expect(measurements).not.toHaveAttribute("open");
+    expect(screen.getByRole("button", { name: /Follow founder lineage/ }).closest("details")).toBeNull();
+    expect(screen.getByRole("button", { name: "Clear inspection" }).closest("details")).toBeNull();
+  });
   it("shows compact organism and founder-family context without removing detailed inspection", () => {
     const state = createSimulation({ seed: 17, config: defaultConfig() });
     const index = state.guild.findIndex(Boolean);

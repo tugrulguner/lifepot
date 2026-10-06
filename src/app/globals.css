@@ -562,9 +562,13 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 /* Session-local exploration and results: no overlays obscure the final world. */
 .run-status { grid-area: status; display: grid; gap: 4px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
 .run-status span { font-size: 12px; overflow-wrap: anywhere; }
-.simulation-shell { grid-template-areas: "stats stats" "controls controls" "board observatory" "inspector observatory" "focus observatory" "status observatory" "legend observatory" "event observatory" "decision observatory" "result result"; }
-@media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "board" "inspector" "focus" "status" "legend" "observatory" "decision" "event" "result"; } }
-.species-focus { grid-area: focus; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.simulation-shell { grid-template-areas: "stats stats" "controls controls" "board observatory" "focus-controls observatory" "inspector observatory" "focus observatory" "status observatory" "legend observatory" "event observatory" "decision observatory" "result result"; }
+@media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "board" "focus-controls" "inspector" "focus" "status" "legend" "observatory" "decision" "event" "result"; } }
+.species-focus { display: contents; }
+.species-focus-buttons { grid-area: focus-controls; display: flex; flex-wrap: wrap; gap: 8px; }
+.species-focus-description { grid-area: focus; }
+.organism-details { margin-block: 12px; }
+.organism-details summary { min-height: 44px; padding-block: 12px; cursor: pointer; }
 .species-focus button, .run-results button, .result-image-share button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; background: var(--mp-surface); color: inherit; }
 .species-focus button[aria-pressed="true"] { outline: 2px solid var(--mint); }
 .run-results { position: relative; z-index: 4; grid-area: result; min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 8px; scroll-margin-top: 80px; background: var(--mp-surface); }

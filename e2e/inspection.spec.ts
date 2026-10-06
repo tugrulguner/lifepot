@@ -14,6 +14,8 @@ for (const width of [1280, 390]) test(`inspect and follow real lineage at ${widt
   await expect(page.getByRole("region", { name: "Creature inspector" })).toBeVisible();
   await page.getByRole("button", { name: "Inspect a living organism" }).click();
   const inspector = page.getByRole("region", { name: "Creature inspector" });
+  await inspector.getByText("Detailed organism inspection", { exact: true }).click();
+  await expect(inspector.getByText("Diet allowed by graph", { exact: true })).toBeVisible();
   await expect(inspector).toContainText("Diet allowed by graph");
   await expect(inspector).toContainText("Inherited generation");
   await expect(inspector).toContainText("not a new species");
