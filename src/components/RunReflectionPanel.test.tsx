@@ -14,8 +14,20 @@ it("requests Jev only on demand and lets the player review a bounded next experi
  render(<RunReflectionPanel evidence={evidence} config={state.config} onExperiment={onExperiment}/>);
  expect(fetcher).not.toHaveBeenCalled();fireEvent.click(screen.getByRole("button",{name:"Ask Jev about this run"}));
  await screen.findByText("Population remained observable");
+ expect(screen.getByText("Resource abundance: scarce")).toBeInTheDocument();
+ expect(screen.queryByText(/environment\.abundance:/)).not.toBeInTheDocument();
  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({evidence,config:state.config});
  fireEvent.click(screen.getByRole("button",{name:"Review suggested experiment"}));expect(onExperiment).toHaveBeenCalledWith(result.nextExperiment);
+});
+it("explains reflection rate limiting without manufacturing a recommendation or retrying", async()=>{
+ const state=createSimulation({seed:7,config:defaultConfig()});const json=vi.fn();const fetcher=vi.fn().mockResolvedValue({ok:false,status:429,json});vi.stubGlobal("fetch",fetcher);
+ render(<RunReflectionPanel evidence={createRunEvidence(state)} config={state.config} onExperiment={vi.fn()}/>);
+ fireEvent.click(screen.getByRole("button",{name:"Ask Jev about this run"}));
+ await waitFor(()=>expect(screen.getByRole("status")).toHaveTextContent("Rate limit reached. Wait a minute"));
+ expect(screen.getByRole("status")).toHaveTextContent("Your recorded results remain available");
+ expect(screen.getByRole("button",{name:"Ask Jev about this run"})).toBeEnabled();
+ expect(screen.queryByRole("button",{name:"Review suggested experiment"})).not.toBeInTheDocument();
+ expect(fetcher).toHaveBeenCalledTimes(1);expect(json).not.toHaveBeenCalled();
 });
 it("reports a failed reflection without manufacturing an explanation", async()=>{
  const state=createSimulation({seed:7,config:defaultConfig()});vi.stubGlobal("fetch",vi.fn().mockResolvedValue({ok:false}));

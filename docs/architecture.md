@@ -76,5 +76,6 @@ Validation runs the ledger through the engine. Missing, reordered, unreachable, 
 - Invalid request: rejected before interpretation.
 - Production without distributed quota configuration: fails closed to fallback.
 - Invalid replay: rejected; no best-effort execution.
+- Setup fidelity requests correction: one bounded, dependent roles-then-links repair and renewed fidelity review. Persistent disagreement offers a finite review focus with original answers retained. Failure during repair preserves the blocked proposal rather than bypassing its rejection through fallback.
 
 Fallback output is always marked with `source: "fallback"` and is never presented as Jev evidence.

@@ -9,7 +9,7 @@ const evidence = { followedFamily:null, samples: [
 const config = { environment:{abundance:"balanced",distribution:"scattered",hazard:"drought",volatility:"stable"}, founders:{balance:"balanced",diversity:"varied",preyStrategy:"generalist",predatorStrategy:"ambush"}, fitness:{survive:1,replicate:1,cooperate:1,explore:1,adapt:1}, rules:{version:1,environment:{regeneration:"steady",pressure:"drought",volatility:"stable",intensity:"medium",duration:"persistent"},species:[],interactions:[]} } as unknown as LifeConfig;
 describe("run reflection helpers", () => {
  it("aligns species trajectories and names actual config differences", () => {
-  const comparison=buildRunComparison({ evidence, config }, { evidence:{...evidence,samples:evidence.samples.map(s=>({...s,species:s.species.filter(x=>x.speciesId!=="B")}))}, config:{...config,environment:{...config.environment,hazard:"toxin"},founders:{...config.founders,balance:"prey_heavy"}} });
+  const comparison=buildRunComparison({ evidence, config }, { evidence:{...evidence,samples:evidence.samples.map(s=>({...s,species:s.species.filter(x=>x.speciesId!=="B")}))}, config:{...config,rules:{...config.rules!,version:2},environment:{...config.environment,hazard:"toxin"},founders:{...config.founders,balance:"prey_heavy"}} });
   expect(comparison.species).toEqual(expect.arrayContaining([expect.objectContaining({speciesId:"B",before:[3,0],after:[null,null]})]));
   expect(comparison.conditionChanges).toContainEqual({path:"environment.hazard",before:"drought",after:"toxin"});
   expect(comparison.species[0]?.before).toHaveLength(2);
@@ -17,6 +17,7 @@ describe("run reflection helpers", () => {
   expect(comparison.conditionChanges).toContainEqual({path:"founders.balance",before:"balanced",after:"prey_heavy"});
   expect(comparison.generations).toEqual([0,2]);
   expect(comparison.conditionChanges).not.toContainEqual(expect.objectContaining({path:"rules.species"}));
+  expect(comparison.conditionChanges).not.toContainEqual(expect.objectContaining({path:"rules.version"}));
  });
  it("accepts bounded grounded observations and refuses unknown evidence references", () => {
   const out={observations:[{text:"B reached zero by generation 2.",evidenceRefs:["species:B","extinction:B"]}], nextExperiment:{title:"Reduce drought pressure", rationale:"Drought is configured.", evidenceRefs:["condition:environment.hazard"], changes:[{path:"rules.environment.pressure",value:"stability"}]}, caveat:"Adaptive decisions may differ between runs."};

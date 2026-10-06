@@ -9,7 +9,7 @@ export function buildRunComparison(before: RunComparisonInput, after: RunCompari
  const flatten=(v:unknown,p=""):Array<{path:string;before:unknown}>=>{if(v&&typeof v==="object"&&!Array.isArray(v))return Object.keys(v).sort().flatMap(k=>flatten((v as Record<string,unknown>)[k],p?`${p}.${k}`:k));return [{path:p,before:v}]};
  const left=flatten(before.config);
  const right=new Map(flatten(after.config).map(x=>[x.path,x.before]));
- const conditionChanges=left.flatMap(x=>{const b=right.get(x.path);return right.has(x.path)&&JSON.stringify(b)!==JSON.stringify(x.before)?[{path:x.path,before:x.before,after:b}]:[]});
+ const conditionChanges=left.flatMap(x=>{const b=right.get(x.path);return x.path!=="rules.version"&&right.has(x.path)&&JSON.stringify(b)!==JSON.stringify(x.before)?[{path:x.path,before:x.before,after:b}]:[]});
  return { generations, before:before.evidence.samples.map(s=>({generation:s.generation,population:s.population})), after:after.evidence.samples.map(s=>({generation:s.generation,population:s.population})), species:ids.map(speciesId=>({speciesId,role:before.evidence.samples.flatMap(s=>s.species).find(x=>x.speciesId===speciesId)?.role??after.evidence.samples.flatMap(s=>s.species).find(x=>x.speciesId===speciesId)?.role??"unknown",before:series(before,speciesId,generations),after:series(after,speciesId,generations)})), conditionChanges };
 }
 const boundedText=z.string().trim().min(1).max(240);

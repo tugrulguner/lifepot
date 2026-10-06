@@ -55,8 +55,8 @@ describe("POST /api/judge setup interpretation", () => {
     const client = { systemOne: vi.fn().mockResolvedValueOnce(firstGraph).mockImplementationOnce(councilSdkResponse).mockResolvedValueOnce(fidelity) };
     const response = await (await import("./route")).createJudgeHandler({ decide: (i) => interpretSetup(i, { apiKey: "test", client: client as never }) })(new Request("http://localhost/api/judge", { method: "POST", body: JSON.stringify(input) }));
     const body = await response.json();
-    expect(client.systemOne).toHaveBeenCalledTimes(3);
-    expect(body).toMatchObject({ source: "jev", fidelity: { verdict: "reselect" }, provenance: { outcome: "reselect" } });
+    expect(client.systemOne).toHaveBeenCalledTimes(4);
+    expect(body).toMatchObject({ source: "jev", fidelity: { verdict: "reselect", repairAttempted: true, repairFailure: "invalid_response" }, provenance: { outcome: "reselect" } });
     expect(body.fidelity.verdict).not.toBe("approve");
   });
 
