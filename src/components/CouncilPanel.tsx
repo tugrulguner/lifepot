@@ -39,6 +39,7 @@ export function RuntimeCouncil({ decision, state, ledger, replay }: { decision?:
     {!decision ? <p>No runtime judgment yet.</p> : decision.source === "fallback" ? <p>Council abstained · no new birth policies or graph patch. Inherited strategies continue; no partial specialist output applied.</p> : !council ? <p>Legacy decision · no council provenance recorded.</p> : <>
       <p>Generation {decision.generation} · observation {decision.observationHash} · graph v{decision.ruleGraphVersion}</p>
       <p><strong>Reconciled patch owner: {council.selectedPatch}</strong> · {council.calls} provider calls</p>
+      {council.batching && <p>Grouped specialist inference: scoped answers share one provider request. Batch usage: {council.batchUsage?.input_tokens ?? 0} input / {council.batchUsage?.output_tokens ?? 0} output tokens, counted once; specialist records do not have separately attributable token usage.</p>}
       <p>{selectedChangeLabel(decision)}</p>
       {decision.scheduledRuleChange && <p>{ruleTimingLabel(decision, state)} · {label(decision.scheduledRuleChange.duration)} duration · {label(decision.scheduledRuleChange.transition)} transition</p>}
       <details open><summary>Runtime orchestrator</summary><RecordEvidence record={council.orchestrator} history={recorded}/></details>

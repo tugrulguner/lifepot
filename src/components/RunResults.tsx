@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { SimulationState } from "@/game/world";
 import { GRID_CELLS } from "@/game/world";
 import type { RunEvidence } from "@/game/run-evidence";
+import { speciesColor } from "@/game/species-colors";
 
 export type RunResultsProps = {
   state: SimulationState;
@@ -53,6 +54,15 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
         <text x={PAD} y={HEIGHT - 8}>Gen {history[0]?.generation ?? 0}</text><text x={WIDTH - PAD} y={HEIGHT - 8} textAnchor="end">Gen {last?.generation ?? 0}</text>
       </svg>
       <ul className="run-results__legend"><li>Population: organisms</li><li>Resources: mean per cell</li></ul>
+    </figure>
+    <figure className="run-results__trajectory"><figcaption>Whole-run species population history</figcaption>
+      <svg className="run-results__graph" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Whole-run species population history">
+        <line className="run-results__axis" x1={PAD} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} />
+        <text x={PAD - 6} y={PAD} textAnchor="end">{max.toFixed(0)}</text><text x={PAD - 6} y={HEIGHT - PAD} textAnchor="end">0</text>
+        {configured.map(rule => <polyline key={rule.id} aria-label={`Species ${rule.id}: ${rule.role}`} stroke={speciesColor(rule.id)} strokeWidth={2.5} points={history.map((item, index) => point(item.species.find(entry => entry.speciesId === rule.id)?.population ?? 0, index)).join(" ")} fill="none" />)}
+        <text x={PAD} y={HEIGHT - 8}>Gen {history[0]?.generation ?? 0}</text><text x={WIDTH - PAD} y={HEIGHT - 8} textAnchor="end">Gen {last?.generation ?? 0}</text>
+      </svg>
+      <ul className="run-results__legend">{configured.map(rule => <li key={rule.id}><span style={{ color: speciesColor(rule.id) }}>●</span> Species {rule.id}: {rule.role}</li>)}</ul>
     </figure>
     <details className="run-results__measurements"><summary>Generation measurements</summary>
       <table><thead><tr><th scope="col">Generation</th><th scope="col">Population</th>{configured.map(rule => <th scope="col" key={rule.id}>{rule.role} {rule.id}</th>)}<th scope="col">Mean resources/cell</th></tr></thead>

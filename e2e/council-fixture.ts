@@ -9,7 +9,7 @@ export const councilClient: CouncilClient = {
     const seats = ["birth_A", "birth_B", "self_A", "self_B", "pair_A_B", "environment"];
     return { model: "council-browser-fixture", usage: { input_tokens: 17, output_tokens: 9 }, answers: Object.fromEntries(Object.entries(questions).map(([key, question]) => {
       const options = Object.keys(question.criteria);
-      const wanted = key.startsWith("priority_") ? (seats.includes(key.slice(9)) ? "5" : "0") : key.startsWith("activation_") ? (key === "activation_environment" ? "predation_spike" : "always") : key.startsWith("activate_") ? (picks[key] ?? "active") : picks[key];
+      const wanted = key.startsWith("priority_") ? (seats.includes(key.slice(9)) ? "5" : "0") : key.startsWith("activation_") ? (key === "activation_environment" ? "predation_spike" : "always") : key.startsWith("activate_") ? (picks[key] ?? "active") : picks[key.split("__").at(-1)!];
       const choice = options.includes(wanted) ? wanted : options.includes("pursuit") ? "pursuit" : options[0];
       return [key, { type: "choice", choice, confidence: .9, probabilities: Object.fromEntries(options.map(option => [option, option === choice ? .9 : .1 / (options.length - 1)])) }];
     })) };

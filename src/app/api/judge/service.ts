@@ -1,5 +1,6 @@
 import { choice, score, TypeSafeClient } from "@typesafe-ai/sdk";
 import { selectCouncil, runCouncil, type CouncilClient } from "./council-service";
+import { reviewSetupFidelity, type SetupFidelityResult } from "./setup-fidelity";
 import { z } from "zod";
 import {
   ENVIRONMENT_PRESSURES,
@@ -41,6 +42,8 @@ export type SetupInterpretation = {
   model?: string;
   usage?: Usage;
   evidence?: Record<string, unknown>;
+  fidelity?: SetupFidelityResult;
+  fallbackReason?: "rate_limited" | "unavailable" | "invalid_response" | "missing_credentials" | "unknown";
 };
 
 const criteria = <T extends readonly string[]>(values: T) => Object.fromEntries(values.map((value) => [value, value.replaceAll("_", " ")]));
@@ -140,12 +143,22 @@ function buildRuleGraph(answers: SetupAnswersResponse): WorldRuleGraph {
   return validateRuleGraph({ version: 1, species, interactions, environment: { regeneration: answers.regeneration.choice, pressure: answers.rulePressure.choice, volatility: answers.volatility.choice, intensity: answers.ruleIntensity.choice, duration: answers.ruleDuration.choice } });
 }
 
+function classifySetupFailure(error: unknown): SetupInterpretation["fallbackReason"] {
+  if(error instanceof z.ZodError)return "invalid_response";
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (/quota exceeded|rate limit|rate-limit|too many requests/.test(message)) return "rate_limited";
+  if (/invalid|parse|schema|answer keys mismatch|scope palette/.test(message)) return "invalid_response";
+  if (/api key|credential/.test(message)) return "missing_credentials";
+  if (/timeout|connection|fetch|unavailable|network|5\\d\\d/.test(message)) return "unavailable";
+  return "unknown";
+}
+
 export async function interpretSetup(input: SetupRequest, options: { apiKey?: string; client?: SetupClient; beforeCall?:()=>Promise<void> } = {}): Promise<SetupInterpretation> {
   const requestHash = hashSetupRequest(input.answers);
-  const fallback = (): SetupInterpretation => ({ config: deterministicSetup(input.answers), source: "fallback", requestHash });
-  if (input.requestHash !== requestHash) return fallback();
+  const fallback = (fallbackReason?: SetupInterpretation["fallbackReason"]): SetupInterpretation => ({ config: deterministicSetup(input.answers), source: "fallback", requestHash, ...(fallbackReason ? { fallbackReason } : {}) });
+  if (input.requestHash !== requestHash) return fallback("invalid_response");
   const apiKey = options.apiKey ?? process.env.TYPESAFE_API_KEY;
-  if (!apiKey) return fallback();
+  if (!apiKey) return fallback("missing_credentials");
   try {
     const client = options.client ?? new TypeSafeClient({ apiKey, timeout: 5000, retry: { maxRetries: 0 } });
     await options.beforeCall?.();
@@ -161,9 +174,10 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
     });
     const council=await selectCouncil(config.rules!,input.answers,client as CouncilClient,options.beforeCall);
     config.rules!.council=council.manifest;config.rules!.councilSetup=council.record;
-    return { config, source: "jev", requestHash, model: parsed.model, usage: {input_tokens:parsed.usage.input_tokens+council.record.usage.input_tokens,output_tokens:parsed.usage.output_tokens+council.record.usage.output_tokens}, evidence: structuredClone(answers) as Record<string, unknown> };
-  } catch {
-    return fallback();
+    const fidelity = await reviewSetupFidelity(input.answers, config.rules!, client as never, options.beforeCall);
+    return { config, source: "jev", requestHash, model: parsed.model, usage: {input_tokens:parsed.usage.input_tokens+council.record.usage.input_tokens+fidelity.usage.input_tokens,output_tokens:parsed.usage.output_tokens+council.record.usage.output_tokens+fidelity.usage.output_tokens}, evidence: structuredClone(answers) as Record<string, unknown>, fidelity };
+  } catch (error) {
+    return fallback(classifySetupFailure(error));
   }
 }
 
@@ -195,10 +209,20 @@ function scopedEvolutionResponse(summary: EcologySummary) {
   return evolutionResponse.extend({ answers: z.object(shape).strict() });
 }
 type EvolutionClient = { systemOne(request: { state: EcologySummary; questions: ReturnType<typeof buildEvolutionQuestions> }): Promise<unknown> };
-export async function decideEvolution(input: { kind: "evolution"; summary: EcologySummary }, options: { apiKey?: string; client?: EvolutionClient; beforeCall?:()=>Promise<void> } = {}): Promise<EvolutionDecision> {
-  const fallback = () => deterministicEvolutionDecision(input.summary);
+export type EvolutionRuntimeDecision = EvolutionDecision & { fallbackReason?: "rate_limited" | "unavailable" | "invalid_response" | "missing_credentials" | "unknown" };
+function classifyEvolutionFailure(error: unknown): NonNullable<EvolutionRuntimeDecision["fallbackReason"]> {
+  if(error instanceof z.ZodError)return "invalid_response";
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (/quota exceeded|rate limit|rate-limit|too many requests/.test(message)) return "rate_limited";
+  if (/invalid|parse|schema|answer keys mismatch|scope palette/.test(message)) return "invalid_response";
+  if (/api key|credential/.test(message)) return "missing_credentials";
+  if (/timeout|connection|fetch|unavailable|network|5\\d\\d/.test(message)) return "unavailable";
+  return "unknown";
+}
+export async function decideEvolution(input: { kind: "evolution"; summary: EcologySummary }, options: { apiKey?: string; client?: EvolutionClient; beforeCall?:()=>Promise<void> } = {}): Promise<EvolutionRuntimeDecision> {
+  const fallback = (reason: EvolutionRuntimeDecision["fallbackReason"]): EvolutionRuntimeDecision => ({ ...deterministicEvolutionDecision(input.summary), ...(reason ? { fallbackReason: reason } : {}) });
   const apiKey = options.apiKey ?? process.env.TYPESAFE_API_KEY;
-  if (!apiKey) return fallback();
+  if (!apiKey) return fallback("missing_credentials");
   try {
     const client = options.client ?? new TypeSafeClient({ apiKey, timeout: 5000, retry: { maxRetries: 0 } });
     if(input.summary.rules?.council)return await runCouncil(input.summary,client as CouncilClient,options.beforeCall);
@@ -215,7 +239,7 @@ export async function decideEvolution(input: { kind: "evolution"; summary: Ecolo
       return { species: species.id, strategy: answer("strategy"), mutationTarget: answer("mutationTarget"), mutationTempo: answer("mutationTempo") } as SpeciesDirective;
     });
     return validateEvolutionDecision({ generation: input.summary.generation, trigger: input.summary.trigger, observationHash: observationHash(input.summary.observation), speciesDirectives, source: "jev", model: parsed.model, usage: parsed.usage, ruleGraphVersion: input.summary.rules?.version??1, scheduledRuleChange: { decidedAtGeneration: input.summary.generation, activation: ruleActivation.choice, duration: ruleDuration.choice, transition: ruleTransition.choice, patch: { kind: "environment", field: "pressure", value: mechanics.environmentPressure.choice } }, ruleActivation: strip(ruleActivation), ruleDuration: strip(ruleDuration), ruleTransition: strip(ruleTransition), ...Object.fromEntries(Object.entries(mechanics).map(([key, value]) => [key, strip(value)])) });
-  } catch {
-    return fallback();
+  } catch (error) {
+    return fallback(classifyEvolutionFailure(error));
   }
 }
