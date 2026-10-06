@@ -211,7 +211,7 @@ test("gameplay header, stats, controls, and useful board geometry do not overlap
         const r = document.querySelector(s)!.getBoundingClientRect();
         return { x: r.x, y: r.y, width: r.width, height: r.height, bottom: r.bottom, right: r.right };
       };
-      return { header: rect(".family-header"), stats: rect(".stats-strip"), controls: rect(".controls"), board: rect("canvas.life-canvas"), inspector: rect("#creature-inspector"), focus: rect(".species-focus"), shell: rect(".simulation-shell"), viewport: { width: innerWidth, height: innerHeight } };
+      return { header: rect(".family-header"), stats: rect(".stats-strip"), controls: rect(".controls"), board: rect("canvas.life-canvas"), inspector: rect("#creature-inspector"), focus: rect(".species-focus-buttons"), shell: rect(".simulation-shell"), viewport: { width: innerWidth, height: innerHeight } };
     });
     expect(geometry.stats.y, `stats below header at ${width}x${height}`).toBeGreaterThanOrEqual(geometry.header.bottom);
     expect(geometry.stats.bottom, `complete stats visible at ${width}x${height}`).toBeLessThanOrEqual(height - 12);
