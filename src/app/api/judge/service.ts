@@ -203,13 +203,14 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
         const reviewed = await reviewSetupFidelity(input.answers, config, client as never, options.beforeCall);
         addUsage(reviewed.usage);
         config.rules = corrected;
-        fidelity = { ...reviewed, repairAttempted: true };
-        if (fidelity.verdict === "approve") {
+        if (reviewed.verdict === "approve") {
           const correctedCouncil = await selectCouncil(corrected, input.answers, client as CouncilClient, options.beforeCall);
           config.rules.council = correctedCouncil.manifest;
           config.rules.councilSetup = correctedCouncil.record;
           addUsage(correctedCouncil.record.usage);
         }
+        // Publish approval only after every required repair stage succeeds.
+        fidelity = { ...reviewed, repairAttempted: true };
       } catch (error) {
         // Never turn a failed repair into an implicitly seedable fallback.
         fidelity = { ...fidelity, repairFailure: classifySetupFailure(error) ?? "unknown" };

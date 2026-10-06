@@ -48,6 +48,17 @@ describe("bounded setup correction", () => {
   expect(result.fidelity).toMatchObject({ repairAttempted: true, focus: "species_count" });
   expect(client.systemOne).toHaveBeenCalledTimes(7);
  });
+ it.each(["reselect", "reject"])("keeps %s blocked when corrected council selection fails after approval", async (firstVerdict) => {
+  const client = repairedClient("approve", firstVerdict);
+  client.systemOne.mockRejectedValueOnce(new Error("network unavailable"));
+  const beforeCall = vi.fn();
+  const result = await interpretSetup(input, { apiKey: "test-key", client: client as never, beforeCall });
+  expect(result.source).toBe("jev");
+  expect(result.fidelity).toMatchObject({ verdict: firstVerdict, repairAttempted: true, repairFailure: "unavailable" });
+  expect(result.fidelity?.verdict).not.toBe("approve");
+  expect(client.systemOne).toHaveBeenCalledTimes(7);
+  expect(beforeCall).toHaveBeenCalledTimes(7);
+ });
  it("keeps the rejected graph blocked when correction hits the call budget", async () => {
   const client = repairedClient(); let calls = 0;
   const result = await interpretSetup(input, { apiKey: "test-key", client: client as never, beforeCall: async () => { if (++calls === 4) throw new Error("Quota exceeded"); } });
