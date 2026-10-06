@@ -46,6 +46,12 @@ Source of truth: `src/game/setup.ts`, `src/game/world.ts`.
 
 Setup prose maps by fixed keyword rules in `deterministicSetup`; it does not generate executable logic. The route may request typed setup interpretation from Jev, validates the response, and returns deterministic setup as an explicitly labeled fallback when model access or validation fails.
 
+### Fidelity correction and review
+
+The fidelity request includes the complete interpreted configuration and a readable, engine-derived food web alongside the original answers and encoded graph. Pair directions are decoded using each pair's own endpoints; review checks supported food-web intent, not biological realism or guaranteed success of the player's objective. A `reselect` or `reject` fidelity verdict triggers at most one correction; the corrected proposal must independently receive `approve`, and persistent rejection stays blocked. Roles/count are selected first; the dependent pair request includes the fixed species/roles. The complete corrected graph is validated and reviewed against the unchanged original answers. An approved correction receives a council selected for that graph. Every provider call reserves the existing call budget, and successful response usage is accumulated. A persistent nonapproval gets a finite, model-selected review focus; that focus is not independent proof of a semantic mismatch. Failure inside correction preserves the nonapproval instead of silently returning a seedable fallback. Additional review metadata stays outside deterministic engine/replay contracts.
+
+Run `LIFEPOT_LIVE_SETUP_TEST=1 npm test -- src/app/api/judge/setup-live.test.ts` with a server-side `TYPESAFE_API_KEY` already configured to check real Jev acceptance of ordinary inputs. This explicitly opted-in test makes paid inference requests; without both settings it is skipped. Mocked approval tests prove the correction/control flow, not model fidelity. For an approved Cloudflare preview that already holds the server-side key, run `PLAYWRIGHT_BASE_URL=http://localhost:9239 LIFEPOT_LIVE_GAMEPLAY_BASE_URL=http://localhost:9239 npm run test:e2e -- e2e/live-jev-gameplay.spec.ts --workers=1 --retries=0`. This separate opt-in browser test exercises ordinary setup, adaptive play, reflection, a mobile follow-up and inference-free replay; it is skipped during normal fixture runs. Do not point it at production by default.
+
 ## Rule graph reference
 
 Source: `src/game/rules.ts`; tests: `src/game/rules.test.ts`.

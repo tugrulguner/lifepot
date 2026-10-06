@@ -50,6 +50,7 @@ import { cellAtPoint } from "@/game/inspection";
 import { updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
 import { WorldObservatory } from "./WorldObservatory";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
+import { setupFidelitySchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity } from "@/game/setup-review";
 import { speciesColor } from "@/game/species-colors";
 import { isSurvivingNewborn, relationshipLabel, triggerLabel } from "@/game/visuals";
 export type LifePotViewModel = {
@@ -116,7 +117,7 @@ const RESPONSE = z
       })
       .optional(),
     evidence: z.record(z.string(), z.unknown()).optional(),
-    fidelity: z.object({ verdict: z.enum(["approve", "reselect", "reject", "needs_clarification"]), model: z.string(), usage: z.object({ input_tokens: z.number(), output_tokens: z.number() }) }).optional(),
+    fidelity: setupFidelitySchema.optional(),
     fallbackReason: failureReasonSchema.optional(),
     provenance: z.object({ outcome: z.string(), reason: z.string().optional() }).optional(),
   })
@@ -282,6 +283,7 @@ export function GameCanvas() {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
   };
   const [stage, setStage] = useState<Stage>("questions"),
+    [arrivalRevision, setArrivalRevision] = useState(0),
     [answers, setAnswers] = useState(EMPTY),
     [qi, setQi] = useState(0),
     [config, setConfig] = useState<LifeConfig | null>(null),
@@ -289,7 +291,7 @@ export function GameCanvas() {
       source: "jev" | "fallback";
       model?: string;
       usage?: { input_tokens: number; output_tokens: number };
-      fidelity?: { verdict: "approve" | "reselect" | "reject" | "needs_clarification" };
+      fidelity?: SetupFidelity;
       fallbackReason?: FailureReason;
     } | null>(null),
     [seed, setSeed] = useState(0),
@@ -323,7 +325,7 @@ export function GameCanvas() {
     if (stage !== "simulation" || !pendingArrival.current) return;
     pendingArrival.current = false;
     window.scrollTo(0, 0);
-  }, [stage]);
+  }, [stage, arrivalRevision]);
   const begin = useCallback(
     (a: SetupAnswers, c: LifeConfig, s: number, replay?: ReplayData) => {
       const initial = createSimulation({ seed: s, config: c }),
@@ -359,6 +361,7 @@ export function GameCanvas() {
           : `${initial.stats.population} founders seeded across ${initial.config.rules!.species.length} configured species`,
       );
       pendingArrival.current = true;
+      setArrivalRevision(revision => revision + 1);
       setStage("simulation");
     },
     [],
@@ -640,7 +643,13 @@ export function GameCanvas() {
               ? `Jev API · ${proof.model ?? "jev-latest"}`
               : "Deterministic fallback"}
           </p>
-          {proof?.fidelity && proof.fidelity.verdict !== "approve" && <section aria-label="Setup needs clarification" role="alert"><p>Jev found a mismatch or ambiguity between your description and the assembled food web ({title(proof.fidelity.verdict)}). This world has not been approved for seeding. Clarify the species and who consumes whom, then ask Jev again.</p><button disabled={interpreting} onClick={() => interpret(answers)}>Ask Jev to reinterpret</button></section>}
+          {proof?.fidelity?.verdict === "approve" && proof.fidelity.repairAttempted && <p role="status">Jev corrected its proposed food web and checked it again against your original answers. Review the corrected world below before seeding.</p>}
+          {proof?.fidelity && proof.fidelity.verdict !== "approve" && <section aria-label="Setup needs clarification" role="alert">
+            <p>Our proposed world still needs review; your answers have been kept. {proof.fidelity.repairAttempted ? "Jev attempted one bounded correction, but this world is not yet approved for seeding." : "This world has not yet been approved for seeding."}</p>
+            {proof.fidelity.repairFailure ? <p>Correction could not finish: {failureLabels[proof.fidelity.repairFailure]}. You do not need to rewrite your answers to retry.</p> : <p>Jev&apos;s suggested review focus: {SETUP_REVIEW_QUESTIONS[proof.fidelity.focus ?? "general"]}</p>}
+            <button disabled={interpreting} onClick={() => interpret(answers)}>Ask Jev to reinterpret</button>
+            <button disabled={interpreting} onClick={loadDeterministicPreset}>Explore deterministic preset instead</button>
+          </section>}
           {proof?.fallbackReason && <p role="status">Setup interpretation unavailable: {failureLabels[proof.fallbackReason]}. This preview is a fallback, not a Jev-approved interpretation.</p>}
           <WorldPreview config={config} answers={answers} onChange={next => { setConfig(next); setManuallyEdited(true); }} />
           <div className="experiment-intent">
@@ -658,7 +667,7 @@ export function GameCanvas() {
             <div><span>Initial resources</span><p>{title(config.environment.abundance)} · {title(config.environment.distribution)}</p></div>
           </div>
           {config.rules && <SetupCouncil rules={config.rules}/>}
-          {proof?.usage && <p>Setup total: {proof.usage.input_tokens} input / {proof.usage.output_tokens} output tokens (world interpretation + council selection).</p>}
+          {proof?.usage && <p>Setup total: {proof.usage.input_tokens} input / {proof.usage.output_tokens} output tokens (interpretation, fidelity review, any bounded correction, and council selection).</p>}
           </details>
           <button className="back-button" onClick={() => { setQi(0); setStage("questions"); }}>Edit setup answers</button>
           <p className="review-note">These are the validated mechanics, not unrestricted interpretations of your prose. Roles do not imply feeding links: consumption follows the relationship graph. Extinct species are not automatically restored.</p>

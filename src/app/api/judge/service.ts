@@ -1,6 +1,6 @@
 import { choice, score, TypeSafeClient } from "@typesafe-ai/sdk";
 import { selectCouncil, runCouncil, type CouncilClient } from "./council-service";
-import { reviewSetupFidelity, type SetupFidelityResult } from "./setup-fidelity";
+import { reviewSetupFidelity, selectSetupReviewFocus, type SetupFidelityResult } from "./setup-fidelity";
 import { z } from "zod";
 import {
   ENVIRONMENT_PRESSURES,
@@ -174,8 +174,55 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
     });
     const council=await selectCouncil(config.rules!,input.answers,client as CouncilClient,options.beforeCall);
     config.rules!.council=council.manifest;config.rules!.councilSetup=council.record;
-    const fidelity = await reviewSetupFidelity(input.answers, config.rules!, client as never, options.beforeCall);
-    return { config, source: "jev", requestHash, model: parsed.model, usage: {input_tokens:parsed.usage.input_tokens+council.record.usage.input_tokens+fidelity.usage.input_tokens,output_tokens:parsed.usage.output_tokens+council.record.usage.output_tokens+fidelity.usage.output_tokens}, evidence: structuredClone(answers) as Record<string, unknown>, fidelity };
+    let fidelity = await reviewSetupFidelity(input.answers, config, client as never, options.beforeCall);
+    const usage = { input_tokens: parsed.usage.input_tokens + council.record.usage.input_tokens + fidelity.usage.input_tokens, output_tokens: parsed.usage.output_tokens + council.record.usage.output_tokens + fidelity.usage.output_tokens };
+    const addUsage = (u: Usage) => { usage.input_tokens += u.input_tokens; usage.output_tokens += u.output_tokens; };
+    let evidence = structuredClone(answers);
+    if (fidelity.verdict === "reselect" || fidelity.verdict === "reject") {
+      // One correction only: establish roles/count first, then select links against
+      // those exact species. Independent pair choices can now see selected roles.
+      fidelity = { ...fidelity, repairAttempted: true };
+      try {
+        const roleKeys = { speciesCount: true, roleA: true, roleB: true, roleC: true, roleD: true, selfA: true, selfB: true, selfC: true, selfD: true } as const;
+        const roleQuestions = Object.fromEntries(Object.keys(roleKeys).map(key => [key, setupQuestions[key as keyof typeof roleKeys]]));
+        await options.beforeCall?.();
+        const roles = setupResponse.extend({ answers: setupResponse.shape.answers.pick(roleKeys) }).parse(await client.systemOne({ state: { original_prose: input.answers, rejected_graph: config.rules, task: "Correct the species count and roles using the original names in first-mentioned slot order. Do not defend the rejected graph. Relationships will be selected after these roles are fixed." }, questions: roleQuestions } as never));
+        addUsage(roles.usage);
+        const partial = { ...answers, ...roles.answers };
+        const count = partial.speciesCount.choice === "two" ? 2 : partial.speciesCount.choice === "three" ? 3 : 4;
+        const selectedSpecies = slotIds.slice(0, count).map((id, index) => ({ id, role: [partial.roleA, partial.roleB, partial.roleC, partial.roleD][index].choice, selfInteraction: [partial.selfA, partial.selfB, partial.selfC, partial.selfD][index].choice }));
+        const pairKeys = Object.entries(pairQuestion).filter(([pair]) => pair.split(":").every(id => selectedSpecies.some(s => s.id === id))).map(([,key]) => key);
+        const pairQuestions = Object.fromEntries(pairKeys.map(key => [key, setupQuestions[key]]));
+        const pairShape = Object.fromEntries(pairKeys.map(key => [key, setupResponse.shape.answers.shape[key]]));
+        await options.beforeCall?.();
+        const pairs = setupResponse.extend({ answers: z.object(pairShape).strict() }).parse(await client.systemOne({ state: { original_prose: input.answers, selected_species: selectedSpecies, rejected_graph: config.rules, task: "Select the directed relationships jointly against these fixed species roles and original prose. Pair endpoints are literal slot IDs. Do not invent feeding links." }, questions: pairQuestions } as never));
+        addUsage(pairs.usage);
+        evidence = { ...partial, ...pairs.answers } as SetupAnswersResponse;
+        const corrected = buildRuleGraph(evidence);
+        config.rules = corrected;
+        const reviewed = await reviewSetupFidelity(input.answers, config, client as never, options.beforeCall);
+        addUsage(reviewed.usage);
+        config.rules = corrected;
+        fidelity = { ...reviewed, repairAttempted: true };
+        if (fidelity.verdict === "approve") {
+          const correctedCouncil = await selectCouncil(corrected, input.answers, client as CouncilClient, options.beforeCall);
+          config.rules.council = correctedCouncil.manifest;
+          config.rules.councilSetup = correctedCouncil.record;
+          addUsage(correctedCouncil.record.usage);
+        }
+      } catch (error) {
+        // Never turn a failed repair into an implicitly seedable fallback.
+        fidelity = { ...fidelity, repairFailure: classifySetupFailure(error) ?? "unknown" };
+      }
+    }
+    if (fidelity.verdict !== "approve" && !fidelity.repairFailure) {
+      try {
+        const focused = await selectSetupReviewFocus(input.answers, config, client as never, options.beforeCall);
+        addUsage(focused.usage);
+        fidelity = { ...fidelity, focus: focused.focus };
+      } catch { fidelity = { ...fidelity, focus: "general" }; }
+    }
+    return { config, source: "jev", requestHash, model: parsed.model, usage, evidence: evidence as Record<string, unknown>, fidelity };
   } catch (error) {
     return fallback(classifySetupFailure(error));
   }
