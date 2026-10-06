@@ -211,7 +211,7 @@ test("gameplay header, stats, controls, and useful board geometry do not overlap
         const r = document.querySelector(s)!.getBoundingClientRect();
         return { x: r.x, y: r.y, width: r.width, height: r.height, bottom: r.bottom, right: r.right };
       };
-      return { header: rect(".family-header"), stats: rect(".stats-strip"), controls: rect(".controls"), board: rect("canvas.life-canvas"), shell: rect(".simulation-shell"), viewport: { width: innerWidth, height: innerHeight } };
+      return { header: rect(".family-header"), stats: rect(".stats-strip"), controls: rect(".controls"), board: rect("canvas.life-canvas"), inspector: rect("#creature-inspector"), focus: rect(".species-focus"), shell: rect(".simulation-shell"), viewport: { width: innerWidth, height: innerHeight } };
     });
     expect(geometry.stats.y, `stats below header at ${width}x${height}`).toBeGreaterThanOrEqual(geometry.header.bottom);
     expect(geometry.stats.bottom, `complete stats visible at ${width}x${height}`).toBeLessThanOrEqual(height - 12);
@@ -220,6 +220,8 @@ test("gameplay header, stats, controls, and useful board geometry do not overlap
     expect(geometry.board.width, `useful canvas at ${width}x${height}`).toBeGreaterThanOrEqual(width <= 390 ? width - 40 : 300);
     expect(geometry.board.height).toBeGreaterThanOrEqual(width <= 390 ? 260 : 300);
     expect(geometry.board.bottom, `complete world and bottom breathing room at ${width}x${height}`).toBeLessThanOrEqual(height - 12);
+    expect(geometry.inspector.y, `inspector follows the board at ${width}x${height}`).toBeGreaterThanOrEqual(geometry.board.bottom);
+    expect(geometry.inspector.y - geometry.board.bottom, `inspector is near the board at ${width}x${height}`).toBeLessThanOrEqual(geometry.focus.height + 24);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const buttonCenters = await page.locator(".controls button").evaluateAll((buttons) => buttons.map(button => {
       const r = button.getBoundingClientRect();

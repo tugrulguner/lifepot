@@ -36,6 +36,8 @@ The world is a 50×50 toroidal grid: movement across an edge wraps to the opposi
 
 Select a living organism to open the Creature Inspector. It describes the selected individual's current species, guild, strategy, energy/age/traits, and lineage context where available. Selection is an observation, not an intervention: it does not change the simulation. A selected organism may die as the world advances, so inspect its status again after resuming.
 
+The Creature Inspector sits immediately below the board and includes a compact organism/founder-family summary alongside its detailed measurements. Observed extinction milestones retains the first observed extinction generation of each configured species and of a family followed when its last member disappeared. Clearing inspection or stopping following does not remove recorded milestones; starting another run resets them. A family already absent when first followed has no observed extinction transition. These notices report what happened, not why.
+
 The World Observatory summarizes population, prey/predator counts, births, deaths, kills, resources, species richness, lineages, and the recent ecological history. These are aggregate simulation counters, not estimates of real-world populations. The decision ledger records accepted evolution decisions and their evidence/source. A fallback entry is not Jev evidence.
 
 ## Read outcomes without overclaiming

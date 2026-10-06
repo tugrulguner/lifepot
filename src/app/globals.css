@@ -562,8 +562,8 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 /* Session-local exploration and results: no overlays obscure the final world. */
 .run-status { grid-area: status; display: grid; gap: 4px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
 .run-status span { font-size: 12px; overflow-wrap: anywhere; }
-.simulation-shell { grid-template-areas: "stats stats" "controls controls" "board observatory" "status observatory" "legend observatory" "focus observatory" "inspector observatory" "event observatory" "decision observatory" "result result"; }
-@media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "board" "status" "legend" "focus" "inspector" "event" "observatory" "decision" "result"; } }
+.simulation-shell { grid-template-areas: "stats stats" "controls controls" "board observatory" "inspector observatory" "focus observatory" "status observatory" "legend observatory" "event observatory" "decision observatory" "result result"; }
+@media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "board" "inspector" "focus" "status" "legend" "observatory" "decision" "event" "result"; } }
 .species-focus { grid-area: focus; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .species-focus button, .run-results button, .result-image-share button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; background: var(--mp-surface); color: inherit; }
 .species-focus button[aria-pressed="true"] { outline: 2px solid var(--mint); }
@@ -634,3 +634,10 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
   .family-header-actions .theme-control select { min-width: 64px; font-size: 12px; }
   .family-compact-home { padding-inline: 5px !important; }
 }
+.organism-family-summary { display: grid; gap: 4px; margin: 14px 0; padding: 12px 14px; border-left: 3px solid var(--mint); background: color-mix(in srgb, var(--mint) 9%, var(--panel)); overflow-wrap: anywhere; }
+.organism-family-summary strong { font-size: 14px; }
+.organism-family-summary span { color: var(--muted); font-size: 13px; }
+
+/* Bound sticky travel to the observatory grid area, above full-width results. */
+.observatory-boundary { grid-area: observatory; min-width: 0; }
+.extinction-milestones { overflow-wrap: anywhere; }
