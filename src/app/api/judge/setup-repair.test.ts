@@ -22,14 +22,22 @@ function repairedClient(lastVerdict = "approve", firstVerdict = "reselect", fail
  return { systemOne: withIntentCalls(script, ["algae","grazer","hunter"], ["producer","grazer","hunter"], {"A:B":"b_consumes_a","A:C":"neutral","B:C":"b_consumes_a"}) };
 }
 describe("bounded setup correction", () => {
- it("reserves and accounts for both bounded corrections without exceeding eleven provider calls", async () => {
+ it("reserves and accounts for all bounded corrections without exceeding thirteen provider calls", async () => {
   const client=repairedClient(); const script=client.systemOne;
-  const usages:{input_tokens:number;output_tokens:number}[]=[]; let firstMapping=true;
-  client.systemOne=vi.fn(async request=>{const response=await script(request) as ReturnType<typeof councilSdkResponse>;if(Object.keys(request.questions).includes("intent_identity_A")&&firstMapping){firstMapping=false;response.answers.intent_identity_C=response.answers.intent_identity_B;}usages.push(response.usage);return response;});
+  const usages:{input_tokens:number;output_tokens:number}[]=[];let firstMapping=true;
+  let pendingCouncil:ReturnType<typeof councilSdkResponse>|undefined;
+  client.systemOne=vi.fn(async request=>{
+   let response:ReturnType<typeof councilSdkResponse>;
+   if('protocol_correction' in request.state&&pendingCouncil){response=pendingCouncil;pendingCouncil=undefined;}
+   else{response=await script(request) as ReturnType<typeof councilSdkResponse>;if(Object.keys(request.questions).some(k=>k.startsWith("priority_"))){pendingCouncil=structuredClone(response);response=structuredClone(response);response.answers.priority_birth_A.choice="4";response.answers.priority_birth_A.probabilities={"0":0,"1":0,"2":0,"3":0,"4":.3,"5":.7};}}
+   if(Object.keys(request.questions).includes("intent_identity_A")&&firstMapping){firstMapping=false;response.answers.intent_identity_C=response.answers.intent_identity_B;}
+   usages.push(response.usage);return response;
+  });
   const beforeCall=vi.fn();const result=await interpretSetup(input,{apiKey:"test",client:client as never,beforeCall});
   expect(result.fidelity?.verdict).toBe("approve");
   expect(result.config.rules?.species.map(s=>s.role)).toEqual(["producer","grazer","hunter"]);
-  expect(client.systemOne).toHaveBeenCalledTimes(11);expect(beforeCall).toHaveBeenCalledTimes(11);
+  expect(client.systemOne).toHaveBeenCalledTimes(13);expect(beforeCall).toHaveBeenCalledTimes(13);
+  expect(result.evidence?.councilSelectionCalls).toEqual({initial:2,corrected:2});
   expect(result.usage).toEqual(usages.reduce((sum,u)=>({input_tokens:sum.input_tokens+u.input_tokens,output_tokens:sum.output_tokens+u.output_tokens}),{input_tokens:0,output_tokens:0}));
  });
  it.each(["role", "pair"] as const)("blocks false approval when repair corrupts the established %s", async corruption => {

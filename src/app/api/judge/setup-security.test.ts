@@ -39,11 +39,11 @@ describe("setup endpoint hardening", () => {
     expect((await handler(request({ ...input, requestHash: "forged-hash" }))).status).toBe(400);
     expect(decide).not.toHaveBeenCalled();
   });
-  it("allows two full gameplay workflows of 28 provider calls within one minute", async () => {
+  it("allows two full gameplay workflows of 30 provider calls within one minute", async () => {
     const decide = vi.fn(async () => interpretSetup(input));
     const handler = createJudgeHandler({ decide, now: () => 1000 });
-    for (let call = 0; call < 56; call++) expect((await handler(request(input))).status).toBe(200);
-    expect(decide).toHaveBeenCalledTimes(56);
+    for (let call = 0; call < 60; call++) expect((await handler(request(input))).status).toBe(200);
+    expect(decide).toHaveBeenCalledTimes(60);
   });
   it("denies provider calls above sixty and resets the fixed window", async () => {
     let now = 1000;

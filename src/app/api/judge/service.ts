@@ -189,6 +189,7 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
     const usage = { input_tokens: parsed.usage.input_tokens + intent.usage.input_tokens + council.record.usage.input_tokens + fidelity.usage.input_tokens, output_tokens: parsed.usage.output_tokens + intent.usage.output_tokens + council.record.usage.output_tokens + fidelity.usage.output_tokens };
     const addUsage = (u: Usage) => { usage.input_tokens += u.input_tokens; usage.output_tokens += u.output_tokens; };
     let evidence: Record<string, unknown> = structuredClone(answers);
+    let correctedCouncilCalls: number | undefined;
     if (fidelity.verdict === "reselect" || fidelity.verdict === "reject") {
       // One correction only: establish roles/count first, then select links against
       // those exact species. Independent pair choices can now see selected roles.
@@ -222,6 +223,7 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
         if (reviewed.verdict === "approve") {
           stage = "repair_council";
           const correctedCouncil = await selectCouncil(corrected, input.answers, client as CouncilClient, options.beforeCall);
+          correctedCouncilCalls = correctedCouncil.providerCalls;
           config.rules.council = correctedCouncil.manifest;
           config.rules.councilSetup = correctedCouncil.record;
           addUsage(correctedCouncil.record.usage);
@@ -247,7 +249,7 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
       const mismatches = intentMismatches(intent, config.rules!);
       if (mismatches.length) fidelity = { ...fidelity, verdict: "reselect", mismatches };
     }
-    return { config, source: "jev", requestHash, model: parsed.model, usage, evidence: { ...evidence, establishedIntent: { species: intent.species, interactions: intent.graph.interactions } } as Record<string, unknown>, fidelity };
+    return { config, source: "jev", requestHash, model: parsed.model, usage, evidence: { ...evidence, councilSelectionCalls: { initial: council.providerCalls, ...(correctedCouncilCalls ? { corrected: correctedCouncilCalls } : {}) }, establishedIntent: { species: intent.species, interactions: intent.graph.interactions } } as Record<string, unknown>, fidelity };
   } catch (error) {
     return fallback(classifySetupFailure(error));
   }
