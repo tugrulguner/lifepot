@@ -25,19 +25,19 @@ it("allows an explicitly enabled loopback showcase more than ten calls, with a f
 it.each([undefined, "0", "true"])("retains default limits without exact opt-in: %s", async flag => {
   localEnvironment(); vi.stubEnv("LIFEPOT_SHOWCASE_MODE", flag);
   const { decide, handler } = fixture();
-  for (let i = 0; i < 11; i++) await handler(request());
-  expect(decide).toHaveBeenCalledTimes(10);
+  for (let i = 0; i < 61; i++) await handler(request());
+  expect(decide).toHaveBeenCalledTimes(60);
 });
 it.each(["example.com", "localhost.example.com", "192.168.1.2"])("does not expand quotas for non-loopback host %s", async host => {
   localEnvironment(); const { decide, handler } = fixture();
-  for (let i = 0; i < 11; i++) await handler(request(host));
-  expect(decide).toHaveBeenCalledTimes(10);
+  for (let i = 0; i < 61; i++) await handler(request(host));
+  expect(decide).toHaveBeenCalledTimes(60);
 });
 it.each(["1", "0", ""])("does not enable showcase on any Vercel-marked process: %s", async vercel => {
   localEnvironment(); vi.stubEnv("VERCEL", vercel);
   const { decide, handler } = fixture();
-  for (let i = 0; i < 11; i++) await handler(request());
-  expect(decide).toHaveBeenCalledTimes(10);
+  for (let i = 0; i < 61; i++) await handler(request());
+  expect(decide).toHaveBeenCalledTimes(60);
 });
 it.each(["127.0.0.1", "[::1]"])("supports explicit loopback addresses: %s", async host => {
   localEnvironment(); const { decide, handler } = fixture();
@@ -47,8 +47,8 @@ it.each(["127.0.0.1", "[::1]"])("supports explicit loopback addresses: %s", asyn
 it.each([undefined, "staging"])("does not expand quotas in an unspecified runtime: %s", async runtime => {
   localEnvironment(); vi.stubEnv("NODE_ENV", runtime);
   const { decide, handler } = fixture();
-  for (let i = 0; i < 11; i++) await handler(request());
-  expect(decide).toHaveBeenCalledTimes(10);
+  for (let i = 0; i < 61; i++) await handler(request());
+  expect(decide).toHaveBeenCalledTimes(60);
 });
 it("allows a production model request only after the Cloudflare limiter allows it", async () => {
   vi.stubEnv("NODE_ENV", "production");

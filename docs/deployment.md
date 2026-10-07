@@ -27,8 +27,11 @@ The route enforces:
 - a 16 KiB request-body limit;
 - strict setup and evolution request schemas;
 - `Cache-Control: no-store`;
-- a Cloudflare Workers Rate Limiting binding allowing at most 10 downstream calls per minute per client key and Cloudflare location;
+- a Cloudflare Workers Rate Limiting binding configured for 60 downstream provider calls per minute per client key and Cloudflare location;
+- a separate aggregate binding configured for 240 provider calls per minute per Cloudflare location;
 - fail-closed deterministic fallback when the binding is absent, denies a call, or errors.
+
+A corrected setup can consume seven provider calls. Each adaptive council checkpoint uses two, and a run records at most eight checkpoints. Setup, a complete adaptive run and reflection fit within 24 calls; two workflows fit within 48. The shared 60-call client window supports rapid experiments without test-only cooldowns, while still limiting every real provider call. These are LifePot abuse controls, not evidence of a Jev service quota. The higher aggregate limit permits more inference volume but remains bounded.
 
 Cloudflare's binding is location-local and eventually consistent, so it is an abuse-control measure, not an exact global quota or billing ledger. Provider-side usage limits remain the spend backstop. Local Node development and unit tests use an injected, deterministic in-process limiter; production must not fall back to an unmetered model call.
 

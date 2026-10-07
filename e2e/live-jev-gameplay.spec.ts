@@ -24,8 +24,6 @@ test.describe("live Jev setup and gameplay", () => {
    } catch { /* Assertions on awaited responses handle failures. */ }
   });
   await page.setViewportSize({ width: 1280, height: 850 });
-  // The previous adaptive case shares this origin's inference budget.
-  if (index === 1) await page.waitForTimeout(61000);
   await page.goto("/");
   let response;
   for (const [i, answer] of answers.entries()) {
@@ -52,9 +50,6 @@ test.describe("live Jev setup and gameplay", () => {
   const results = page.getByRole("region", { name: "Run results", exact: true });
   await expect(results).toBeVisible({ timeout: 240000 });
   await writeFile(info.outputPath("live-trial.txt"), await page.locator("body").innerText());
-  // Respect the shared 60-second Cloudflare inference budget after adaptive play.
-  // This deliberate cooldown does not disable limits or retry failed inference.
-  await page.waitForTimeout(61000);
   const reflectionPending = page.waitForResponse(r => r.url().endsWith("/api/reflect"), { timeout: 60000 });
   await page.getByRole("button", { name: "Ask Jev about this run" }).click();
   const reflectionResponse = await reflectionPending;
@@ -80,6 +75,9 @@ test.describe("live Jev setup and gameplay", () => {
   await expect(results).toBeVisible({ timeout: 180000 });
   expect(await page.getByRole("list", { name: "Observed outcomes" }).innerText()).toBe(outcomes);
   expect(judgeRequests).toBe(0); expect(errors).toEqual([]);
+  const runtime = network.filter(event => (event as { request?: { kind?: string } }).request?.kind === "evolution");
+  expect(runtime.length).toBeGreaterThan(0);
+  for (const event of runtime) expect((event as { response?: { source?: string } }).response?.source).toBe("jev");
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   await writeFile(info.outputPath("live-network.json"), JSON.stringify(network, null, 2));
   await page.screenshot({ path: info.outputPath("mobile-results.png"), fullPage: true });

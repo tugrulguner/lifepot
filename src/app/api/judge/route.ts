@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { INFERENCE_BUDGET } from "../inference-budget";
 import { deterministicSetup,hashSetupRequest } from "@/game/setup";
 import { deterministicEvolutionDecision,type EvolutionDecision } from "@/game/decisions";
 import { evolutionRequestSchema,setupRequestSchema,type EvolutionRequest,type SetupRequest } from "./schema";
@@ -28,10 +29,10 @@ function ip(r:Request){const raw=r.headers.get("cf-connecting-ip")?.trim();retur
 function fallback(i:Input){return "kind" in i?deterministicEvolutionDecision(i.summary):{config:deterministicSetup(i.answers),source:"fallback",requestHash:hashSetupRequest(i.answers)};}
 // Explicit development-only opt-in. Host checks are not authentication: bind dev to loopback.
 function localShowcase(r:Request){return process.env.LIFEPOT_SHOWCASE_MODE==="1"&&(process.env.NODE_ENV==="development"||process.env.NODE_ENV==="test")&&process.env.VERCEL===undefined&&["localhost","127.0.0.1","[::1]"].includes(new URL(r.url).hostname);}
-export function createCallBudget(max=10,window=60000,now=Date.now){const rates=new Map<string,{count:number;reset:number}>();return async(key:string)=>{const time=now();let b=rates.get(key);if(!b||time>=b.reset){if(rates.size>=1024&&!b)throw new Error("Quota store full");b={count:0,reset:time+window};rates.set(key,b);}if(b.count>=max)throw new Error("Model call quota exceeded");b.count++;};}
+export function createCallBudget(max=INFERENCE_BUDGET.perIp,window=INFERENCE_BUDGET.windowSeconds*1000,now=Date.now){const rates=new Map<string,{count:number;reset:number}>();return async(key:string)=>{const time=now();let b=rates.get(key);if(!b||time>=b.reset){if(rates.size>=1024&&!b)throw new Error("Quota store full");b={count:0,reset:time+window};rates.set(key,b);}if(b.count>=max)throw new Error("Model call quota exceeded");b.count++;};}
 export function createJudgeHandler(o:Options={}){
- const reserve=createCallBudget(o.maxRequests??10,o.windowMs??60000,o.now??Date.now);
- const showcaseReserve=createCallBudget(o.maxRequests??120,o.windowMs??60000,o.now??Date.now);
+ const reserve=createCallBudget(o.maxRequests??INFERENCE_BUDGET.perIp,o.windowMs??INFERENCE_BUDGET.windowSeconds*1000,o.now??Date.now);
+ const showcaseReserve=createCallBudget(o.maxRequests??120,o.windowMs??INFERENCE_BUDGET.windowSeconds*1000,o.now??Date.now);
  return async(r:Request)=>{try{
  if(Number(r.headers.get("content-length")??0)>MAX_BODY_BYTES)return response({error:"Request is too large"},413);
  let raw:string;try{raw=await readBoundedBody(r);}catch(e){if(e instanceof RangeError)return response({error:"Request is too large"},413);throw e;}
