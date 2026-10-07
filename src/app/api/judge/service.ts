@@ -241,6 +241,12 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
         fidelity = { ...fidelity, focus: focused.focus };
       } catch { fidelity = { ...fidelity, focus: "general" }; }
     }
+    // Final approval boundary: construction and repaired-review checks must not
+    // substitute for validating the graph actually returned to the browser.
+    if (fidelity.verdict === "approve") {
+      const mismatches = intentMismatches(intent, config.rules!);
+      if (mismatches.length) fidelity = { ...fidelity, verdict: "reselect", mismatches };
+    }
     return { config, source: "jev", requestHash, model: parsed.model, usage, evidence: { ...evidence, establishedIntent: { species: intent.species, interactions: intent.graph.interactions } } as Record<string, unknown>, fidelity };
   } catch (error) {
     return fallback(classifySetupFailure(error));

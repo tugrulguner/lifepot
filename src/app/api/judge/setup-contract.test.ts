@@ -25,6 +25,25 @@ function client(poisonUnusedRole = false, invalidStage?: "initial_council" | "fi
  return councilSdkResponse(request as never);
  }) }; }
 describe('shared setup food-web contract integration', () => {
+ it.each(['missing_hunter','reversed_link'] as const)('blocks initial approval after fault-injected %s graph drift', async corruption => {
+  const c=client(), original=c.systemOne, beforeCall=vi.fn();
+  c.systemOne=vi.fn(async request=>{
+   if ('verdict' in request.questions) {
+    const graph=request.state.assembled_graph as {species:{id:string;role:string}[];interactions:{pair:string;mode:string}[]};
+    // Fault injection models drift after construction, not a provider verdict's ability to rewrite the graph.
+    if(corruption==='missing_hunter'){graph.species=graph.species.filter(s=>s.id!=='C');graph.interactions=graph.interactions.filter(e=>!e.pair.split(':').includes('C'));}
+    else graph.interactions.find(e=>e.pair==='B:C')!.mode='a_consumes_b';
+   }
+   return original(request);
+  });
+  const result=await interpretSetup({answers,requestHash:hashSetupRequest(answers)},{apiKey:'test',client:c as never,beforeCall});
+  expect(result.source).toBe('jev');
+  expect(result.fidelity?.verdict).toBe('reselect');
+  expect(result.fidelity?.mismatches?.length).toBeGreaterThan(0);
+  expect(result.fidelity?.repairAttempted).not.toBe(true);
+  expect(c.systemOne).toHaveBeenCalledTimes(6);expect(beforeCall).toHaveBeenCalledTimes(6);
+  expect(result.evidence?.establishedIntent).toMatchObject({species:[{id:'A',role:'producer'},{id:'B',role:'grazer'},{id:'C',role:'hunter'}]});
+ });
  it.each(['initial_council','fidelity_review'] as const)('classifies invalid output at %s without leaking payloads', async stage => {
   const c=client(false,stage);
   const result=await interpretSetup({answers,requestHash:hashSetupRequest(answers)},{apiKey:'test',client:c as never});
