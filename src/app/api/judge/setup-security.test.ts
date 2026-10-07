@@ -39,6 +39,40 @@ describe("setup endpoint hardening", () => {
     expect((await handler(request({ ...input, requestHash: "forged-hash" }))).status).toBe(400);
     expect(decide).not.toHaveBeenCalled();
   });
+  it("allows two full gameplay workflows of 24 provider calls within one minute", async () => {
+    const decide = vi.fn(async () => interpretSetup(input));
+    const handler = createJudgeHandler({ decide, now: () => 1000 });
+    for (let call = 0; call < 48; call++) expect((await handler(request(input))).status).toBe(200);
+    expect(decide).toHaveBeenCalledTimes(48);
+  });
+  it("denies provider calls above sixty and resets the fixed window", async () => {
+    let now = 1000;
+    const decide = vi.fn(async () => interpretSetup(input));
+    const handler = createJudgeHandler({ decide, now: () => now });
+    for (let call = 0; call < 60; call++) await handler(request(input));
+    expect((await handler(request(input))).status).toBe(200);
+    expect((await (await handler(request(input))).json()).provenance.reason).toBe("rate_limited");
+    expect(decide).toHaveBeenCalledTimes(60);
+    now += 60_000;
+    await handler(request(input));
+    expect(decide).toHaveBeenCalledTimes(61);
+  });
+  it("fails closed when a production rate binding denies an actual provider call", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const decide = vi.fn(async () => interpretSetup(input));
+    const rateLimit = vi.fn(async () => false);
+    const globalRateLimit = vi.fn(async () => true);
+    try {
+      const handler = createJudgeHandler({ decide, rateLimit, globalRateLimit });
+      const response = await handler(request(input));
+      expect((await response.json()).provenance).toEqual({ outcome: "abstained", reason: "rate_limited" });
+      expect(rateLimit).toHaveBeenCalledWith("judge:unknown");
+      expect(globalRateLimit).not.toHaveBeenCalled();
+      expect(decide).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
   it("calls Jev for every submission and throttles excess requests", async () => {
     const decide = vi.fn(async () => interpretSetup(input)); const handler = createJudgeHandler({ decide, maxRequests: 2 });
     expect((await handler(request(input))).status).toBe(200);
