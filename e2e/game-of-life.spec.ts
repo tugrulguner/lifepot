@@ -91,12 +91,15 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
     await expect(page.getByRole("textbox", { name: "What exists in this world?" })).toBeFocused();
     // Native autofocus scrolls asynchronously; assert after the browser has settled.
     await page.waitForTimeout(300);
+    await page.locator(".setup-intro summary").click();
     await expect(page.getByText(/three answers.*Jev.*validated.*deterministic/i)).toBeVisible();
     await expect(page.getByText(/not a biological forecast/i)).toBeVisible();
     const about = page.getByRole("link", { name: /About LifePot/i });
     await expect(about).toHaveAttribute("href", "https://github.com/tugrulguner/lifepot/tree/main/docs");
     await expect(about).toHaveAttribute("target", "_blank");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.locator(".setup-intro summary").click();
+    await page.getByRole("heading", { name: "What exists in this world?" }).scrollIntoViewIfNeeded();
     const headerBounds = await page.locator(".family-header").boundingBox();
     const headingBounds = await page.getByRole("heading", { name: "What exists in this world?" }).boundingBox();
     expect(headerBounds).not.toBeNull();
