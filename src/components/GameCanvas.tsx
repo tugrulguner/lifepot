@@ -50,7 +50,7 @@ import { cellAtPoint } from "@/game/inspection";
 import { updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
 import { WorldObservatory } from "./WorldObservatory";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
-import { setupFidelitySchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity } from "@/game/setup-review";
+import { setupFidelitySchema, setupFailureSchema, setupNamedIntentSchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity, type SetupFailure, type SetupNamedIntent } from "@/game/setup-review";
 import { speciesColor } from "@/game/species-colors";
 import { isSurvivingNewborn, relationshipLabel, triggerLabel } from "@/game/visuals";
 export type LifePotViewModel = {
@@ -119,6 +119,7 @@ const RESPONSE = z
     evidence: z.record(z.string(), z.unknown()).optional(),
     fidelity: setupFidelitySchema.optional(),
     fallbackReason: failureReasonSchema.optional(),
+    failure: setupFailureSchema.optional(),
     provenance: z.object({ outcome: z.string(), reason: z.string().optional() }).optional(),
   })
   .strict();
@@ -293,6 +294,8 @@ export function GameCanvas() {
       usage?: { input_tokens: number; output_tokens: number };
       fidelity?: SetupFidelity;
       fallbackReason?: FailureReason;
+      failure?: SetupFailure;
+      namedIntent?: SetupNamedIntent;
     } | null>(null),
     [seed, setSeed] = useState(0),
     [simulation, setSimulation] = useState<SimulationState | null>(null),
@@ -505,8 +508,9 @@ export function GameCanvas() {
         }),
         p = RESPONSE.parse(await r.json());
       if (p.requestHash !== hash) throw 0;
+      const namedIntent = setupNamedIntentSchema.safeParse(p.evidence?.establishedIntent);
       setConfig(p.config);
-      setProof({ source: p.source, model: p.model, usage: p.usage, fidelity: p.fidelity, fallbackReason: p.fallbackReason });
+      setProof({ source: p.source, model: p.model, usage: p.usage, fidelity: p.fidelity, fallbackReason: p.fallbackReason, failure: p.failure, namedIntent: namedIntent.success ? namedIntent.data : undefined });
     } catch {
       setConfig(deterministicSetup(ca));
       setProof({ source: "fallback" });
@@ -651,6 +655,9 @@ export function GameCanvas() {
             <button disabled={interpreting} onClick={loadDeterministicPreset}>Explore deterministic preset instead</button>
           </section>}
           {proof?.fallbackReason && <p role="status">Setup interpretation unavailable: {failureLabels[proof.fallbackReason]}. This preview is a fallback, not a Jev-approved interpretation.</p>}
+          {(proof?.failure ?? proof?.fidelity?.failure) && <p role="status">Setup failure stage: {(proof?.failure ?? proof?.fidelity?.failure)!.stage.replaceAll("_", " ")}.</p>}
+          {proof?.fidelity?.mismatches?.length ? <section aria-label="Food-web contract conflicts"><p>The corrected proposal conflicts with the established food web:</p><ul>{proof.fidelity.mismatches.map((message, index) => <li key={index}>{message}</li>)}</ul></section> : null}
+          {proof?.namedIntent && <p>Established organism intent: {proof.namedIntent.species.map(species => `${species.id} — ${species.name} (${species.role})`).join("; ")}.</p>}
           <WorldPreview config={config} answers={answers} onChange={next => { setConfig(next); setManuallyEdited(true); }} />
           <div className="experiment-intent">
             <label>Your question or prediction (optional)<input aria-label="Your question or prediction (optional)" value={question} maxLength={240} placeholder="What would you like to investigate?" onChange={event => setQuestion(event.target.value)}/></label>

@@ -9,12 +9,21 @@ export const SETUP_REVIEW_QUESTIONS: Record<typeof SETUP_REVIEW_FOCI[number], st
  ambiguous_food_web: "Should these organisms eat one another, compete without feeding, or remain unrelated? Specify the intended relationships.",
  general: "Review the proposed species and feeding links below. If they differ from your idea, edit only the affected answer; your original answers are retained.",
 };
+export const setupNamedIntentSchema = z.object({ species: z.array(z.object({ id: z.enum(["A", "B", "C", "D"]), name: z.string().min(1).max(140), role: z.enum(["producer", "grazer", "hunter", "scavenger", "omnivore"]) })).min(2).max(4) });
+export type SetupNamedIntent = z.infer<typeof setupNamedIntentSchema>;
+export const setupFailureSchema = z.object({
+ stage: z.enum(["initial_interpretation", "intent_mapping", "intent_roles", "intent_pairs", "initial_council", "fidelity_review", "repair_roles", "repair_pairs", "repair_fidelity", "repair_council", "review_focus"]),
+ code: z.enum(["rate_limited", "unavailable", "invalid_response", "missing_credentials", "unknown"]),
+}).strict();
+export type SetupFailure = z.infer<typeof setupFailureSchema>;
 export const setupFidelitySchema = z.object({
  verdict: z.enum(["approve", "reselect", "reject", "needs_clarification"]),
  model: z.string().min(1),
  usage: z.object({ input_tokens: z.number().int().nonnegative(), output_tokens: z.number().int().nonnegative() }).strict(),
  repairAttempted: z.boolean().optional(),
+ failure: setupFailureSchema.optional(),
  repairFailure: z.enum(["rate_limited", "unavailable", "invalid_response", "missing_credentials", "unknown"]).optional(),
  focus: z.enum(SETUP_REVIEW_FOCI).optional(),
+ mismatches: z.array(z.string().max(500)).max(16).optional(),
 }).strict();
 export type SetupFidelity = z.infer<typeof setupFidelitySchema>;

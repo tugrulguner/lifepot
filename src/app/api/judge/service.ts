@@ -2,6 +2,8 @@ import { choice, score, TypeSafeClient } from "@typesafe-ai/sdk";
 import { selectCouncil, runCouncil, type CouncilClient } from "./council-service";
 import { reviewSetupFidelity, selectSetupReviewFocus, type SetupFidelityResult } from "./setup-fidelity";
 import { z } from "zod";
+import { selectSetupIntent, intentMismatches } from "./setup-intent";
+import type { SetupFailure } from "@/game/setup-review";
 import {
   ENVIRONMENT_PRESSURES,
   INTENSITIES,
@@ -44,6 +46,7 @@ export type SetupInterpretation = {
   evidence?: Record<string, unknown>;
   fidelity?: SetupFidelityResult;
   fallbackReason?: "rate_limited" | "unavailable" | "invalid_response" | "missing_credentials" | "unknown";
+  failure?: SetupFailure;
 };
 
 const criteria = <T extends readonly string[]>(values: T) => Object.fromEntries(values.map((value) => [value, value.replaceAll("_", " ")]));
@@ -126,8 +129,12 @@ const setupResponse = z.object({
   }).strict(),
 }).passthrough();
 
+const INITIAL_GRAPH_FIELDS = { speciesCount: true, roleA: true, roleB: true, roleC: true, roleD: true, pairAB: true, pairAC: true, pairAD: true, pairBC: true, pairBD: true, pairCD: true } as const;
+const initialQuestions = Object.fromEntries(Object.entries(setupQuestions).filter(([key]) => !(key in INITIAL_GRAPH_FIELDS)));
+const initialResponse = setupResponse.extend({ answers: setupResponse.shape.answers.omit(INITIAL_GRAPH_FIELDS).strip() });
+
 type SetupAnswersResponse = z.infer<typeof setupResponse>["answers"];
-type SetupClient = { systemOne(request: { state: SetupAnswers; questions: typeof setupQuestions }): Promise<unknown> };
+type SetupClient = { systemOne(request: { state: SetupAnswers; questions: typeof initialQuestions }): Promise<unknown> };
 const slotIds = ["A", "B", "C", "D"] as const;
 const pairQuestion = { "A:B": "pairAB", "A:C": "pairAC", "A:D": "pairAD", "B:C": "pairBC", "B:D": "pairBD", "C:D": "pairCD" } as const;
 function buildRuleGraph(answers: SetupAnswersResponse): WorldRuleGraph {
@@ -147,7 +154,7 @@ function classifySetupFailure(error: unknown): SetupInterpretation["fallbackReas
   if(error instanceof z.ZodError)return "invalid_response";
   const message = error instanceof Error ? error.message.toLowerCase() : "";
   if (/quota exceeded|rate limit|rate-limit|too many requests/.test(message)) return "rate_limited";
-  if (/invalid|parse|schema|answer keys mismatch|scope palette/.test(message)) return "invalid_response";
+  if (/invalid|malformed|parse|schema|answer keys mismatch|scope palette/.test(message)) return "invalid_response";
   if (/api key|credential/.test(message)) return "missing_credentials";
   if (/timeout|connection|fetch|unavailable|network|5\\d\\d/.test(message)) return "unavailable";
   return "unknown";
@@ -155,29 +162,33 @@ function classifySetupFailure(error: unknown): SetupInterpretation["fallbackReas
 
 export async function interpretSetup(input: SetupRequest, options: { apiKey?: string; client?: SetupClient; beforeCall?:()=>Promise<void> } = {}): Promise<SetupInterpretation> {
   const requestHash = hashSetupRequest(input.answers);
-  const fallback = (fallbackReason?: SetupInterpretation["fallbackReason"]): SetupInterpretation => ({ config: deterministicSetup(input.answers), source: "fallback", requestHash, ...(fallbackReason ? { fallbackReason } : {}) });
+  let stage: NonNullable<SetupInterpretation["failure"]>["stage"] = "initial_interpretation";
+  const fallback = (fallbackReason?: SetupInterpretation["fallbackReason"]): SetupInterpretation => ({ config: deterministicSetup(input.answers), source: "fallback", requestHash, ...(fallbackReason ? { fallbackReason, failure: { stage, code: fallbackReason } } : {}) });
   if (input.requestHash !== requestHash) return fallback("invalid_response");
   const apiKey = options.apiKey ?? process.env.TYPESAFE_API_KEY;
   if (!apiKey) return fallback("missing_credentials");
   try {
     const client = options.client ?? new TypeSafeClient({ apiKey, timeout: 5000, retry: { maxRetries: 0 } });
     await options.beforeCall?.();
-    const parsed = setupResponse.parse(await client.systemOne({ state: input.answers, questions: setupQuestions }));
+    const parsed = initialResponse.parse(await client.systemOne({ state: input.answers, questions: initialQuestions }));
     const answers = parsed.answers;
     const scores = [answers.survive, answers.replicate, answers.cooperate, answers.explore, answers.adapt];
-    if (scores.some((item) => Math.abs(item.score - Object.entries(item.probabilities).reduce((sum, [level, value]) => sum + Number(level) * value, 0)) > 0.051)) return fallback();
+    if (scores.some((item) => Math.abs(item.score - Object.entries(item.probabilities).reduce((sum, [level, value]) => sum + Number(level) * value, 0)) > 0.051)) return fallback("invalid_response");
+    const intent = await selectSetupIntent(input.answers, client as never, options.beforeCall, next => { stage = next; });
     const config = lifeConfigSchema.parse({
       environment: { abundance: answers.abundance.choice, distribution: answers.distribution.choice, hazard: answers.hazard.choice, volatility: answers.volatility.choice },
       founders: { balance: answers.balance.choice, diversity: answers.diversity.choice, preyStrategy: answers.preyStrategy.choice, predatorStrategy: answers.predatorStrategy.choice },
       fitness: normalizeFitness({ survive: answers.survive.score, replicate: answers.replicate.score, cooperate: answers.cooperate.score, explore: answers.explore.score, adapt: answers.adapt.score }),
-      rules: buildRuleGraph(answers),
+      rules: { ...intent.graph, species: intent.graph.species.map((species, index) => ({ ...species, selfInteraction: [answers.selfA, answers.selfB, answers.selfC, answers.selfD][index].choice })), environment: { regeneration: answers.regeneration.choice, pressure: answers.rulePressure.choice, volatility: answers.volatility.choice, intensity: answers.ruleIntensity.choice, duration: answers.ruleDuration.choice } },
     });
+    stage = "initial_council";
     const council=await selectCouncil(config.rules!,input.answers,client as CouncilClient,options.beforeCall);
     config.rules!.council=council.manifest;config.rules!.councilSetup=council.record;
-    let fidelity = await reviewSetupFidelity(input.answers, config, client as never, options.beforeCall);
-    const usage = { input_tokens: parsed.usage.input_tokens + council.record.usage.input_tokens + fidelity.usage.input_tokens, output_tokens: parsed.usage.output_tokens + council.record.usage.output_tokens + fidelity.usage.output_tokens };
+    stage = "fidelity_review";
+    let fidelity = await reviewSetupFidelity(input.answers, config, client as never, options.beforeCall, intent);
+    const usage = { input_tokens: parsed.usage.input_tokens + intent.usage.input_tokens + council.record.usage.input_tokens + fidelity.usage.input_tokens, output_tokens: parsed.usage.output_tokens + intent.usage.output_tokens + council.record.usage.output_tokens + fidelity.usage.output_tokens };
     const addUsage = (u: Usage) => { usage.input_tokens += u.input_tokens; usage.output_tokens += u.output_tokens; };
-    let evidence = structuredClone(answers);
+    let evidence: Record<string, unknown> = structuredClone(answers);
     if (fidelity.verdict === "reselect" || fidelity.verdict === "reject") {
       // One correction only: establish roles/count first, then select links against
       // those exact species. Independent pair choices can now see selected roles.
@@ -185,8 +196,9 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
       try {
         const roleKeys = { speciesCount: true, roleA: true, roleB: true, roleC: true, roleD: true, selfA: true, selfB: true, selfC: true, selfD: true } as const;
         const roleQuestions = Object.fromEntries(Object.keys(roleKeys).map(key => [key, setupQuestions[key as keyof typeof roleKeys]]));
+        stage = "repair_roles";
         await options.beforeCall?.();
-        const roles = setupResponse.extend({ answers: setupResponse.shape.answers.pick(roleKeys) }).parse(await client.systemOne({ state: { original_prose: input.answers, rejected_graph: config.rules, task: "Correct the species count and roles using the original names in first-mentioned slot order. Do not defend the rejected graph. Relationships will be selected after these roles are fixed." }, questions: roleQuestions } as never));
+        const roles = setupResponse.extend({ answers: setupResponse.shape.answers.pick(roleKeys) }).parse(await client.systemOne({ state: { original_prose: input.answers, rejected_graph: config.rules, established_intent: intent.species, task: "Preserve the established named species and roles. Correct the species count and roles using the original names in first-mentioned slot order. Do not defend the rejected graph. Relationships will be selected after these roles are fixed." }, questions: roleQuestions } as never));
         addUsage(roles.usage);
         const partial = { ...answers, ...roles.answers };
         const count = partial.speciesCount.choice === "two" ? 2 : partial.speciesCount.choice === "three" ? 3 : 4;
@@ -194,16 +206,21 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
         const pairKeys = Object.entries(pairQuestion).filter(([pair]) => pair.split(":").every(id => selectedSpecies.some(s => s.id === id))).map(([,key]) => key);
         const pairQuestions = Object.fromEntries(pairKeys.map(key => [key, setupQuestions[key]]));
         const pairShape = Object.fromEntries(pairKeys.map(key => [key, setupResponse.shape.answers.shape[key]]));
+        stage = "repair_pairs";
         await options.beforeCall?.();
-        const pairs = setupResponse.extend({ answers: z.object(pairShape).strict() }).parse(await client.systemOne({ state: { original_prose: input.answers, selected_species: selectedSpecies, rejected_graph: config.rules, task: "Select the directed relationships jointly against these fixed species roles and original prose. Pair endpoints are literal slot IDs. Do not invent feeding links." }, questions: pairQuestions } as never));
+        const pairs = setupResponse.extend({ answers: z.object(pairShape).strict() }).parse(await client.systemOne({ state: { original_prose: input.answers, selected_species: selectedSpecies, established_intent: intent, rejected_graph: config.rules, task: "Select the directed relationships jointly against these fixed species roles and original prose. Pair endpoints are literal slot IDs. Do not invent feeding links." }, questions: pairQuestions } as never));
         addUsage(pairs.usage);
         evidence = { ...partial, ...pairs.answers } as SetupAnswersResponse;
-        const corrected = buildRuleGraph(evidence);
+        const corrected = buildRuleGraph(evidence as SetupAnswersResponse);
         config.rules = corrected;
-        const reviewed = await reviewSetupFidelity(input.answers, config, client as never, options.beforeCall);
+        stage = "repair_fidelity";
+        const reviewed = await reviewSetupFidelity(input.answers, config, client as never, options.beforeCall, intent);
         addUsage(reviewed.usage);
+        const mismatches = intentMismatches(intent, corrected);
+        if (mismatches.length) { reviewed.verdict = "reselect"; reviewed.mismatches = mismatches; }
         config.rules = corrected;
         if (reviewed.verdict === "approve") {
+          stage = "repair_council";
           const correctedCouncil = await selectCouncil(corrected, input.answers, client as CouncilClient, options.beforeCall);
           config.rules.council = correctedCouncil.manifest;
           config.rules.councilSetup = correctedCouncil.record;
@@ -213,17 +230,18 @@ export async function interpretSetup(input: SetupRequest, options: { apiKey?: st
         fidelity = { ...reviewed, repairAttempted: true };
       } catch (error) {
         // Never turn a failed repair into an implicitly seedable fallback.
-        fidelity = { ...fidelity, repairFailure: classifySetupFailure(error) ?? "unknown" };
+        fidelity = { ...fidelity, repairFailure: classifySetupFailure(error) ?? "unknown", failure: { stage, code: classifySetupFailure(error) ?? "unknown" } } as SetupFidelityResult;
       }
     }
     if (fidelity.verdict !== "approve" && !fidelity.repairFailure) {
       try {
+        stage = "review_focus";
         const focused = await selectSetupReviewFocus(input.answers, config, client as never, options.beforeCall);
         addUsage(focused.usage);
         fidelity = { ...fidelity, focus: focused.focus };
       } catch { fidelity = { ...fidelity, focus: "general" }; }
     }
-    return { config, source: "jev", requestHash, model: parsed.model, usage, evidence: evidence as Record<string, unknown>, fidelity };
+    return { config, source: "jev", requestHash, model: parsed.model, usage, evidence: { ...evidence, establishedIntent: { species: intent.species, interactions: intent.graph.interactions } } as Record<string, unknown>, fidelity };
   } catch (error) {
     return fallback(classifySetupFailure(error));
   }
