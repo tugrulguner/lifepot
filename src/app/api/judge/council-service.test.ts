@@ -4,12 +4,42 @@ import {validateSpeciesDirectives,validateEvolutionDecision} from "@/game/decisi
 import {createCallBudget} from "./route";
 import {decideEvolution} from "./service";
 import {defaultConfig} from "@/game/setup";
-import {expect,it} from "vitest";
+import {expect,it,vi} from "vitest";
 import {selectCouncil,runCouncil} from "./council-service";
 import {defaultRuleGraph} from "@/game/rules";
 import {createSimulation} from "@/game/world";
 import {summarizeEcology} from "@/game/decisions";
 const intent={world:"rich",threat:"heat",reward:"adapt"};
+it("corrects a nonmaximal council choice once without changing its probability data",async()=>{
+ const model=client(),requests:unknown[]=[];const reserve=vi.fn();
+ const result=await selectCouncil(defaultRuleGraph(),intent,{async systemOne(request){requests.push(request.state);const response=await model.systemOne(request);const a=response.answers.priority_birth_A;if(model.calls===1){a.choice="4";a.probabilities={"0":0,"1":0,"2":0,"3":0,"4":.3,"5":.7};}else{a.choice="2";a.probabilities={"0":0,"1":0,"2":1,"3":0,"4":0,"5":0};}return response;}},reserve);
+ expect(model.calls).toBe(2);expect(reserve).toHaveBeenCalledTimes(2);expect(result.providerCalls).toBe(2);
+ expect(result.record.usage).toEqual({input_tokens:20,output_tokens:4});
+ expect(result.record.evidence.priority_birth_A.choice).toBe("2");
+ expect(result.record.evidence.priority_birth_A.probabilities).toEqual({"0":0,"1":0,"2":1,"3":0,"4":0,"5":0});
+ expect(requests[1]).toMatchObject({intent,protocol_correction:"Return a selected label whose reported probability is maximal. Preserve all question palettes and the original state."});
+});
+it("rejects a second inconsistent council response after two reserved attempts",async()=>{
+ const model=client(),reserve=vi.fn();
+ await expect(selectCouncil(defaultRuleGraph(),intent,{async systemOne(request){const response=await model.systemOne(request);const a=response.answers.priority_birth_A;a.choice="4";a.probabilities={"0":0,"1":0,"2":0,"3":0,"4":.3,"5":.7};return response;}},reserve)).rejects.toThrow("Invalid council distribution");
+ expect(model.calls).toBe(2);expect(reserve).toHaveBeenCalledTimes(2);
+});
+it("does not retry malformed council distributions",async()=>{
+ const model=client(),reserve=vi.fn();
+ await expect(selectCouncil(defaultRuleGraph(),intent,{async systemOne(request){const response=await model.systemOne(request);response.answers.priority_birth_A.probabilities["5"]=.5;return response;}},reserve)).rejects.toThrow("Invalid council distribution");
+ expect(model.calls).toBe(1);expect(reserve).toHaveBeenCalledTimes(1);
+});
+
+it("does not send the corrective request when its reservation is denied",async()=>{
+ const model=client(),reserve=vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("Quota exceeded"));
+ await expect(selectCouncil(defaultRuleGraph(),intent,{async systemOne(request){const response=await model.systemOne(request);const a=response.answers.priority_birth_A;a.choice="4";a.probabilities={"0":0,"1":0,"2":0,"3":0,"4":.3,"5":.7};return response;}},reserve)).rejects.toThrow("Quota exceeded");
+ expect(model.calls).toBe(1);expect(reserve).toHaveBeenCalledTimes(2);
+});
+it.each(["confidence","usage"] as const)("does not retry a contradiction with invalid %s metadata",async corruption=>{
+ const model=client(),reserve=vi.fn();
+ await expect(selectCouncil(defaultRuleGraph(),intent,{async systemOne(request){const response=await model.systemOne(request);const a=response.answers.priority_birth_A;a.choice="4";a.probabilities={"0":0,"1":0,"2":0,"3":0,"4":.3,"5":.7};if(corruption==="confidence")a.confidence=2;else response.usage.input_tokens=-1;return response;}},reserve)).rejects.toThrow();
+ expect(model.calls).toBe(1);expect(reserve).toHaveBeenCalledTimes(1);
+});
 it("replays council provenance without inference and rejects changed authority",async()=>{const config=defaultConfig();config.rules!.council=(await selectCouncil(config.rules!,intent,client())).manifest;const initial=createSimulation({seed:1,config}),live=client();const fresh=await runFreshWithDecisions(initial,intent,s=>runCouncil(s,live),50);expect(fresh.ledger.some(d=>d.council)).toBe(true);const count=live.calls;expect(snapshotSimulation(runWithDecisionLedger(initial,fresh.ledger,50,intent))).toEqual(snapshotSimulation(fresh.state));expect(live.calls).toBe(count);const tampered=structuredClone(fresh.ledger.find(d=>d.council)!);tampered.council!.members[0].scope="D";expect(()=>validateSpeciesDirectives(tampered,config.rules!)).toThrow();});
 it("counts actual downstream calls and atomically abstains on exhausted quota",async()=>{const rules=defaultRuleGraph();rules.council=(await selectCouncil(rules,intent,client("4"))).manifest;const summary={...summarizeEcology(createSimulation({seed:1,config:defaultConfig()}),intent,"stagnation"),rules,generation:12};const model=client(),reserve=createCallBudget(1);const result=await decideEvolution({kind:"evolution",summary},{apiKey:"test",client:model,beforeCall:()=>reserve("ip")});expect(model.calls).toBe(1);expect(result.source).toBe("fallback");expect(result.speciesDirectives).toEqual([]);expect(result.scheduledRuleChange).toBeUndefined();});
 it("accepts identical scoped evidence after Zod reorders probability keys, but rejects changed values",async()=>{

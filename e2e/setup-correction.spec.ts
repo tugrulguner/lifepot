@@ -28,3 +28,22 @@ test("failed corrected council selection stays blocked and is explained without 
  await page.getByRole("button", { name: "Edit setup answers" }).click();
  await expect(page.locator("input")).toHaveValue(answers[0]);
 });
+test("shows concrete contract conflicts while keeping seed blocked", async ({ page }) => {
+ await page.route("**/api/judge", async route => { const input = route.request().postDataJSON(); await route.fulfill({ json: { config: defaultConfig(), source: "jev", requestHash: input.requestHash, fidelity: { verdict: "reselect", model: "jev-test", usage: {input_tokens:1,output_tokens:1}, repairAttempted:true, mismatches:["hunter (C) role: grazer; intended hunter"] } } }); });
+ await setup(page);
+ await expect(page.getByText("hunter (C) role: grazer; intended hunter")).toBeVisible();
+ await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeDisabled();
+});
+test("shows the source-grounded organism names in setup review", async ({ page }) => {
+ await page.route("**/api/judge", async route => { const input = route.request().postDataJSON(); await route.fulfill({ json: {config:defaultConfig(),source:"jev",requestHash:input.requestHash,evidence:{establishedIntent:{species:[{id:"A",name:"algae",role:"producer"},{id:"B",name:"grazers",role:"grazer"},{id:"C",name:"hunters",role:"hunter"}]}},fidelity:{verdict:"approve",model:"jev-test",usage:{input_tokens:1,output_tokens:1}}} }); });
+ await setup(page);
+ await expect(page.getByText("Established organism intent: A — algae (producer); B — grazers (grazer); C — hunters (hunter).")).toBeVisible();
+});
+test("safe setup failure stage reaches the browser without being replaced by generic fallback", async ({ page }) => {
+ await page.route("**/api/judge", async route => { const input = route.request().postDataJSON(); await route.fulfill({ json: { config: defaultConfig(), source: "fallback", requestHash: input.requestHash, fallbackReason: "invalid_response", failure: { stage: "initial_council", code: "invalid_response" } } }); });
+ await setup(page);
+ await expect(page.getByText("Setup failure stage: initial council.")).toBeVisible();
+ await expect(page.getByText(/This preview is a fallback/)).toBeVisible();
+ await page.getByRole("button", { name: "Edit setup answers" }).click();
+ await expect(page.locator("input")).toHaveValue(answers[0]);
+});

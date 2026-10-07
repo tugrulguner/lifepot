@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { hashSetupRequest, type SetupAnswers } from "@/game/setup";
 import { createJudgeHandler } from "./route";
 import { interpretSetup } from "./service";
-import { validSdkResponse, councilSdkResponse } from "./setup-route.test";
+import { validSdkResponse, councilSdkResponse, withIntentCalls } from "./setup-test-fixtures";
 
-const answers: SetupAnswers = { world: "Rich scattered light", threat: "Heat is stable", reward: "Reward exploration" };
+const answers: SetupAnswers = { world: "Rich scattered light for grazers and hunters", threat: "Heat is stable", reward: "Reward exploration" };
 const input = { answers, requestHash: hashSetupRequest(answers) };
 const request = (body: unknown, ip = "203.0.113.8") => new Request("http://localhost/api/judge", { method: "POST", body: JSON.stringify(body), headers: { "x-forwarded-for": ip } });
 
@@ -23,14 +23,14 @@ describe("setup endpoint hardening", () => {
   it("accepts SDK score rounding within one hundredth", async () => {
     const rounded = validSdkResponse();
     rounded.answers.cooperate.score = 2.01;
-    const client = { systemOne: vi.fn().mockResolvedValueOnce(rounded).mockImplementation(councilSdkResponse) };
+    const client = { systemOne: withIntentCalls(vi.fn().mockResolvedValueOnce(rounded).mockImplementation(councilSdkResponse), ["grazers","hunters"], ["grazer","hunter"], {"A:B":"b_consumes_a"}) };
     expect((await interpretSetup(input, { apiKey: "test-key", client: client as never })).source).toBe("jev");
   });
   it("accepts a probability distribution rounded to 0.99", async () => {
     const rounded = validSdkResponse();
     rounded.answers.explore.score = 0.99;
     rounded.answers.explore.probabilities = { "0": 0, "1": 0.99, "2": 0, "3": 0, "4": 0 };
-    const client = { systemOne: vi.fn().mockResolvedValueOnce(rounded).mockImplementation(councilSdkResponse) };
+    const client = { systemOne: withIntentCalls(vi.fn().mockResolvedValueOnce(rounded).mockImplementation(councilSdkResponse), ["grazers","hunters"], ["grazer","hunter"], {"A:B":"b_consumes_a"}) };
     expect((await interpretSetup(input, { apiKey: "test-key", client: client as never })).source).toBe("jev");
   });
 
@@ -39,11 +39,11 @@ describe("setup endpoint hardening", () => {
     expect((await handler(request({ ...input, requestHash: "forged-hash" }))).status).toBe(400);
     expect(decide).not.toHaveBeenCalled();
   });
-  it("allows two full gameplay workflows of 24 provider calls within one minute", async () => {
+  it("allows two full gameplay workflows of 30 provider calls within one minute", async () => {
     const decide = vi.fn(async () => interpretSetup(input));
     const handler = createJudgeHandler({ decide, now: () => 1000 });
-    for (let call = 0; call < 48; call++) expect((await handler(request(input))).status).toBe(200);
-    expect(decide).toHaveBeenCalledTimes(48);
+    for (let call = 0; call < 60; call++) expect((await handler(request(input))).status).toBe(200);
+    expect(decide).toHaveBeenCalledTimes(60);
   });
   it("denies provider calls above sixty and resets the fixed window", async () => {
     let now = 1000;

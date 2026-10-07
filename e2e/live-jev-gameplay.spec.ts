@@ -34,6 +34,25 @@ test.describe("live Jev setup and gameplay", () => {
   const setup = await response!.json();
   await writeFile(info.outputPath("live-setup.json"), JSON.stringify(setup, null, 2));
   expect(setup.source).toBe("jev"); expect(setup.fidelity.verdict).toBe("approve");
+  const graph = setup.config.rules as { species: { id: string; role: string }[]; interactions: { pair: string; mode: string }[] };
+  const feedingLinks = graph.interactions.flatMap(edge => {
+   const [a,b] = edge.pair.split(":");
+   return edge.mode === "a_consumes_b" ? [`${a}->${b}`] : edge.mode === "b_consumes_a" ? [`${b}->${a}`] : [];
+  });
+  if (index === 0) {
+   expect(graph.species.map(({id,role}) => ({id,role}))).toEqual([{id:"A",role:"producer"},{id:"B",role:"grazer"},{id:"C",role:"hunter"}]);
+   expect(feedingLinks.sort()).toEqual(["B->A","C->B"]);
+  } else {
+   const prey = graph.species.filter(s => s.role === "grazer").map(s => s.id);
+   const hunters = graph.species.filter(s => s.role === "hunter").map(s => s.id);
+   expect(prey.length).toBeGreaterThan(0); expect(hunters.length).toBeGreaterThan(0);
+   expect(feedingLinks.some(link => hunters.some(h => prey.some(p => link === `${h}->${p}`)))).toBe(true);
+  }
+  const intentSpecies = setup.evidence?.establishedIntent?.species as {id:string;name:string;role:string}[];
+  expect(intentSpecies).toHaveLength(graph.species.length);
+  expect(intentSpecies.map(({id,role}) => ({id,role}))).toEqual(graph.species.map(({id,role}) => ({id,role})));
+  for (const species of intentSpecies) expect(answers.slice(0,2).some(answer => answer.includes(species.name))).toBe(true);
+  await expect(page.getByText(/^Established organism intent:/)).toBeVisible();
   await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeEnabled();
   if (index !== 0) return;
   const question = "PRIVATE live review prediction";
