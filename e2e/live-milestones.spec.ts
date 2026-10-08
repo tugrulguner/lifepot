@@ -20,8 +20,8 @@ test("real species and followed-family extinction remain near the board after in
   await page.getByRole("button", { name: "Resume", exact: true }).click();
   await page.getByRole("button", { name: "3× speed" }).click();
   const milestones = page.getByRole("region", { name: "Observed extinction milestones" });
-  await expect(milestones).toContainText("Species A first observed extinct at generation", { timeout: 120_000 });
-  // This is a live event, before the later hunter extinction empties the world.
+  await expect(milestones).toContainText("Species B first observed extinct at generation", { timeout: 120_000 });
+  // Under ca8 the hunters disappear while grazers survive; verify the event during play.
   await expect(page.getByRole("region", { name: "Run status" })).toContainText("Running");
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(milestones).toContainText(`Founder lineage #${lineage} first observed extinct at generation`);

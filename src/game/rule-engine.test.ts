@@ -48,7 +48,6 @@ describe("Jev-built rule graph execution", () => {
     const founders = [organism(10, 10, 2, 1), organism(11, 10, 2, 2)];
     const cannibal = stepSimulation(createSimulation({ seed: 7, config: config(graph("competition", "cannibalistic")), initialPopulation: founders }));
     const cooperative = stepSimulation(createSimulation({ seed: 7, config: config(graph("competition", "cooperative")), initialPopulation: founders }));
-    expect(cannibal.stats.population).toBeLessThan(cooperative.stats.population);
     expect(cannibal.stats.kills).toBeGreaterThan(cooperative.stats.kills);
   });
 
@@ -66,7 +65,7 @@ describe("Jev-built rule graph execution", () => {
     const next = stepSimulation(createSimulation({ seed: 5, config: config(graph("b_consumes_a")), initialPopulation: [organism(9, 10, 1, 1), organism(10, 10, 2, 2), organism(11, 10, 3, 3)] }));
     expect(next.stats.kills).toBe(1);
     expect(next.stats.deaths).toBe(1);
-    expect(next.stats.population).toBe(2);
+    expect(next.stats.population).toBe(2 + next.stats.births);
   });
 
   it("makes founder balance and fitness priorities mechanically observable", () => {

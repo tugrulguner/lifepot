@@ -1,0 +1,1631 @@
+{
+  "version": 3,
+  "engineVersion": "lifepot-ca-7",
+  "answers": {
+    "world": "Sparse nutrients scattered across open water",
+    "threat": "Predator packs hunt through pulsing droughts",
+    "reward": "Favor armored swarms and efficient hunters"
+  },
+  "config": {
+    "environment": {
+      "abundance": "balanced",
+      "distribution": "scattered",
+      "hazard": "drought",
+      "volatility": "pulsing"
+    },
+    "fitness": {
+      "survive": 0.2,
+      "replicate": 0.2,
+      "cooperate": 0.2,
+      "explore": 0.2,
+      "adapt": 0.19999999999999996
+    },
+    "founders": {
+      "balance": "balanced",
+      "diversity": "focused",
+      "preyStrategy": "armored",
+      "predatorStrategy": "pack_hunting"
+    },
+    "rules": {
+      "version": 1,
+      "species": [
+        {
+          "id": "A",
+          "role": "grazer",
+          "selfInteraction": "cooperative"
+        },
+        {
+          "id": "B",
+          "role": "hunter",
+          "selfInteraction": "territorial"
+        }
+      ],
+      "interactions": [
+        {
+          "pair": "A:B",
+          "mode": "b_consumes_a"
+        }
+      ],
+      "environment": {
+        "regeneration": "steady",
+        "pressure": "drought",
+        "volatility": "pulsing",
+        "intensity": "medium",
+        "duration": "persistent"
+      }
+    }
+  },
+  "seed": 1330785599,
+  "requestHash": "setup_1mhticp",
+  "ledger": [
+    {
+      "speciesDirectives": [
+        {
+          "species": "A",
+          "strategy": {
+            "choice": "swarming",
+            "confidence": 0.26,
+            "probabilities": {
+              "efficient_grazing": 0.16,
+              "early_brood": 0.01,
+              "armored": 0.41,
+              "swarming": 0.41,
+              "dispersal": 0.01
+            }
+          },
+          "mutationTarget": {
+            "choice": "defense",
+            "confidence": 0.91,
+            "probabilities": {
+              "metabolism": 0.01,
+              "fecundity": 0.04,
+              "mobility": 0.01,
+              "defense": 0.9299999999999999,
+              "sensing": 0.01
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.61,
+            "probabilities": {
+              "slow": 0.2,
+              "steady": 0.74,
+              "rapid": 0.06
+            }
+          }
+        },
+        {
+          "species": "B",
+          "strategy": {
+            "choice": "pack_hunting",
+            "confidence": 0.4,
+            "probabilities": {
+              "ambush": 0.02,
+              "pursuit": 0,
+              "pack_hunting": 0.52,
+              "efficient_kill": 0.45,
+              "brood_hunting": 0.01
+            }
+          },
+          "mutationTarget": {
+            "choice": "mobility",
+            "confidence": 0.27,
+            "probabilities": {
+              "metabolism": 0.06,
+              "fecundity": 0.05,
+              "mobility": 0.42,
+              "defense": 0.06,
+              "sensing": 0.41
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.52,
+            "probabilities": {
+              "slow": 0.21,
+              "steady": 0.68,
+              "rapid": 0.11
+            }
+          }
+        }
+      ],
+      "generation": 12,
+      "trigger": "predation_spike",
+      "observationHash": "eco_z8tcp5",
+      "source": "jev",
+      "model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 2645,
+        "output_tokens": 980
+      },
+      "ruleGraphVersion": 1,
+      "scheduledRuleChange": {
+        "decidedAtGeneration": 12,
+        "activation": "predation_high",
+        "duration": "persistent",
+        "transition": "pulse",
+        "patch": {
+          "kind": "environment",
+          "field": "pressure",
+          "value": "drought"
+        }
+      },
+      "ruleActivation": {
+        "choice": "predation_high",
+        "confidence": 0.86,
+        "probabilities": {
+          "immediate": 0.04,
+          "after_6": 0,
+          "after_12": 0.09,
+          "after_24": 0,
+          "resources_low": 0,
+          "population_boom": 0,
+          "population_crash": 0,
+          "species_emergence": 0,
+          "species_extinction": 0,
+          "predation_high": 0.87
+        }
+      },
+      "ruleDuration": {
+        "choice": "persistent",
+        "confidence": 1,
+        "probabilities": {
+          "short": 0,
+          "medium": 0,
+          "long": 0,
+          "persistent": 1
+        }
+      },
+      "ruleTransition": {
+        "choice": "pulse",
+        "confidence": 0.98,
+        "probabilities": {
+          "abrupt": 0.01,
+          "ramp": 0,
+          "pulse": 0.99
+        }
+      },
+      "preyStrategy": {
+        "choice": "armored",
+        "confidence": 0.27,
+        "probabilities": {
+          "efficient_grazing": 0.23,
+          "early_brood": 0.01,
+          "armored": 0.42,
+          "swarming": 0.33,
+          "dispersal": 0.01
+        }
+      },
+      "predatorStrategy": {
+        "choice": "efficient_kill",
+        "confidence": 0.45,
+        "probabilities": {
+          "ambush": 0.04,
+          "pursuit": 0,
+          "pack_hunting": 0.38,
+          "efficient_kill": 0.56,
+          "brood_hunting": 0.01
+        }
+      },
+      "preyMutationTarget": {
+        "choice": "defense",
+        "confidence": 0.64,
+        "probabilities": {
+          "metabolism": 0.17,
+          "fecundity": 0.04,
+          "mobility": 0.02,
+          "defense": 0.71,
+          "sensing": 0.06
+        }
+      },
+      "preyMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.66,
+        "probabilities": {
+          "slow": 0.2,
+          "steady": 0.77,
+          "rapid": 0.03
+        }
+      },
+      "predatorMutationTarget": {
+        "choice": "mobility",
+        "confidence": 0.25,
+        "probabilities": {
+          "metabolism": 0.21,
+          "fecundity": 0.01,
+          "mobility": 0.4,
+          "defense": 0.02,
+          "sensing": 0.36
+        }
+      },
+      "predatorMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.77,
+        "probabilities": {
+          "slow": 0.11,
+          "steady": 0.85,
+          "rapid": 0.04
+        }
+      },
+      "environmentPressure": {
+        "choice": "drought",
+        "confidence": 0.94,
+        "probabilities": {
+          "nutrient_bloom": 0.01,
+          "drought": 0.95,
+          "toxin_wave": 0.01,
+          "heat_wave": 0.01,
+          "fragmentation": 0.01,
+          "stability": 0.01
+        }
+      },
+      "environmentIntensity": {
+        "choice": "medium",
+        "confidence": 1,
+        "probabilities": {
+          "low": 0,
+          "medium": 1,
+          "high": 0
+        }
+      }
+    },
+    {
+      "speciesDirectives": [],
+      "generation": 24,
+      "trigger": "predator_crash",
+      "observationHash": "eco_1xkh7p3",
+      "source": "fallback",
+      "ruleGraphVersion": 2,
+      "preyStrategy": {
+        "choice": "efficient_grazing",
+        "confidence": 1,
+        "probabilities": {
+          "efficient_grazing": 1,
+          "early_brood": 0,
+          "armored": 0,
+          "swarming": 0,
+          "dispersal": 0
+        }
+      },
+      "predatorStrategy": {
+        "choice": "ambush",
+        "confidence": 1,
+        "probabilities": {
+          "ambush": 1,
+          "pursuit": 0,
+          "pack_hunting": 0,
+          "efficient_kill": 0,
+          "brood_hunting": 0
+        }
+      },
+      "preyMutationTarget": {
+        "choice": "metabolism",
+        "confidence": 1,
+        "probabilities": {
+          "metabolism": 1,
+          "fecundity": 0,
+          "mobility": 0,
+          "defense": 0,
+          "sensing": 0
+        }
+      },
+      "preyMutationTempo": {
+        "choice": "slow",
+        "confidence": 1,
+        "probabilities": {
+          "slow": 1,
+          "steady": 0,
+          "rapid": 0
+        }
+      },
+      "predatorMutationTarget": {
+        "choice": "metabolism",
+        "confidence": 1,
+        "probabilities": {
+          "metabolism": 1,
+          "fecundity": 0,
+          "mobility": 0,
+          "defense": 0,
+          "sensing": 0
+        }
+      },
+      "predatorMutationTempo": {
+        "choice": "slow",
+        "confidence": 1,
+        "probabilities": {
+          "slow": 1,
+          "steady": 0,
+          "rapid": 0
+        }
+      },
+      "environmentPressure": {
+        "choice": "drought",
+        "confidence": 1,
+        "probabilities": {
+          "nutrient_bloom": 0,
+          "drought": 1,
+          "toxin_wave": 0,
+          "heat_wave": 0,
+          "fragmentation": 0,
+          "stability": 0
+        }
+      },
+      "environmentIntensity": {
+        "choice": "medium",
+        "confidence": 1,
+        "probabilities": {
+          "low": 0,
+          "medium": 1,
+          "high": 0
+        }
+      }
+    },
+    {
+      "speciesDirectives": [
+        {
+          "species": "A",
+          "strategy": {
+            "choice": "swarming",
+            "confidence": 0.25,
+            "probabilities": {
+              "efficient_grazing": 0.17,
+              "early_brood": 0.01,
+              "armored": 0.4,
+              "swarming": 0.4,
+              "dispersal": 0.01
+            }
+          },
+          "mutationTarget": {
+            "choice": "defense",
+            "confidence": 0.89,
+            "probabilities": {
+              "metabolism": 0.02,
+              "fecundity": 0.05,
+              "mobility": 0.01,
+              "defense": 0.91,
+              "sensing": 0.01
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.58,
+            "probabilities": {
+              "slow": 0.2,
+              "steady": 0.72,
+              "rapid": 0.08
+            }
+          }
+        },
+        {
+          "species": "B",
+          "strategy": {
+            "choice": "efficient_kill",
+            "confidence": 0.45,
+            "probabilities": {
+              "ambush": 0.03,
+              "pursuit": 0,
+              "pack_hunting": 0.39,
+              "efficient_kill": 0.56,
+              "brood_hunting": 0.01
+            }
+          },
+          "mutationTarget": {
+            "choice": "mobility",
+            "confidence": 0.24,
+            "probabilities": {
+              "metabolism": 0.14,
+              "fecundity": 0.11,
+              "mobility": 0.39,
+              "defense": 0.05,
+              "sensing": 0.31
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.46,
+            "probabilities": {
+              "slow": 0.27,
+              "steady": 0.64,
+              "rapid": 0.09
+            }
+          }
+        }
+      ],
+      "generation": 36,
+      "trigger": "predator_crash",
+      "observationHash": "eco_14nqd2h",
+      "source": "jev",
+      "model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 2645,
+        "output_tokens": 979
+      },
+      "ruleGraphVersion": 2,
+      "scheduledRuleChange": {
+        "decidedAtGeneration": 36,
+        "activation": "population_crash",
+        "duration": "persistent",
+        "transition": "pulse",
+        "patch": {
+          "kind": "environment",
+          "field": "pressure",
+          "value": "drought"
+        }
+      },
+      "ruleActivation": {
+        "choice": "population_crash",
+        "confidence": 0.91,
+        "probabilities": {
+          "immediate": 0.05,
+          "after_6": 0,
+          "after_12": 0.01,
+          "after_24": 0,
+          "resources_low": 0,
+          "population_boom": 0,
+          "population_crash": 0.92,
+          "species_emergence": 0,
+          "species_extinction": 0,
+          "predation_high": 0.02
+        }
+      },
+      "ruleDuration": {
+        "choice": "persistent",
+        "confidence": 1,
+        "probabilities": {
+          "short": 0,
+          "medium": 0,
+          "long": 0,
+          "persistent": 1
+        }
+      },
+      "ruleTransition": {
+        "choice": "pulse",
+        "confidence": 0.98,
+        "probabilities": {
+          "abrupt": 0.01,
+          "ramp": 0,
+          "pulse": 0.99
+        }
+      },
+      "preyStrategy": {
+        "choice": "armored",
+        "confidence": 0.24,
+        "probabilities": {
+          "efficient_grazing": 0.28,
+          "early_brood": 0.02,
+          "armored": 0.39,
+          "swarming": 0.3,
+          "dispersal": 0.01
+        }
+      },
+      "predatorStrategy": {
+        "choice": "efficient_kill",
+        "confidence": 0.56,
+        "probabilities": {
+          "ambush": 0.06,
+          "pursuit": 0,
+          "pack_hunting": 0.28,
+          "efficient_kill": 0.65,
+          "brood_hunting": 0.01
+        }
+      },
+      "preyMutationTarget": {
+        "choice": "defense",
+        "confidence": 0.51,
+        "probabilities": {
+          "metabolism": 0.21,
+          "fecundity": 0.04,
+          "mobility": 0.04,
+          "defense": 0.61,
+          "sensing": 0.1
+        }
+      },
+      "preyMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.67,
+        "probabilities": {
+          "slow": 0.2,
+          "steady": 0.78,
+          "rapid": 0.02
+        }
+      },
+      "predatorMutationTarget": {
+        "choice": "mobility",
+        "confidence": 0.2,
+        "probabilities": {
+          "metabolism": 0.29,
+          "fecundity": 0.02,
+          "mobility": 0.36,
+          "defense": 0.01,
+          "sensing": 0.32
+        }
+      },
+      "predatorMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.7,
+        "probabilities": {
+          "slow": 0.16,
+          "steady": 0.8,
+          "rapid": 0.04
+        }
+      },
+      "environmentPressure": {
+        "choice": "drought",
+        "confidence": 0.94,
+        "probabilities": {
+          "nutrient_bloom": 0.02,
+          "drought": 0.95,
+          "toxin_wave": 0,
+          "heat_wave": 0.01,
+          "fragmentation": 0.01,
+          "stability": 0.01
+        }
+      },
+      "environmentIntensity": {
+        "choice": "medium",
+        "confidence": 1,
+        "probabilities": {
+          "low": 0,
+          "medium": 1,
+          "high": 0
+        }
+      }
+    },
+    {
+      "speciesDirectives": [
+        {
+          "species": "A",
+          "strategy": {
+            "choice": "swarming",
+            "confidence": 0.31,
+            "probabilities": {
+              "efficient_grazing": 0.18,
+              "early_brood": 0.01,
+              "armored": 0.35,
+              "swarming": 0.45,
+              "dispersal": 0.01
+            }
+          },
+          "mutationTarget": {
+            "choice": "defense",
+            "confidence": 0.91,
+            "probabilities": {
+              "metabolism": 0.01,
+              "fecundity": 0.04,
+              "mobility": 0.01,
+              "defense": 0.9299999999999999,
+              "sensing": 0.01
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.61,
+            "probabilities": {
+              "slow": 0.22,
+              "steady": 0.74,
+              "rapid": 0.04
+            }
+          }
+        },
+        {
+          "species": "B",
+          "strategy": {
+            "choice": "pack_hunting",
+            "confidence": 0.37,
+            "probabilities": {
+              "ambush": 0.02,
+              "pursuit": 0,
+              "pack_hunting": 0.5,
+              "efficient_kill": 0.47,
+              "brood_hunting": 0.01
+            }
+          },
+          "mutationTarget": {
+            "choice": "mobility",
+            "confidence": 0.25,
+            "probabilities": {
+              "metabolism": 0.08,
+              "fecundity": 0.11,
+              "mobility": 0.39999999999999997,
+              "defense": 0.07,
+              "sensing": 0.34
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.55,
+            "probabilities": {
+              "slow": 0.21,
+              "steady": 0.7,
+              "rapid": 0.09
+            }
+          }
+        }
+      ],
+      "generation": 48,
+      "trigger": "speciation",
+      "observationHash": "eco_io9zgd",
+      "source": "jev",
+      "model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 2644,
+        "output_tokens": 981
+      },
+      "ruleGraphVersion": 2,
+      "scheduledRuleChange": {
+        "decidedAtGeneration": 48,
+        "activation": "species_emergence",
+        "duration": "persistent",
+        "transition": "pulse",
+        "patch": {
+          "kind": "environment",
+          "field": "pressure",
+          "value": "drought"
+        }
+      },
+      "ruleActivation": {
+        "choice": "species_emergence",
+        "confidence": 0.49,
+        "probabilities": {
+          "immediate": 0.24,
+          "after_6": 0,
+          "after_12": 0.1,
+          "after_24": 0.01,
+          "resources_low": 0.05,
+          "population_boom": 0.01,
+          "population_crash": 0.01,
+          "species_emergence": 0.54,
+          "species_extinction": 0,
+          "predation_high": 0.04
+        }
+      },
+      "ruleDuration": {
+        "choice": "persistent",
+        "confidence": 1,
+        "probabilities": {
+          "short": 0,
+          "medium": 0,
+          "long": 0,
+          "persistent": 1
+        }
+      },
+      "ruleTransition": {
+        "choice": "pulse",
+        "confidence": 1,
+        "probabilities": {
+          "abrupt": 0,
+          "ramp": 0,
+          "pulse": 1
+        }
+      },
+      "preyStrategy": {
+        "choice": "armored",
+        "confidence": 0.24,
+        "probabilities": {
+          "efficient_grazing": 0.24,
+          "early_brood": 0.01,
+          "armored": 0.39,
+          "swarming": 0.35,
+          "dispersal": 0.01
+        }
+      },
+      "predatorStrategy": {
+        "choice": "efficient_kill",
+        "confidence": 0.42,
+        "probabilities": {
+          "ambush": 0.03,
+          "pursuit": 0,
+          "pack_hunting": 0.42,
+          "efficient_kill": 0.54,
+          "brood_hunting": 0.01
+        }
+      },
+      "preyMutationTarget": {
+        "choice": "defense",
+        "confidence": 0.5,
+        "probabilities": {
+          "metabolism": 0.2,
+          "fecundity": 0.08,
+          "mobility": 0.03,
+          "defense": 0.6,
+          "sensing": 0.09
+        }
+      },
+      "preyMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.67,
+        "probabilities": {
+          "slow": 0.2,
+          "steady": 0.78,
+          "rapid": 0.02
+        }
+      },
+      "predatorMutationTarget": {
+        "choice": "mobility",
+        "confidence": 0.24,
+        "probabilities": {
+          "metabolism": 0.27,
+          "fecundity": 0.02,
+          "mobility": 0.39,
+          "defense": 0.02,
+          "sensing": 0.3
+        }
+      },
+      "predatorMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.74,
+        "probabilities": {
+          "slow": 0.14,
+          "steady": 0.83,
+          "rapid": 0.03
+        }
+      },
+      "environmentPressure": {
+        "choice": "drought",
+        "confidence": 0.95,
+        "probabilities": {
+          "nutrient_bloom": 0.01,
+          "drought": 0.96,
+          "toxin_wave": 0,
+          "heat_wave": 0.01,
+          "fragmentation": 0.01,
+          "stability": 0.01
+        }
+      },
+      "environmentIntensity": {
+        "choice": "medium",
+        "confidence": 1,
+        "probabilities": {
+          "low": 0,
+          "medium": 1,
+          "high": 0
+        }
+      }
+    },
+    {
+      "speciesDirectives": [
+        {
+          "species": "A",
+          "strategy": {
+            "choice": "swarming",
+            "confidence": 0.3,
+            "probabilities": {
+              "efficient_grazing": 0.15,
+              "early_brood": 0.01,
+              "armored": 0.39,
+              "swarming": 0.44,
+              "dispersal": 0.01
+            }
+          },
+          "mutationTarget": {
+            "choice": "defense",
+            "confidence": 0.87,
+            "probabilities": {
+              "metabolism": 0.02,
+              "fecundity": 0.06,
+              "mobility": 0.01,
+              "defense": 0.9,
+              "sensing": 0.01
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.52,
+            "probabilities": {
+              "slow": 0.25,
+              "steady": 0.68,
+              "rapid": 0.07
+            }
+          }
+        },
+        {
+          "species": "B",
+          "strategy": {
+            "choice": "efficient_kill",
+            "confidence": 0.37,
+            "probabilities": {
+              "ambush": 0.02,
+              "pursuit": 0,
+              "pack_hunting": 0.47,
+              "efficient_kill": 0.5,
+              "brood_hunting": 0.01
+            }
+          },
+          "mutationTarget": {
+            "choice": "mobility",
+            "confidence": 0.18,
+            "probabilities": {
+              "metabolism": 0.15,
+              "fecundity": 0.15,
+              "mobility": 0.34,
+              "defense": 0.07,
+              "sensing": 0.29
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.4,
+            "probabilities": {
+              "slow": 0.29,
+              "steady": 0.6,
+              "rapid": 0.11
+            }
+          }
+        }
+      ],
+      "generation": 61,
+      "trigger": "predator_crash",
+      "observationHash": "eco_pge2hj",
+      "source": "jev",
+      "model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 2647,
+        "output_tokens": 979
+      },
+      "ruleGraphVersion": 3,
+      "scheduledRuleChange": {
+        "decidedAtGeneration": 61,
+        "activation": "population_crash",
+        "duration": "persistent",
+        "transition": "pulse",
+        "patch": {
+          "kind": "environment",
+          "field": "pressure",
+          "value": "drought"
+        }
+      },
+      "ruleActivation": {
+        "choice": "population_crash",
+        "confidence": 0.87,
+        "probabilities": {
+          "immediate": 0.06,
+          "after_6": 0,
+          "after_12": 0.02,
+          "after_24": 0,
+          "resources_low": 0.01,
+          "population_boom": 0,
+          "population_crash": 0.88,
+          "species_emergence": 0,
+          "species_extinction": 0,
+          "predation_high": 0.03
+        }
+      },
+      "ruleDuration": {
+        "choice": "persistent",
+        "confidence": 1,
+        "probabilities": {
+          "short": 0,
+          "medium": 0,
+          "long": 0,
+          "persistent": 1
+        }
+      },
+      "ruleTransition": {
+        "choice": "pulse",
+        "confidence": 0.98,
+        "probabilities": {
+          "abrupt": 0.01,
+          "ramp": 0,
+          "pulse": 0.99
+        }
+      },
+      "preyStrategy": {
+        "choice": "armored",
+        "confidence": 0.25,
+        "probabilities": {
+          "efficient_grazing": 0.27,
+          "early_brood": 0.02,
+          "armored": 0.39999999999999997,
+          "swarming": 0.3,
+          "dispersal": 0.01
+        }
+      },
+      "predatorStrategy": {
+        "choice": "efficient_kill",
+        "confidence": 0.59,
+        "probabilities": {
+          "ambush": 0.03,
+          "pursuit": 0,
+          "pack_hunting": 0.29,
+          "efficient_kill": 0.67,
+          "brood_hunting": 0.01
+        }
+      },
+      "preyMutationTarget": {
+        "choice": "defense",
+        "confidence": 0.44,
+        "probabilities": {
+          "metabolism": 0.22,
+          "fecundity": 0.07,
+          "mobility": 0.04,
+          "defense": 0.55,
+          "sensing": 0.11
+        }
+      },
+      "preyMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.64,
+        "probabilities": {
+          "slow": 0.22,
+          "steady": 0.76,
+          "rapid": 0.02
+        }
+      },
+      "predatorMutationTarget": {
+        "choice": "mobility",
+        "confidence": 0.21,
+        "probabilities": {
+          "metabolism": 0.33,
+          "fecundity": 0.02,
+          "mobility": 0.37,
+          "defense": 0.02,
+          "sensing": 0.26
+        }
+      },
+      "predatorMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.67,
+        "probabilities": {
+          "slow": 0.19,
+          "steady": 0.78,
+          "rapid": 0.03
+        }
+      },
+      "environmentPressure": {
+        "choice": "drought",
+        "confidence": 0.95,
+        "probabilities": {
+          "nutrient_bloom": 0.01,
+          "drought": 0.96,
+          "toxin_wave": 0,
+          "heat_wave": 0.01,
+          "fragmentation": 0.01,
+          "stability": 0.01
+        }
+      },
+      "environmentIntensity": {
+        "choice": "medium",
+        "confidence": 1,
+        "probabilities": {
+          "low": 0,
+          "medium": 1,
+          "high": 0
+        }
+      }
+    },
+    {
+      "speciesDirectives": [
+        {
+          "species": "A",
+          "strategy": {
+            "choice": "swarming",
+            "confidence": 0.34,
+            "probabilities": {
+              "efficient_grazing": 0.22,
+              "early_brood": 0.01,
+              "armored": 0.29,
+              "swarming": 0.47000000000000003,
+              "dispersal": 0.01
+            }
+          },
+          "mutationTarget": {
+            "choice": "defense",
+            "confidence": 0.87,
+            "probabilities": {
+              "metabolism": 0.02,
+              "fecundity": 0.06,
+              "mobility": 0.01,
+              "defense": 0.9,
+              "sensing": 0.01
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.56,
+            "probabilities": {
+              "slow": 0.25,
+              "steady": 0.71,
+              "rapid": 0.04
+            }
+          }
+        },
+        {
+          "species": "B",
+          "strategy": {
+            "choice": "pack_hunting",
+            "confidence": 0.39,
+            "probabilities": {
+              "ambush": 0.02,
+              "pursuit": 0.01,
+              "pack_hunting": 0.51,
+              "efficient_kill": 0.45,
+              "brood_hunting": 0.01
+            }
+          },
+          "mutationTarget": {
+            "choice": "mobility",
+            "confidence": 0.14,
+            "probabilities": {
+              "metabolism": 0.23,
+              "fecundity": 0.16,
+              "mobility": 0.31,
+              "defense": 0.05,
+              "sensing": 0.25
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.41,
+            "probabilities": {
+              "slow": 0.31,
+              "steady": 0.61,
+              "rapid": 0.08
+            }
+          }
+        }
+      ],
+      "generation": 73,
+      "trigger": "speciation",
+      "observationHash": "eco_1cyhpx2",
+      "source": "jev",
+      "model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 2646,
+        "output_tokens": 983
+      },
+      "ruleGraphVersion": 3,
+      "scheduledRuleChange": {
+        "decidedAtGeneration": 73,
+        "activation": "species_emergence",
+        "duration": "persistent",
+        "transition": "pulse",
+        "patch": {
+          "kind": "environment",
+          "field": "pressure",
+          "value": "drought"
+        }
+      },
+      "ruleActivation": {
+        "choice": "species_emergence",
+        "confidence": 0.47,
+        "probabilities": {
+          "immediate": 0.18,
+          "after_6": 0,
+          "after_12": 0.18,
+          "after_24": 0.01,
+          "resources_low": 0.05,
+          "population_boom": 0.03,
+          "population_crash": 0.01,
+          "species_emergence": 0.52,
+          "species_extinction": 0,
+          "predation_high": 0.02
+        }
+      },
+      "ruleDuration": {
+        "choice": "persistent",
+        "confidence": 1,
+        "probabilities": {
+          "short": 0,
+          "medium": 0,
+          "long": 0,
+          "persistent": 1
+        }
+      },
+      "ruleTransition": {
+        "choice": "pulse",
+        "confidence": 1,
+        "probabilities": {
+          "abrupt": 0,
+          "ramp": 0,
+          "pulse": 1
+        }
+      },
+      "preyStrategy": {
+        "choice": "swarming",
+        "confidence": 0.22,
+        "probabilities": {
+          "efficient_grazing": 0.27,
+          "early_brood": 0.02,
+          "armored": 0.32,
+          "swarming": 0.38,
+          "dispersal": 0.01
+        }
+      },
+      "predatorStrategy": {
+        "choice": "efficient_kill",
+        "confidence": 0.42,
+        "probabilities": {
+          "ambush": 0.05,
+          "pursuit": 0,
+          "pack_hunting": 0.4,
+          "efficient_kill": 0.54,
+          "brood_hunting": 0.01
+        }
+      },
+      "preyMutationTarget": {
+        "choice": "defense",
+        "confidence": 0.57,
+        "probabilities": {
+          "metabolism": 0.18,
+          "fecundity": 0.07,
+          "mobility": 0.03,
+          "defense": 0.66,
+          "sensing": 0.06
+        }
+      },
+      "preyMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.67,
+        "probabilities": {
+          "slow": 0.2,
+          "steady": 0.78,
+          "rapid": 0.02
+        }
+      },
+      "predatorMutationTarget": {
+        "choice": "metabolism",
+        "confidence": 0.22,
+        "probabilities": {
+          "metabolism": 0.38,
+          "fecundity": 0.02,
+          "mobility": 0.33,
+          "defense": 0.02,
+          "sensing": 0.25
+        }
+      },
+      "predatorMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.69,
+        "probabilities": {
+          "slow": 0.18,
+          "steady": 0.79,
+          "rapid": 0.03
+        }
+      },
+      "environmentPressure": {
+        "choice": "drought",
+        "confidence": 0.95,
+        "probabilities": {
+          "nutrient_bloom": 0.01,
+          "drought": 0.96,
+          "toxin_wave": 0,
+          "heat_wave": 0.01,
+          "fragmentation": 0.01,
+          "stability": 0.01
+        }
+      },
+      "environmentIntensity": {
+        "choice": "medium",
+        "confidence": 1,
+        "probabilities": {
+          "low": 0,
+          "medium": 1,
+          "high": 0
+        }
+      }
+    },
+    {
+      "speciesDirectives": [
+        {
+          "species": "A",
+          "strategy": {
+            "choice": "swarming",
+            "confidence": 0.25,
+            "probabilities": {
+              "efficient_grazing": 0.24,
+              "early_brood": 0.01,
+              "armored": 0.33,
+              "swarming": 0.4,
+              "dispersal": 0.02
+            }
+          },
+          "mutationTarget": {
+            "choice": "defense",
+            "confidence": 0.85,
+            "probabilities": {
+              "metabolism": 0.03,
+              "fecundity": 0.07,
+              "mobility": 0.01,
+              "defense": 0.88,
+              "sensing": 0.01
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.56,
+            "probabilities": {
+              "slow": 0.22,
+              "steady": 0.71,
+              "rapid": 0.07
+            }
+          }
+        },
+        {
+          "species": "B",
+          "strategy": {
+            "choice": "efficient_kill",
+            "confidence": 0.56,
+            "probabilities": {
+              "ambush": 0.06,
+              "pursuit": 0.01,
+              "pack_hunting": 0.26,
+              "efficient_kill": 0.65,
+              "brood_hunting": 0.02
+            }
+          },
+          "mutationTarget": {
+            "choice": "fecundity",
+            "confidence": 0.18,
+            "probabilities": {
+              "metabolism": 0.15,
+              "fecundity": 0.34,
+              "mobility": 0.25,
+              "defense": 0.05,
+              "sensing": 0.21
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.4,
+            "probabilities": {
+              "slow": 0.27,
+              "steady": 0.6,
+              "rapid": 0.13
+            }
+          }
+        }
+      ],
+      "generation": 85,
+      "trigger": "predator_crash",
+      "observationHash": "eco_1k5ktyk",
+      "source": "jev",
+      "model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 2650,
+        "output_tokens": 980
+      },
+      "ruleGraphVersion": 4,
+      "scheduledRuleChange": {
+        "decidedAtGeneration": 85,
+        "activation": "population_crash",
+        "duration": "persistent",
+        "transition": "pulse",
+        "patch": {
+          "kind": "environment",
+          "field": "pressure",
+          "value": "drought"
+        }
+      },
+      "ruleActivation": {
+        "choice": "population_crash",
+        "confidence": 0.87,
+        "probabilities": {
+          "immediate": 0.07,
+          "after_6": 0,
+          "after_12": 0.03,
+          "after_24": 0,
+          "resources_low": 0.01,
+          "population_boom": 0,
+          "population_crash": 0.88,
+          "species_emergence": 0,
+          "species_extinction": 0,
+          "predation_high": 0.01
+        }
+      },
+      "ruleDuration": {
+        "choice": "persistent",
+        "confidence": 1,
+        "probabilities": {
+          "short": 0,
+          "medium": 0,
+          "long": 0,
+          "persistent": 1
+        }
+      },
+      "ruleTransition": {
+        "choice": "pulse",
+        "confidence": 0.98,
+        "probabilities": {
+          "abrupt": 0.01,
+          "ramp": 0,
+          "pulse": 0.99
+        }
+      },
+      "preyStrategy": {
+        "choice": "armored",
+        "confidence": 0.25,
+        "probabilities": {
+          "efficient_grazing": 0.29,
+          "early_brood": 0.02,
+          "armored": 0.4,
+          "swarming": 0.28,
+          "dispersal": 0.01
+        }
+      },
+      "predatorStrategy": {
+        "choice": "efficient_kill",
+        "confidence": 0.56,
+        "probabilities": {
+          "ambush": 0.06,
+          "pursuit": 0,
+          "pack_hunting": 0.27,
+          "efficient_kill": 0.65,
+          "brood_hunting": 0.02
+        }
+      },
+      "preyMutationTarget": {
+        "choice": "defense",
+        "confidence": 0.52,
+        "probabilities": {
+          "metabolism": 0.22,
+          "fecundity": 0.08,
+          "mobility": 0.03,
+          "defense": 0.62,
+          "sensing": 0.05
+        }
+      },
+      "preyMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.66,
+        "probabilities": {
+          "slow": 0.21,
+          "steady": 0.77,
+          "rapid": 0.02
+        }
+      },
+      "predatorMutationTarget": {
+        "choice": "sensing",
+        "confidence": 0.16,
+        "probabilities": {
+          "metabolism": 0.32,
+          "fecundity": 0.03,
+          "mobility": 0.31,
+          "defense": 0.01,
+          "sensing": 0.33
+        }
+      },
+      "predatorMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.67,
+        "probabilities": {
+          "slow": 0.18,
+          "steady": 0.78,
+          "rapid": 0.04
+        }
+      },
+      "environmentPressure": {
+        "choice": "drought",
+        "confidence": 0.95,
+        "probabilities": {
+          "nutrient_bloom": 0.01,
+          "drought": 0.96,
+          "toxin_wave": 0,
+          "heat_wave": 0.01,
+          "fragmentation": 0.01,
+          "stability": 0.01
+        }
+      },
+      "environmentIntensity": {
+        "choice": "medium",
+        "confidence": 1,
+        "probabilities": {
+          "low": 0,
+          "medium": 1,
+          "high": 0
+        }
+      }
+    },
+    {
+      "speciesDirectives": [
+        {
+          "species": "A",
+          "strategy": {
+            "choice": "swarming",
+            "confidence": 0.19,
+            "probabilities": {
+              "efficient_grazing": 0.32,
+              "early_brood": 0.02,
+              "armored": 0.28,
+              "swarming": 0.36,
+              "dispersal": 0.02
+            }
+          },
+          "mutationTarget": {
+            "choice": "defense",
+            "confidence": 0.78,
+            "probabilities": {
+              "metabolism": 0.06,
+              "fecundity": 0.09,
+              "mobility": 0.02,
+              "defense": 0.8099999999999999,
+              "sensing": 0.02
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.62,
+            "probabilities": {
+              "slow": 0.15,
+              "steady": 0.75,
+              "rapid": 0.1
+            }
+          }
+        },
+        {
+          "species": "B",
+          "strategy": {
+            "choice": "efficient_kill",
+            "confidence": 0.45,
+            "probabilities": {
+              "ambush": 0.09,
+              "pursuit": 0.01,
+              "pack_hunting": 0.32,
+              "efficient_kill": 0.55,
+              "brood_hunting": 0.03
+            }
+          },
+          "mutationTarget": {
+            "choice": "sensing",
+            "confidence": 0.13,
+            "probabilities": {
+              "metabolism": 0.17,
+              "fecundity": 0.26,
+              "mobility": 0.22,
+              "defense": 0.05,
+              "sensing": 0.3
+            }
+          },
+          "mutationTempo": {
+            "choice": "steady",
+            "confidence": 0.34,
+            "probabilities": {
+              "slow": 0.27,
+              "steady": 0.56,
+              "rapid": 0.17
+            }
+          }
+        }
+      ],
+      "generation": 97,
+      "trigger": "predator_crash",
+      "observationHash": "eco_1pfqp8s",
+      "source": "jev",
+      "model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 2644,
+        "output_tokens": 981
+      },
+      "ruleGraphVersion": 4,
+      "scheduledRuleChange": {
+        "decidedAtGeneration": 97,
+        "activation": "population_crash",
+        "duration": "persistent",
+        "transition": "pulse",
+        "patch": {
+          "kind": "environment",
+          "field": "pressure",
+          "value": "drought"
+        }
+      },
+      "ruleActivation": {
+        "choice": "population_crash",
+        "confidence": 0.66,
+        "probabilities": {
+          "immediate": 0.06,
+          "after_6": 0,
+          "after_12": 0.01,
+          "after_24": 0,
+          "resources_low": 0.01,
+          "population_boom": 0,
+          "population_crash": 0.7,
+          "species_emergence": 0,
+          "species_extinction": 0.21,
+          "predation_high": 0.01
+        }
+      },
+      "ruleDuration": {
+        "choice": "persistent",
+        "confidence": 1,
+        "probabilities": {
+          "short": 0,
+          "medium": 0,
+          "long": 0,
+          "persistent": 1
+        }
+      },
+      "ruleTransition": {
+        "choice": "pulse",
+        "confidence": 0.96,
+        "probabilities": {
+          "abrupt": 0.03,
+          "ramp": 0,
+          "pulse": 0.97
+        }
+      },
+      "preyStrategy": {
+        "choice": "efficient_grazing",
+        "confidence": 0.28,
+        "probabilities": {
+          "efficient_grazing": 0.42,
+          "early_brood": 0.03,
+          "armored": 0.3,
+          "swarming": 0.23,
+          "dispersal": 0.02
+        }
+      },
+      "predatorStrategy": {
+        "choice": "efficient_kill",
+        "confidence": 0.47,
+        "probabilities": {
+          "ambush": 0.08,
+          "pursuit": 0.01,
+          "pack_hunting": 0.32,
+          "efficient_kill": 0.57,
+          "brood_hunting": 0.02
+        }
+      },
+      "preyMutationTarget": {
+        "choice": "defense",
+        "confidence": 0.44,
+        "probabilities": {
+          "metabolism": 0.25,
+          "fecundity": 0.07,
+          "mobility": 0.05,
+          "defense": 0.55,
+          "sensing": 0.08
+        }
+      },
+      "preyMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.67,
+        "probabilities": {
+          "slow": 0.19,
+          "steady": 0.78,
+          "rapid": 0.03
+        }
+      },
+      "predatorMutationTarget": {
+        "choice": "sensing",
+        "confidence": 0.25,
+        "probabilities": {
+          "metabolism": 0.29,
+          "fecundity": 0.03,
+          "mobility": 0.26,
+          "defense": 0.02,
+          "sensing": 0.4
+        }
+      },
+      "predatorMutationTempo": {
+        "choice": "steady",
+        "confidence": 0.62,
+        "probabilities": {
+          "slow": 0.2,
+          "steady": 0.74,
+          "rapid": 0.06
+        }
+      },
+      "environmentPressure": {
+        "choice": "drought",
+        "confidence": 0.95,
+        "probabilities": {
+          "nutrient_bloom": 0.01,
+          "drought": 0.96,
+          "toxin_wave": 0,
+          "heat_wave": 0.01,
+          "fragmentation": 0.01,
+          "stability": 0.01
+        }
+      },
+      "environmentIntensity": {
+        "choice": "medium",
+        "confidence": 1,
+        "probabilities": {
+          "low": 0,
+          "medium": 1,
+          "high": 0
+        }
+      }
+    }
+  ],
+  "contractHash": "replay_161v9v4"
+}
