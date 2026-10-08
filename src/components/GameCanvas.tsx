@@ -141,7 +141,8 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   const c = canvas.getContext("2d");
   if (!c) return;
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
-  c.fillStyle = getComputedStyle(canvas).getPropertyValue("--mp-canvas").trim() || "#03110f";
+  // The ecosystem remains a dark, low-glare observation surface in either site theme.
+  c.fillStyle = getComputedStyle(canvas).getPropertyValue("--mp-canvas").trim() || "#020a09";
   c.fillRect(0, 0, rect.width, rect.height);
   const pad = 18,
     cw = (rect.width - pad * 2) / GRID_SIZE,
@@ -151,14 +152,15 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       y = Math.floor(i / 50),
       r = state.resources[i] / 255;
     if (r > 0.08) {
-      c.globalAlpha = 0.08 + r * 0.28;
-      c.fillStyle = "#80d79b";
-      c.fillRect(
-        pad + x * cw,
-        pad + y * ch,
-        Math.max(1, cw * 0.35),
-        Math.max(1, ch * 0.35),
-      );
+      c.globalAlpha = 0.1 + r * 0.3;
+      c.fillStyle = "#83d99a";
+      c.fillRect(pad + x * cw + cw * .2, pad + y * ch + ch * .2, Math.max(1, cw * .58), Math.max(1, ch * .58));
+    }
+    const hazard = state.hazards[i] / 255;
+    if (hazard > .025) {
+      c.globalAlpha = .12 + hazard * .34;
+      c.fillStyle = "#ff806d";
+      c.fillRect(pad + x * cw + cw * .72, pad + y * ch + ch * .1, Math.max(1, cw * .18), Math.max(1, ch * .8));
     }
   }
   c.globalAlpha = 1;
@@ -172,29 +174,48 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     c.fillStyle = speciesColor(
       state.config.rules?.species[state.ruleSpecies[i] - 1]?.id ?? "",
     );
-    c.strokeStyle = pred ? "#ffd0c9" : "#d4fff1";
-    c.lineWidth = pred ? 1.2 : 0.55;
+    // Role silhouettes use the same species palette; interior marks distinguish
+    // trophic role without implying unrecorded physiology or behavior.
+    c.strokeStyle = "rgba(241,248,237,.9)";
+    c.lineWidth = Math.max(.7, Math.min(cw, ch) * .12);
+    const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
+    const radius = Math.max(1.25, Math.min(cw, ch) * .34);
     c.beginPath();
     if (pred) {
-      c.moveTo(pad + (x + 0.85) * cw, pad + (y + 0.5) * ch);
-      c.lineTo(pad + (x + 0.15) * cw, pad + (y + 0.12) * ch);
-      c.lineTo(pad + (x + 0.15) * cw, pad + (y + 0.88) * ch);
+      c.moveTo(cx + radius, cy);
+      c.lineTo(cx - radius, cy - radius * .82);
+      c.lineTo(cx - radius, cy + radius * .82);
       c.closePath();
     } else if (role === "omnivore") {
-      c.rect(pad + (x + .18) * cw, pad + (y + .18) * ch, cw * .64, ch * .64);
-    } else
-      c.arc(
-        pad + (x + 0.5) * cw,
-        pad + (y + 0.5) * ch,
-        Math.max(1.5, Math.min(cw, ch) * 0.42),
-        0,
-        Math.PI * 2,
-      );
+      c.moveTo(cx, cy - radius); c.lineTo(cx + radius, cy);
+      c.lineTo(cx, cy + radius); c.lineTo(cx - radius, cy); c.closePath();
+    } else if (role === "producer") {
+      for (let side = 0; side < 6; side++) {
+        const angle = Math.PI / 3 * side - Math.PI / 6;
+        const px = cx + radius * Math.cos(angle), py = cy + radius * Math.sin(angle);
+        if (side === 0) c.moveTo(px, py);
+        else c.lineTo(px, py);
+      }
+      c.closePath();
+    } else if (role === "scavenger") {
+      c.rect(cx - radius * .8, cy - radius * .8, radius * 1.6, radius * 1.6);
+    } else {
+      c.arc(cx, cy, radius, 0, Math.PI * 2);
+    }
     c.fill();
     c.stroke();
+    if (role === "hunter" && Math.min(cw, ch) >= 7) {
+      c.beginPath(); c.arc(cx - radius * .25, cy, Math.max(.65, radius * .16), 0, Math.PI * 2); c.fillStyle = "#17201b"; c.fill();
+    } else if (role === "producer" && Math.min(cw, ch) >= 7) {
+      c.beginPath(); c.arc(cx, cy, Math.max(.6, radius * .2), 0, Math.PI * 2); c.fillStyle = "#17201b"; c.fill();
+    }
     if (i === selected || state.lineage[i] === followed) {
-      c.strokeStyle = i === selected ? "#fff" : "#ffda72"; c.lineWidth = 2;
-      c.strokeRect(pad + x * cw - 1, pad + y * ch - 1, cw + 2, ch + 2);
+      const isSelected = i === selected;
+      c.save();
+      c.strokeStyle = isSelected ? "#ffffff" : "#ffd36a";
+      c.lineWidth = Math.max(1.4, Math.min(cw, ch) * .16);
+      c.setLineDash(isSelected ? [] : [Math.max(1.2, cw * .22), Math.max(1, cw * .13)]);
+      c.beginPath(); c.arc(cx, cy, radius * 1.48, 0, Math.PI * 2); c.stroke(); c.restore();
     }
     if (isSurvivingNewborn(state.generation, state.age[i], state.organismGeneration[i], state.guild[i])) {
       c.strokeStyle = "#ffffff"; c.lineWidth = 1; c.beginPath();
@@ -788,8 +809,10 @@ export function GameCanvas() {
           <i className="resource-key" />
           Resource
         </span>
-        <span>○ Producer / grazer / scavenger</span>
-        <span>▷ Hunter</span><span>□ Omnivore</span>
+        <span>⬡ Producer</span><span>○ Grazer</span><span>□ Scavenger</span>
+        <span>▷ Hunter</span><span>◇ Omnivore</span>
+        <span>Coral marks = local hazard intensity</span>
+        <span>White ring = selected · dashed gold ring = followed family</span>
         <span>White = birth · gold pulse = feeding · red cross = death</span>
         <span>Color = species in observatory</span>
       </div>
