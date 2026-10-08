@@ -9,8 +9,7 @@ function summary() {
  return {...summarizeEcology(createSimulation({seed:1,config}),{world:"pond",threat:"drought",reward:"coexist"},"stagnation"),generation:12};
 }
 function client(corruptStage:number):CouncilClient {
- let calls=0;
- return {async systemOne(request){calls++;return {model:"fixture",usage:{input_tokens:1,output_tokens:1},answers:Object.fromEntries(Object.entries(request.questions).map(([key,q])=>{const keys=Object.keys(q.criteria),selected=key==="selectedPatch"?"none":keys[0];return [key,{type:"choice",choice:selected,confidence:calls===corruptStage?2:1,probabilities:Object.fromEntries(keys.map(k=>[k,k===selected?1:0]))}]}))};}};
+ return {async systemOne(request){return {model:"fixture",usage:{input_tokens:1,output_tokens:1},answers:Object.fromEntries(Object.entries(request.questions).map(([key,q])=>{const keys=Object.keys(q.criteria),selected=key==="selectedPatch"?"none":keys[0];return [key,{type:"choice",choice:selected,confidence:(("selectedPatch" in request.questions)?1:2)===corruptStage?2:1,probabilities:Object.fromEntries(keys.map(k=>[k,k===selected?1:0]))}]}))};}};
 }
 it.each([[1,"orchestrator"],[2,"specialists"]] as const)("identifies a failure in %s without logging provider values",async(call,stage)=>{
  const warn=vi.spyOn(console,"warn").mockImplementation(()=>{});
