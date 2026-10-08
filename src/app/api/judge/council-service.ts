@@ -49,19 +49,28 @@ function specialistQuestions(member:CouncilMember,rules:WorldRuleGraph){
  else {q.value=question("Choose a bounded environmental selection pressure, never inject cells or rescue populations. Resource laws change resource conditions, not organism genes; outcomes may include extinction.",ENVIRONMENT_PRESSURES);q.intensity=question("Choose environmental intensity.",INTENSITIES);}
  return q;
 }
+type RuntimeCouncilStage = "orchestrator" | "authority" | "specialists" | "reconciliation";
+async function atRuntimeStage<T>(stage:RuntimeCouncilStage,generation:number,operation:()=>Promise<T>):Promise<T>{
+ try{return await operation();}catch(error){
+  // Never log provider bodies, prompts, choices, arbitrary keys or exception text.
+  const fields=new Set(["answers","evidence","choice","confidence","probabilities","model","usage","input_tokens","output_tokens"]);
+  console.warn("lifepot.runtime.council_failure",{stage,generation,code:error instanceof z.ZodError?"schema":error instanceof Error&&error.message==="Inactive patch authority"?"inactive_authority":"exception",...(error instanceof z.ZodError?{issues:error.issues.slice(0,12).map(issue=>({code:issue.code,...(issue.code==="custom"&&["empty_distribution","probability_sum","selection_mismatch"].includes(issue.params?.reason)?{reason:issue.params?.reason}:{}),path:issue.path.slice(0,6).map(part=>typeof part==="string"&&fields.has(part)?part:"[field]")}))}:{})});
+  throw error;
+ }
+}
 export async function runCouncil(summary:EcologySummary,client:CouncilClient,beforeCall?:()=>Promise<void>){
  const rules=summary.rules!;const manifest=validateCouncilManifest(rules.council,rules),eligible=manifest.members.filter(m=>councilApplicable(m,summary.trigger));
  const questions:Record<string,ReturnType<typeof choice>>={selectedPatch:question("Select the one eligible scoped graph-patch owner to execute, or none when existing ecological conditions need no change. This steers selection pressures, not advantageous mutations. Other graph proposals are advisory only; birth policies are independent.",["none",...eligible.filter(m=>m.responsibility!=="birth_policy").map(m=>m.id)]),activation:question("Choose patch activation condition, no automatic rescue.",ACTIVATIONS),duration:question("Choose bounded patch duration.",DURATIONS),transition:question("Choose patch transition.",TRANSITIONS)};
  for(const m of eligible)questions[`activate_${m.id}`]=question(`Should ${m.id} independently judge this frozen ecology? Selected patch owner must be active.`,["active","skip"]);
- const orchestrator=await evaluate(client,{summary,manifest},questions,{id:"runtime_orchestrator",responsibility:"coordination",scope:"world"},beforeCall);
+ const orchestrator=await atRuntimeStage("orchestrator",summary.generation,()=>evaluate(client,{summary,manifest},questions,{id:"runtime_orchestrator",responsibility:"coordination",scope:"world"},beforeCall));
  const selectedPatch=orchestrator.evidence.selectedPatch.choice;
  const active=eligible.filter(m=>orchestrator.evidence[`activate_${m.id}`].choice==="active");
- if(selectedPatch!=="none"&&!active.some(m=>m.id===selectedPatch))throw new Error("Inactive patch authority");
- const batch=active.length?await evaluateBatch(client,{summary,manifest,orchestrator},active,rules,beforeCall):{records:[],usage:{input_tokens:0,output_tokens:0}};const members=batch.records;
+ await atRuntimeStage("authority",summary.generation,async()=>{if(selectedPatch!=="none"&&!active.some(m=>m.id===selectedPatch))throw new Error("Inactive patch authority");});
+ const batch=active.length?await atRuntimeStage("specialists",summary.generation,()=>evaluateBatch(client,{summary,manifest,orchestrator},active,rules,beforeCall)):{records:[],usage:{input_tokens:0,output_tokens:0}};const members=batch.records;
  const decision=deterministicEvolutionDecision(summary);decision.source="jev";decision.model=orchestrator.model;decision.usage={input_tokens:orchestrator.usage.input_tokens+batch.usage.input_tokens,output_tokens:orchestrator.usage.output_tokens+batch.usage.output_tokens};
  decision.speciesDirectives=rules.species.flatMap(s=>{const r=members.find(m=>m.responsibility==="birth_policy"&&m.scope===s.id);return r?[{species:s.id,strategy:r.evidence.strategy,mutationTarget:r.evidence.mutationTarget,mutationTempo:r.evidence.mutationTempo} as SpeciesDirective]:[];});
  const selected=members.find(m=>m.id===selectedPatch);
  if(selected){let patch:RulePatch;if(selected.responsibility==="environment"){patch={kind:"environment",field:"pressure",value:selected.evidence.value.choice as typeof ENVIRONMENT_PRESSURES[number]};decision.environmentPressure=selected.evidence.value as typeof decision.environmentPressure;decision.environmentIntensity=selected.evidence.intensity as typeof decision.environmentIntensity;}else if(selected.responsibility==="relationship")patch={kind:"pair",pair:selected.scope as SpeciesPair,mode:selected.evidence.value.choice as typeof PAIR_INTERACTIONS[number]};else patch={kind:"self",species:selected.scope as SpeciesId,value:selected.evidence.value.choice as typeof SELF_INTERACTIONS[number]};
  decision.ruleActivation=orchestrator.evidence.activation as NonNullable<typeof decision.ruleActivation>;decision.ruleDuration=orchestrator.evidence.duration as NonNullable<typeof decision.ruleDuration>;decision.ruleTransition=orchestrator.evidence.transition as NonNullable<typeof decision.ruleTransition>;decision.scheduledRuleChange={decidedAtGeneration:summary.generation,activation:decision.ruleActivation.choice,duration:decision.ruleDuration.choice,transition:decision.ruleTransition.choice,patch};}
- decision.council={manifest,orchestrator,members,selectedPatch,calls:1+(active.length?1:0),...(active.length?{batching:{mode:"batched" as const,providerCalls:1 as const},batchUsage:batch.usage}:{})};return validateEvolutionDecision(decision);
+ decision.council={manifest,orchestrator,members,selectedPatch,calls:1+(active.length?1:0),...(active.length?{batching:{mode:"batched" as const,providerCalls:1 as const},batchUsage:batch.usage}:{})};return atRuntimeStage("reconciliation",summary.generation,async()=>validateEvolutionDecision(decision));
 }
