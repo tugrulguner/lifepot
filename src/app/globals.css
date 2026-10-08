@@ -320,7 +320,56 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .theme-control select { min-height: 44px; min-width: 88px; padding: 0 10px; border: 1px solid var(--mp-control-boundary); border-radius: 6px; background: var(--mp-surface); color: var(--mp-ink); font-size: 14px; }
 .setup-shell, .review-shell { background: var(--mp-canvas); color: var(--mp-ink); }
 .setup-shell::before, .review-shell::before { display: none; }
-.question-panel { width: min(690px, calc(100% - 48px)); padding-top: 104px; }
+/* Entry and review share a restrained botanical palette, not gameplay meaning colors. */
+.setup-shell, .review-shell {
+  --mp-canvas: #f4f5ef;
+  --mp-surface: #ffffff;
+  --mp-raised: #eef1e7;
+  --mp-ink: #20352c;
+  --mp-muted: #56675b;
+  --mp-border: #d7dfd2;
+  --mp-control-boundary: #82917e;
+  --mp-accent: #315c40;
+  --mp-accent-ink: #ffffff;
+}
+html[data-theme="dark"] .setup-shell, html[data-theme="dark"] .review-shell {
+  --mp-canvas: #111c16;
+  --mp-surface: #1b2920;
+  --mp-raised: #18241c;
+  --mp-ink: #eff3e8;
+  --mp-muted: #b4c2ae;
+  --mp-border: #354737;
+  --mp-control-boundary: #738970;
+  --mp-accent: #b6d59b;
+  --mp-accent-ink: #18241c;
+}
+.question-panel {
+  width: min(680px, calc(100% - 48px));
+  margin: 0 auto;
+  min-height: 100svh;
+  padding: 128px 0 48px;
+  justify-content: center;
+}
+.question-panel .step-label, .question-panel .eyebrow,
+.question-panel h1, .question-panel .question-note { text-align: center; }
+.question-panel .progress-track { width: 112px; margin: 16px auto 32px; border-radius: 3px; overflow: hidden; }
+.question-panel .eyebrow { margin-bottom: 12px; }
+.question-panel .question-note { margin: 20px auto 28px; max-width: 520px; }
+.question-panel .setup-intro { margin: 32px 0 0; padding-top: 20px; border-top: 1px solid var(--mp-border); text-align: center; font-size: 13px; line-height: 1.6; }
+.question-panel .setup-intro p { margin: 8px 0; }
+.question-panel .setup-intro summary { cursor: pointer; padding: 8px; }
+.question-panel .answer-field { width: 100%; max-width: none; }
+.question-panel .eyebrow { color: var(--mp-accent); }
+html[data-theme="dark"] .setup-shell .question-footer .primary-button,
+html[data-theme="dark"] .review-shell .primary-button { background: var(--mp-accent) !important; color: var(--mp-accent-ink) !important; }
+html[data-theme="dark"] .setup-shell .question-footer .primary-button:disabled { background: var(--mp-raised) !important; color: var(--mp-muted) !important; }
+.question-panel > .back-button { align-self: center; }
+.setup-shell .primary-button, .review-shell .primary-button { background: var(--mp-accent) !important; color: var(--mp-accent-ink) !important; }
+.setup-shell .primary-button:disabled { background: var(--mp-raised) !important; color: var(--mp-muted) !important; border-color: var(--mp-border); }
+@media (max-width: 760px) {
+  .setup-shell .question-panel { width: calc(100% - 40px); margin: 0 auto; padding: 104px 0 32px; justify-content: center; }
+  .question-panel .question-footer { flex-wrap: wrap; gap: 16px; }
+}
 .setup-intro, .question-note, .review-note { color: var(--mp-muted); }
 .setup-intro .setup-boundary, .step-label { color: var(--mp-muted); }
 .eyebrow, .step-label { font: 600 13px/1.4 var(--mp-font); letter-spacing: .02em; text-transform: none; }

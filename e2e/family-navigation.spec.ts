@@ -39,6 +39,7 @@ test("family resources are visible desktop links with the contracted order and t
     expect(box!.height, name).toBeGreaterThanOrEqual(44);
     expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest("a")?.textContent?.trim(), { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 })).toBe(name);
   }
+  await page.locator(".setup-intro summary").click();
   const creator = page.getByRole("link", { name: "Created by Tugrul Guner" });
   await expect(creator).toHaveAttribute("href", "https://tugrul.modepot.io/");
   const creatorBox = await creator.boundingBox();
@@ -97,7 +98,9 @@ test("creator attribution is in the setup intro and deterministic preset remains
   await page.setViewportSize({ width: 320, height: 850 });
   await page.goto("/");
   const intro = page.locator(".setup-intro");
+  await intro.locator("summary").click();
   await expect(intro.getByRole("link", { name: "Created by Tugrul Guner" })).toHaveAttribute("href", "https://tugrul.modepot.io/");
+  await intro.getByRole("link", { name: "Created by Tugrul Guner" }).scrollIntoViewIfNeeded();
   await expect(intro.getByRole("link", { name: "Created by Tugrul Guner" })).toBeInViewport();
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();

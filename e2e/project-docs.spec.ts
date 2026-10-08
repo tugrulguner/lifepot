@@ -36,6 +36,7 @@ test("homepage offers the source-backed roadmap beside its local guide action", 
     for (const theme of ["auto", "light", "dark"] as const) {
       await page.getByLabel("Color theme").selectOption(theme);
       await page.goto("/");
+      await page.locator(".setup-intro summary").click();
       const roadmap = page.getByRole("link", { name: "Roadmap ↗" });
       await expect(roadmap).toBeVisible();
       await expect(roadmap).toHaveAttribute("href", "/project-docs/roadmap");

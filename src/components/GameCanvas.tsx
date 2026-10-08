@@ -547,24 +547,6 @@ export function GameCanvas() {
       <main className="setup-shell">
         <FamilyHeader><span className="header-detail">Co-evolution laboratory</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
         <section className="question-panel">
-          {qi === 0 && (
-            <div className="setup-intro">
-              <p>
-                Three answers shape your world. Jev proposes ecology, LifePot turns
-                validated rules into a deterministic artificial-life simulation
-                you can inspect and replay. A deterministic fallback is available
-                when Jev is not.
-              </p>
-              <p className="setup-boundary">
-                An experimental game, not a biological forecast.{' '}
-                <Link href="/learn">Player & developer guides ↗</Link>{' · '}
-                {publicDocuments.some((document) => document.slug === "roadmap") && <><Link href="/project-docs/roadmap">Roadmap ↗</Link>{' · '}</>}
-                <a href="https://github.com/tugrulguner/lifepot/tree/main/docs" target="_blank" rel="noopener noreferrer">About LifePot ↗</a>
-              </p>
-              <p className="creator-attribution">Created by <a aria-label="Created by Tugrul Guner" href="https://tugrul.modepot.io/">Tugrul Guner</a></p>
-            </div>
-          )}
-          {qi === 0 && <button type="button" className="back-button" onClick={loadDeterministicPreset}>Explore deterministic preset</button>}
           <div className="step-label">QUESTION {qi + 1} / 3</div>
           <div className="progress-track">
             <i style={{ width: `${((qi + 1) / 3) * 100}%` }} />
@@ -623,6 +605,25 @@ export function GameCanvas() {
               </div>
             </div>
           </form>
+          {qi === 0 && (
+            <details className="setup-intro">
+              <summary>How LifePot works · guides & credits</summary>
+              <p>
+                Three answers shape your world. Jev proposes ecology, LifePot turns
+                validated rules into a deterministic artificial-life simulation
+                you can inspect and replay. A deterministic fallback is available
+                when Jev is not.
+              </p>
+              <p className="setup-boundary">
+                An experimental game, not a biological forecast.{' '}
+                <Link href="/learn">Player & developer guides ↗</Link>{' · '}
+                {publicDocuments.some((document) => document.slug === "roadmap") && <><Link href="/project-docs/roadmap">Roadmap ↗</Link>{' · '}</>}
+                <a href="https://github.com/tugrulguner/lifepot/tree/main/docs" target="_blank" rel="noopener noreferrer">About LifePot ↗</a>
+              </p>
+              <p className="creator-attribution">Created by <a aria-label="Created by Tugrul Guner" href="https://tugrul.modepot.io/">Tugrul Guner</a></p>
+            </details>
+          )}
+          {qi === 0 && <button type="button" className="back-button" onClick={loadDeterministicPreset}>Explore deterministic preset</button>}
         </section>
       </main>
     );
