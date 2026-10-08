@@ -331,7 +331,7 @@ export function GameCanvas() {
   }, [stage, arrivalRevision]);
   const begin = useCallback(
     (a: SetupAnswers, c: LifeConfig, s: number, replay?: ReplayData) => {
-      const initial = createSimulation({ seed: s, config: c }),
+      const initial = createSimulation({ seed: s, config: c, engineVersion: replay?.engineVersion }),
         l = replay?.ledger ?? [];
       runId.current++;
       ledgerRef.current = l;
@@ -487,6 +487,7 @@ export function GameCanvas() {
         seed: simulation.seed,
         requestHash: hashSetupRequest(answers),
         ledger: ledgerRef.current,
+        engineVersion: simulation.engineVersion,
       });
     } catch {
       queueMicrotask(() =>

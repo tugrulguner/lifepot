@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {createSimulation,stepSimulation,indexOf,snapshotSimulation} from './world';
+import {createSimulation,stepSimulation,indexOf} from './world';
 import {defaultConfig} from './setup';
 import {deterministicEvolutionDecision,summarizeEcology} from './decisions';
 const seed={x:10,y:10,guild:'prey' as const,energy:220,lineage:1,species:1,generation:0,strategy:'early_brood' as const,traits:[128,128,128,128,128] as const};
@@ -34,16 +34,21 @@ describe('individual identity and witnessed events',()=>{
   expect(next.stats.deaths).toBe(1);expect(next.stats.kills).toBe(0);
   expect(next.events.filter(e=>e.kind==='death')).toHaveLength(1);
  });
- it('mutation target cannot direct which trait mutates',()=>{
-  const mutated=new Set<number>();let positive=0,negative=0;
-  for(let run=1;run<=120;run++){
-    const s=createSimulation({seed:run*1877,config:defaultConfig(),initialPopulation:[seed]});s.generation=12;
+ it('mutation target directs the trait selected for mutation',()=>{
+  const targetIndex={metabolism:0,fecundity:1,mobility:2,defense:3,sensing:4} as const;
+  for(const [run,target] of Object.entries(targetIndex)){
+   let observed=false;
+   for(let seedValue=1;seedValue<=120&&!observed;seedValue++){
+    const s=createSimulation({seed:seedValue*1877,config:defaultConfig(),initialPopulation:[seed]});s.generation=12;
     const d=deterministicEvolutionDecision(summarizeEcology(s,{world:'food',threat:'heat',reward:'adapt'},'stagnation'));
-    delete d.speciesDirectives;d.preyMutationTempo.choice='rapid';d.preyMutationTarget.choice='metabolism';
-    const other=structuredClone(d);other.preyMutationTarget.choice='defense';
-    const next=stepSimulation(s,d);expect(snapshotSimulation(next)).toEqual(snapshotSimulation(stepSimulation(s,other)));
-    for(const event of next.events.filter(e=>e.kind==='birth'))for(let t=0;t<5;t++){const delta=next.traits[event.at*5+t]-128;if(delta){mutated.add(t);if(delta>0)positive++;else negative++;}}
+    delete d.speciesDirectives;d.preyMutationTempo.choice='rapid';d.preyMutationTarget.choice=run as keyof typeof targetIndex;
+    const next=stepSimulation(s,d);
+    for(const event of next.events.filter(e=>e.kind==='birth')){
+      const changed=Array.from({length:5},(_,trait)=>trait).filter(trait=>next.traits[event.at*5+trait]!==seed.traits[trait]);
+      if(changed.length){expect(changed).toEqual([target]);observed=true;}
+    }
+   }
+   expect(observed).toBe(true);
   }
-  expect(mutated.size).toBe(5);expect(positive).toBeGreaterThan(5);expect(negative).toBeGreaterThan(5);
  });
 });
