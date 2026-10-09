@@ -13,8 +13,8 @@ async function evaluate(client:CouncilClient,state:unknown,questions:Record<stri
   await beforeCall?.();
   const requestState=attempt?{...(state as object),protocol_correction:"Return a selected label whose reported probability is maximal. Preserve all question palettes and the original state."}:state;
   const raw=z.object({model:z.string(),usage:z.object({input_tokens:z.number(),output_tokens:z.number()}),answers:z.record(z.string(),z.object({type:z.literal("choice"),choice:z.string(),confidence:z.number(),probabilities:z.record(z.string(),z.number())}).strict())}).passthrough().parse(await client.systemOne({state:requestState,questions}));
-  if(Object.keys(raw.answers).sort().join()!==Object.keys(questions).sort().join())throw new Error("Council answer keys mismatch");
-  for(const [key,q] of Object.entries(questions))if(Object.keys(raw.answers[key].probabilities).sort().join()!==Object.keys(q.criteria).sort().join())throw new Error("Council scope palette mismatch");
+  if(!sameKeys(raw.answers,questions))throw new Error("Council answer keys mismatch");
+  for(const [key,q] of Object.entries(questions))if(!sameKeys(raw.answers[key].probabilities,q.criteria))throw new Error("Council scope palette mismatch");
   const parsed=councilRecordSchema.safeParse({...identity,model:raw.model,usage:raw.usage,evidence:Object.fromEntries(Object.entries(raw.answers).map(([key,a])=>[key,{choice:a.choice,confidence:a.confidence,probabilities:a.probabilities}]))});
   if(parsed.success){parsed.data.usage={input_tokens:usage.input_tokens+raw.usage.input_tokens,output_tokens:usage.output_tokens+raw.usage.output_tokens};return parsed.data;}
   // A reproduced wire contradiction: all data are valid except choice != argmax.
@@ -26,10 +26,11 @@ async function evaluate(client:CouncilClient,state:unknown,questions:Record<stri
  }
  throw new Error("Invalid council response");
 }
+function sameKeys(actual:object,expected:object){const keys=Object.keys(actual);return keys.length===Object.keys(expected).length&&keys.every(key=>Object.hasOwn(expected,key));}
 function runtimeResponse(input:unknown,questions:Record<string,ReturnType<typeof choice>>){
  const raw=z.object({model:z.string().min(1).max(100),usage:z.object({input_tokens:z.number().int().nonnegative(),output_tokens:z.number().int().nonnegative()}).strict(),answers:z.record(z.string(),z.object({type:z.literal("choice"),choice:z.string(),confidence:z.number(),probabilities:z.record(z.string(),z.number())}).strict())}).passthrough().parse(input);
- if(Object.keys(raw.answers).sort().join()!==Object.keys(questions).sort().join())throw new CouncilProtocolViolation(["answers"],"answer_keys_mismatch");
- for(const [key,q] of Object.entries(questions))if(Object.keys(raw.answers[key].probabilities).sort().join()!==Object.keys(q.criteria).sort().join())throw new CouncilProtocolViolation(["answers",key,"probabilities"],"scope_palette_mismatch");
+ if(!sameKeys(raw.answers,questions))throw new CouncilProtocolViolation(["answers"],"answer_keys_mismatch");
+ for(const [key,q] of Object.entries(questions))if(!sameKeys(raw.answers[key].probabilities,q.criteria))throw new CouncilProtocolViolation(["answers",key,"probabilities"],"scope_palette_mismatch");
  const evidence=z.record(z.string(),councilEvidenceSchema).parse(Object.fromEntries(Object.entries(raw.answers).map(([key,a])=>[key,{choice:a.choice,confidence:a.confidence,probabilities:a.probabilities}])));
  return {...raw,evidence};
 }

@@ -10,7 +10,7 @@ function same(a:unknown,b:unknown):boolean {
  const left=a as Record<string,unknown>,right=b as Record<string,unknown>,keys=Object.keys(left);
  return keys.length===Object.keys(right).length&&keys.every(key=>Object.hasOwn(right,key)&&same(left[key],right[key]));
 }
-function palette(r:CouncilRecord,key:string,options:readonly string[]){if(!r.evidence[key]||Object.keys(r.evidence[key].probabilities).sort().join()!==[...options].sort().join())throw new Error("Invalid council evidence palette");}
+function palette(r:CouncilRecord,key:string,options:readonly string[]){if(!r.evidence[key]||!same(Object.keys(r.evidence[key].probabilities).sort(),[...options].sort()))throw new Error("Invalid council evidence palette");}
 export function validateCouncilDecision(d:EvolutionDecision,rules:WorldRuleGraph){
  if(d.source==="fallback"){if(d.council||d.scheduledRuleChange||d.speciesDirectives?.length)throw new Error("Fallback must abstain");return;}
  const c=d.council;if(!c||!rules.council||!same(c.manifest,rules.council))throw new Error("Council authority mismatch");
