@@ -49,6 +49,7 @@ import { FamilyHeader } from "./FamilyHeader";
 import { cellAtPoint } from "@/game/inspection";
 import { updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
 import { WorldObservatory } from "./WorldObservatory";
+import { GameplayObservation } from "./GameplayObservation";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
 import { setupFidelitySchema, setupFailureSchema, setupNamedIntentSchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity, type SetupFailure, type SetupNamedIntent } from "@/game/setup-review";
 import { speciesColor } from "@/game/species-colors";
@@ -237,6 +238,24 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
 function World({ state, selected, followed, focusedSpecies, onInspect }: { state: SimulationState; selected: number | null; followed: number | null; focusedSpecies: SpeciesId | null; onInspect: (index: number) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const effects=useRef<TimedOrganismEvent[]>([]),last=useRef<SimulationState|null>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas?.parentElement) return;
+    // Fit the watching view from actual content height, including retained notices.
+    // Document coordinates keep later deliberate scrolling from resizing the world.
+    const fit = () => {
+      const top = canvas.getBoundingClientRect().top + window.scrollY;
+      canvas.style.setProperty("--board-available-height", `${Math.max(1, window.innerHeight - top - 12)}px`);
+    };
+    const observer = new ResizeObserver(fit);
+    observer.observe(canvas.parentElement);
+    for (const sibling of canvas.parentElement.children) {
+      if (sibling !== canvas) observer.observe(sibling);
+    }
+    window.addEventListener("resize", fit);
+    fit();
+    return () => { observer.disconnect(); window.removeEventListener("resize", fit); };
+  }, []);
   useEffect(() => {
     if (!ref.current) return;
     const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -720,6 +739,7 @@ export function GameCanvas() {
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
       <World state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onInspect={index => { setSelected(index); setPaused(true); }} />
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
+      <GameplayObservation state={simulation} evidence={evidence} followed={followed} decision={active ?? null} />
       <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={lineage => {
         setFollowed(lineage);
         if (evidenceRef.current) {
