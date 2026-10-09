@@ -97,6 +97,40 @@ test("ordinary three-question setup arrives at gameplay without retained review 
   expect(fixtureCalls).toBe(1);
 });
 
+test("near-board observation loop stays readable beside the desktop board and above the mobile board", async ({ page }, testInfo) => {
+  const runtimeErrors: string[] = [];
+  page.on("pageerror", error => runtimeErrors.push(error.message));
+  let modelCalls = 0;
+  await page.route("**/api/judge**", async route => { modelCalls++; await route.abort(); });
+  for (const viewport of [{ width: 1280, height: 850 }, { width: 1280, height: 633 }, { width: 768, height: 850 }, { width: 390, height: 850 }, { width: 320, height: 850 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Explore deterministic preset" }).click();
+    await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+    const canvas = page.getByRole("img", { name: /ecosystem generation/i });
+    await expect(canvas).toBeVisible();
+    await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
+    const observation = page.getByRole("region", { name: "Near-board observations" });
+    await expect(observation).toContainText("Configured species");
+    const geometry = await page.evaluate(() => {
+      const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
+      const observationRect = rect(".gameplay-observation");
+      const boardRect = rect("canvas.life-canvas");
+      return { observation: observationRect, board: boardRect, header: rect(".family-header"), viewport: { width: innerWidth, height: innerHeight }, scrollY };
+    });
+    expect(geometry.observation.y).toBeGreaterThanOrEqual(geometry.header.bottom);
+    expect(geometry.observation.bottom).toBeLessThanOrEqual(viewport.height - 12);
+    expect(geometry.board.bottom).toBeLessThanOrEqual(viewport.height - 12);
+    if (viewport.width > 1000) expect(geometry.observation.x).toBeGreaterThanOrEqual(geometry.board.right);
+    else expect(geometry.observation.bottom).toBeLessThanOrEqual(geometry.board.y);
+    expect(geometry.scrollY).toBe(0);
+    await writeFileSync(evidenceFile(testInfo, `observation-${viewport.width}x${viewport.height}.json`), JSON.stringify(geometry, null, 2));
+    await page.screenshot({ path: evidenceFile(testInfo, `observation-${viewport.width}x${viewport.height}.png`) });
+  }
+  expect(modelCalls).toBe(0);
+  expect(runtimeErrors).toEqual([]);
+});
+
 async function settle(page: import("@playwright/test").Page) {
   await page.evaluate(async () => {
     await document.fonts.ready;
