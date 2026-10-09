@@ -39,6 +39,12 @@ Setup failures carry only a finite stage and classified code through the browser
 
 Cloudflare's binding is location-local and eventually consistent, so it is an abuse-control measure, not an exact global quota or billing ledger. Provider-side usage limits remain the spend backstop. Local Node development and unit tests use an injected, deterministic in-process limiter; production must not fall back to an unmetered model call.
 
+## Reflection failure diagnosis
+
+`/api/reflect` retains HTTP 503 for unavailable or rejected reflection and never manufactures a recommendation. Server diagnostics distinguish limiter failures from reflection failures. Reflection failures additionally carry a finite boundary: configuration, reservation, provider, wire, probabilities, or result. `provider` means the SDK call failed; it does not by itself distinguish upstream availability from SDK-side validation. `wire` is this application's response-schema check; `probabilities` checks exact options, normalization, and maximal selection; `result` validates the grounded reflection.
+
+Only the boundary and an allowlisted error class are retained and logged. Provider errors, messages, response bodies, headers, private predictions, and credentials are neither attached to classified failures nor transported to the browser. This adds no inference attempts, retries, or quota changes. A classified boundary is evidence of where processing failed, not proof of its root cause; the historical reflection 503 remains unexplained.
+
 ## Verification before deployment
 
 ```bash

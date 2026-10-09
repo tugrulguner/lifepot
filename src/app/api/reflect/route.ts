@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { reflectRun } from "./service";
+import { ReflectionStageError, type ReflectionStage } from "./failure-stages";
 import { z } from "zod";
 import { validateReflection } from "@/game/run-reflection";
 import { lifeConfigSchema } from "@/game/setup";
@@ -16,13 +17,13 @@ const evidenceSchema=z.object({samples:z.array(sample).min(1).max(181),firstExti
 const schema=z.object({evidence:evidenceSchema,config:lifeConfigSchema}).strict();
 async function readBody(request:Request){const reader=request.body?.getReader();if(!reader)return "";let total=0;const chunks:Uint8Array[]=[];try{for(;;){const part=await reader.read();if(part.done)break;total+=part.value.byteLength;if(total>MAX_BODY){await reader.cancel();throw new RangeError("Request too large");}chunks.push(part.value);}}finally{reader.releaseLock();}const bytes=new Uint8Array(total);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return new TextDecoder().decode(bytes);}
 const response=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}});
-type Diagnostic={stage:"rate_limit"|"reflection";errorClass:"Error"|"TypeError"|"SyntaxError"|"RangeError"|"ZodError"|"Other"};
+type Diagnostic={stage:"rate_limit"|"reflection";reflectionStage?:ReflectionStage;errorClass:"Error"|"TypeError"|"SyntaxError"|"RangeError"|"ZodError"|"Other"};
 function errorClass(error:unknown):Diagnostic["errorClass"]{const name=error instanceof Error?error.name:"Other";return name==="Error"||name==="TypeError"||name==="SyntaxError"||name==="RangeError"||name==="ZodError"?name:"Other";}
 function reportDiagnostic(event:Diagnostic,diagnostic?: (event:Diagnostic)=>void){if(diagnostic)diagnostic(event);else console.warn("[reflect] request failed",event);}
 export function createReflectHandler(options:{limit?:(key:string)=>Promise<boolean>;reflect?:typeof reflectRun;diagnostic?:(event:Diagnostic)=>void}={}){return async(request:Request)=>{
  let parsed:z.infer<typeof schema>;
  try{if(Number(request.headers.get("content-length")??0)>MAX_BODY)return response({error:"Request too large"},413);parsed=schema.parse(JSON.parse(await readBody(request)));}catch(error){return response({error:error instanceof RangeError?"Request too large":"Invalid reflection request"},error instanceof RangeError?413:400);}
  try{const limit=options.limit??cloudflareLimit;const rawIp=request.headers.get("cf-connecting-ip")?.trim();const ip=rawIp&&/^[0-9a-fA-F:.]{1,45}$/.test(rawIp)?rawIp:"unknown";if(!(await limit(`reflect:${ip}`))||!(await limit("reflect:global")))return response({error:"Rate limited"},429);}catch(error){reportDiagnostic({stage:"rate_limit",errorClass:errorClass(error)},options.diagnostic);return response({error:"Jev reflection unavailable"},503);}
- try{const result=validateReflection(await (options.reflect??reflectRun)(parsed),parsed.evidence,parsed.config);return response(result);}catch(error){reportDiagnostic({stage:"reflection",errorClass:errorClass(error)},options.diagnostic);return response({error:"Jev reflection unavailable"},503);}
+ try{const result=validateReflection(await (options.reflect??reflectRun)(parsed),parsed.evidence,parsed.config);return response(result);}catch(error){reportDiagnostic({stage:"reflection",...(error instanceof ReflectionStageError?{reflectionStage:error.stage}:{}),errorClass:error instanceof ReflectionStageError?error.errorClass:errorClass(error)},options.diagnostic);return response({error:"Jev reflection unavailable"},503);}
 };}
 export const POST=createReflectHandler();
