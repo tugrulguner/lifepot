@@ -611,8 +611,20 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 /* Session-local exploration and results: no overlays obscure the final world. */
 .run-status { grid-area: status; display: grid; gap: 4px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
 .run-status span { font-size: 12px; overflow-wrap: anywhere; }
-.simulation-shell { grid-template-areas: "stats stats" "controls controls" "board observatory" "focus-controls observatory" "inspector observatory" "focus observatory" "status observatory" "legend observatory" "event observatory" "decision observatory" "result result"; }
-@media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "board" "focus-controls" "inspector" "focus" "status" "legend" "observatory" "decision" "event" "result"; } }
+ .simulation-shell { grid-template-areas: "stats stats" "controls controls" "board observation" "focus-controls observatory" "inspector observatory" "focus observatory" "legend observatory" "status observatory" "event observatory" "decision observatory" "result result"; }
+@media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "observation" "board" "focus-controls" "inspector" "focus" "status" "legend" "observatory" "decision" "event" "result"; } }
+.gameplay-observation { grid-area: observation; align-self: start; min-width: 0; display: grid; gap: 7px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--text); font: 12px/1.4 var(--mono); }
+.configured-species-counts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.configured-species-counts > strong { margin-right: 4px; color: var(--muted); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.configured-species-counts > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.configured-species-counts b { font-weight: 700; }
+.species-color { width: 9px; height: 9px; border-radius: 50%; }
+.followed-family-context, .gameplay-observation > p, .intervention-status { margin: 0; overflow-wrap: anywhere; }
+.followed-family-context { color: var(--mint); }
+.gameplay-observation > p[role="status"] { padding-left: 8px; border-left: 2px solid var(--coral); }
+.intervention-status { display: flex; flex-wrap: wrap; gap: 2px 14px; color: var(--muted); }
+.simulation-shell .life-canvas { width: min(100%, var(--board-available-height, calc(100svh - 365px))); }
+@media(max-width: 370px) { .simulation-shell .stats-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }.simulation-shell .stat { padding: 7px 5px; }.simulation-shell .stat span { font-size: 9px; }.simulation-shell .stat strong { font-size: 13px; } }
 .species-focus { display: contents; }
 .species-focus-buttons { grid-area: focus-controls; display: flex; flex-wrap: wrap; gap: 8px; }
 .species-focus-description { grid-area: focus; }

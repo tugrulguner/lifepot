@@ -24,11 +24,24 @@ test("real species and followed-family extinction remain near the board after in
   // Under ca8 the hunters disappear while grazers survive; verify the event during play.
   await expect(page.getByRole("region", { name: "Run status" })).toContainText("Running");
   await page.getByRole("button", { name: "Pause", exact: true }).click();
+  const nearBoard = page.getByRole("region", { name: "Near-board observations" });
+  await expect(nearBoard).toContainText(`Following lineage #${lineage}`);
+  await expect(page.getByRole("status", { name: "Latest retained extinction" })).toContainText("Species B first observed extinct");
+  // The short notice is presented in the watching region, not only in the detailed inspector.
+  await expect(page.getByRole("status", { name: "Latest retained extinction" })).toBeInViewport();
   await expect(milestones).toContainText(`Founder lineage #${lineage} first observed extinct at generation`);
   await page.getByRole("button", { name: "Stop following", exact: true }).click();
+  await expect(nearBoard).toContainText("No founder lineage followed");
+  await expect(page.getByRole("status", { name: "Latest retained extinction" })).toContainText(`Founder lineage #${lineage} first observed extinct`);
   await expect(milestones).toContainText(`Founder lineage #${lineage} first observed extinct at generation`);
   for (const viewport of [{ width: 1280, height: 850 }, { width: 390, height: 850 }]) {
     await page.setViewportSize(viewport);
+    // Test the ordinary watching position after the retained notice grows.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect.poll(async () => {
+      const board = await page.getByRole("img", { name: /ecosystem generation/i }).boundingBox();
+      return board!.y + board!.height;
+    }).toBeLessThanOrEqual(viewport.height - 12);
     await milestones.scrollIntoViewIfNeeded();
     const placement = await page.evaluate(() => {
       const canvas = document.querySelector("canvas.life-canvas")!.getBoundingClientRect();
