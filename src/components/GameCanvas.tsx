@@ -295,9 +295,10 @@ export function GameCanvas() {
   const [initialConfig, setInitialConfig] = useState<LifeConfig | null>(null);
   const [decisionReasons, setDecisionReasons] = useState<Record<number, FailureReason>>({});
   const [policy, setPolicy] = useState<"adaptive" | "fixed">("adaptive");
+  const [fixedBaselineReview, setFixedBaselineReview] = useState(false);
   const [evidence, setEvidence] = useState<RunEvidence | null>(null);
   const evidenceRef = useRef<RunEvidence | null>(null);
-  const [baseline, setBaseline] = useState<{ evidence: RunEvidence; config: LifeConfig; policy: "adaptive" | "fixed" } | null>(null);
+  const [baseline, setBaseline] = useState<{ evidence: RunEvidence; config: LifeConfig; seed: number; decisions: EvolutionLedger; policy: "adaptive" | "fixed" | "recorded" } | null>(null);
   const [showResults, setShowResults] = useState(true);
   const completionSeen = useRef(false);
   const [interpreting, setInterpreting] = useState(false);
@@ -389,6 +390,7 @@ export function GameCanvas() {
       setEvidence(observations);
       completionSeen.current = false;
       setShowResults(true);
+      setFixedBaselineReview(false);
       setNotice("");
       setLedger(l);
       setReplayMode(Boolean(replay));
@@ -676,7 +678,8 @@ export function GameCanvas() {
         <section className="review-card">
           <p className="eyebrow">Founder ecology</p>
           <h1>World conditions</h1>
-          {baseline && <p className="baseline-notice">Your previous run is kept as the baseline. Edit a condition below and keep the same seed to compare. {baseline.policy === "fixed" && policy === "fixed" ? "Both trials use fixed rules." : "Adaptive AI policies can differ between trials; this is not a controlled causal comparison."}</p>}
+          {fixedBaselineReview && <p className="baseline-notice" role="status">Review a separate fixed-rule baseline. Your prior run is retained with its original policy. Seed the unchanged conditions, then edit one condition for a fixed-rule follow-up; an earlier adaptive run is not a fixed-rule control.</p>}
+          {baseline && !fixedBaselineReview && <p className="baseline-notice">Your previous run is kept as the baseline. Edit a condition below and keep the same seed to compare. {baseline.policy === "fixed" && policy === "fixed" ? "Both trials use fixed rules." : "Adaptive AI policies can differ between trials; this is not a controlled causal comparison."}</p>}
           <p className="environment-code">
             Rule graph v{config.rules?.version} · {config.rules?.species.length} configured species
           </p>
@@ -859,9 +862,15 @@ export function GameCanvas() {
       {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} question={question}
         onInspect={() => { setShowResults(false); document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus(); }}
         onReplay={() => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); }}
-        onEdit={() => { setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); }}
+        onEdit={() => { setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); }}
         onNew={() => { setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setStage("questions"); window.scrollTo(0, 0); }}>
-        {baseline && <RunComparison before={baseline} after={{ evidence, config: initialConfig ?? config }} adaptive={baseline.policy === "adaptive" || policy === "adaptive"}/>}
+        <button type="button" onClick={() => {
+          setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy });
+          setConfig(structuredClone(initialConfigRef.current ?? config));
+          setSeed(simulation.seed); setPolicy("fixed"); setReplayMode(false);
+          setFixedBaselineReview(true); setStage("review"); window.scrollTo(0, 0);
+        }}>Review fixed-rule baseline</button>
+        {baseline && <RunComparison before={baseline} after={{ evidence, config: initialConfig ?? config, seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }} />}
         <RunReflectionPanel key={`reflection-${simulation.seed}-${simulation.generation}`} evidence={evidence} config={initialConfig ?? config} onExperiment={experiment => {
           const next = structuredClone(initialConfigRef.current ?? config);
           for (const change of experiment.changes) {
@@ -871,7 +880,7 @@ export function GameCanvas() {
             target[keys.at(-1)!] = change.value;
           }
           const validated = lifeConfigSchema.parse(next);
-          setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), policy });
+          setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy });
           setConfig(validated); setReplayMode(false); setManuallyEdited(true); setStage("review"); window.scrollTo(0, 0);
         }}/>
 

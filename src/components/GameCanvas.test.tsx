@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { stepSimulation, type SimulationState } from "@/game/world";
 import { GameCanvas } from "./GameCanvas";
@@ -50,6 +50,32 @@ test("theme repaint while paused preserves every engine field and deterministic 
   }
   expect(fullState(stepSimulation(engine))).toBe(expectedNext);
 });
+
+test("reviews a separate fixed-rule baseline without auto-seeding or losing private context", async () => {
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+  vi.stubGlobal("ResizeObserver",class { observe() {} disconnect() {} });
+  vi.stubGlobal("scrollTo", vi.fn());
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+  Object.defineProperty(HTMLElement.prototype,"scrollIntoView",{configurable:true,value:vi.fn()});
+  const fetch=vi.fn();vi.stubGlobal("fetch",fetch);
+  render(<GameCanvas />);
+  fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
+  fireEvent.change(screen.getByLabelText("World policy"),{target:{value:"fixed"}});
+  fireEvent.change(screen.getByLabelText("Your question or prediction (optional)"),{target:{value:"PRIVATE test question"}});
+  fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
+  fireEvent.click(screen.getByRole("button",{name:"Pause"}));
+  for(let i=0;i<180 && screen.queryByRole("button",{name:"Step one generation"});i++) await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Step one generation"}));});
+  expect(screen.getByRole("region",{name:"Run results"})).toBeInTheDocument();
+  const original=captured.map(state=>JSON.stringify(state));
+  fireEvent.click(screen.getByRole("button",{name:"Review fixed-rule baseline"}));
+  expect(screen.getByLabelText("World policy")).toHaveValue("fixed");
+  expect(screen.getByLabelText("Your question or prediction (optional)")).toHaveValue("PRIVATE test question");
+  expect(screen.getByText(/separate fixed-rule baseline/)).toBeInTheDocument();
+  expect(screen.getByRole("button",{name:/Seed ecosystem/})).toBeEnabled();
+  expect(screen.queryByRole("region",{name:"Run status"})).not.toBeInTheDocument();
+  expect(captured.slice(0,original.length).map(state=>JSON.stringify(state))).toEqual(original);
+  expect(fetch).not.toHaveBeenCalled();
+}, 30_000);
 
 test("offers a no-model preset through the existing guided setup", () => {
   render(<GameCanvas />);
