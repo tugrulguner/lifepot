@@ -10,7 +10,7 @@ function same(a:unknown,b:unknown):boolean {
  const left=a as Record<string,unknown>,right=b as Record<string,unknown>,keys=Object.keys(left);
  return keys.length===Object.keys(right).length&&keys.every(key=>Object.hasOwn(right,key)&&same(left[key],right[key]));
 }
-function palette(r:CouncilRecord,key:string,options:readonly string[]){if(!r.evidence[key]||Object.keys(r.evidence[key].probabilities).sort().join()!==[...options].sort().join())throw new Error("Invalid council evidence palette");}
+function palette(r:CouncilRecord,key:string,options:readonly string[]){if(!r.evidence[key]||!same(Object.keys(r.evidence[key].probabilities).sort(),[...options].sort()))throw new Error("Invalid council evidence palette");}
 export function validateCouncilDecision(d:EvolutionDecision,rules:WorldRuleGraph){
  if(d.source==="fallback"){if(d.council||d.scheduledRuleChange||d.speciesDirectives?.length)throw new Error("Fallback must abstain");return;}
  const c=d.council;if(!c||!rules.council||!same(c.manifest,rules.council))throw new Error("Council authority mismatch");
@@ -20,7 +20,8 @@ export function validateCouncilDecision(d:EvolutionDecision,rules:WorldRuleGraph
  for(const m of eligible)palette(o,`activate_${m.id}`,["active","skip"]);
  if(Object.keys(o.evidence).length!==4+eligible.length||c.selectedPatch!==o.evidence.selectedPatch.choice)throw new Error("Invalid orchestration");
  const active=eligible.filter(m=>o.evidence[`activate_${m.id}`].choice==="active");
- if(c.calls!==1+(c.batching?c.batching.providerCalls:active.length)||c.members.length!==active.length)throw new Error("Incomplete council");
+ if(c.correction&&(!c.batching&&active.length>0||c.correction.stage==="specialists"&&!c.batching))throw new Error("Invalid correction provenance");
+ if(c.calls!==1+(c.correction?1:0)+(c.batching?c.batching.providerCalls:active.length)||c.members.length!==active.length)throw new Error("Incomplete council");
  if(Boolean(c.batching)!==Boolean(c.batchUsage)||c.batching&&active.length===0)throw new Error("Invalid batch provenance");
  if(c.batching&&c.members.some(r=>r.usage.input_tokens!==0||r.usage.output_tokens!==0))throw new Error("Duplicated batch usage");
  for(const [index,m] of active.entries()){const r=c.members[index];if(r.id!==m.id||r.scope!==m.scope||r.responsibility!==m.responsibility)throw new Error("Cross-scope council result");
@@ -30,5 +31,5 @@ export function validateCouncilDecision(d:EvolutionDecision,rules:WorldRuleGraph
  if(!same(expected,d.speciesDirectives))throw new Error("Council directive mismatch");
  const selected=c.members.find(m=>m.id===c.selectedPatch),p=d.scheduledRuleChange?.patch;
  if(c.selectedPatch==="none"){if(p)throw new Error("Unauthorized patch");}else{if(!selected||!p)throw new Error("Missing selected patch");const expectedPatch=selected.responsibility==="environment"?{kind:"environment",field:"pressure",value:selected.evidence.value.choice}:selected.responsibility==="relationship"?{kind:"pair",pair:selected.scope,mode:selected.evidence.value.choice}:{kind:"self",species:selected.scope,value:selected.evidence.value.choice};if(!same(p,expectedPatch)||!same(d.ruleActivation,o.evidence.activation)||!same(d.ruleDuration,o.evidence.duration)||!same(d.ruleTransition,o.evidence.transition))throw new Error("Reconciliation mismatch");if(selected.responsibility==="environment"&&(!same(d.environmentPressure,selected.evidence.value)||!same(d.environmentIntensity,selected.evidence.intensity)))throw new Error("Environment evidence mismatch");}
- const usage=c.batching?{input_tokens:o.usage.input_tokens+c.batchUsage!.input_tokens,output_tokens:o.usage.output_tokens+c.batchUsage!.output_tokens}:[o,...c.members].reduce((s,r)=>({input_tokens:s.input_tokens+r.usage.input_tokens,output_tokens:s.output_tokens+r.usage.output_tokens}),{input_tokens:0,output_tokens:0});if(!same(usage,d.usage)||d.model!==o.model)throw new Error("Council usage mismatch");
+ const usage=c.batching?{input_tokens:o.usage.input_tokens+c.batchUsage!.input_tokens,output_tokens:o.usage.output_tokens+c.batchUsage!.output_tokens}:[o,...c.members].reduce((s,r)=>({input_tokens:s.input_tokens+r.usage.input_tokens,output_tokens:s.output_tokens+r.usage.output_tokens}),{input_tokens:0,output_tokens:0});if(c.correction){usage.input_tokens+=c.correction.rejectedUsage.input_tokens;usage.output_tokens+=c.correction.rejectedUsage.output_tokens;}if(!same(usage,d.usage)||d.model!==o.model)throw new Error("Council usage mismatch");
 }

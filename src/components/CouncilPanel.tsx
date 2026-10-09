@@ -39,6 +39,7 @@ export function RuntimeCouncil({ decision, state, ledger, replay }: { decision?:
     {!decision ? <p>No runtime judgment yet.</p> : decision.source === "fallback" ? <p>Council abstained · no new birth policies or graph patch. Inherited strategies continue; no partial specialist output applied.</p> : !council ? <p>Legacy decision · no council provenance recorded.</p> : <>
       <p>Generation {decision.generation} · observation {decision.observationHash} · graph v{decision.ruleGraphVersion}</p>
       <p><strong>Reconciled patch owner: {council.selectedPatch}</strong> · {council.calls} provider calls</p>
+      {council.correction && <p>Protocol correction: {council.correction.stage} · one fresh model response. Rejected attempt: {council.correction.rejectedUsage.input_tokens} input / {council.correction.rejectedUsage.output_tokens} output tokens, included in total usage. Invalid evidence was not applied.</p>}
       {council.batching && <p>Grouped specialist inference: scoped answers share one provider request. Batch usage: {council.batchUsage?.input_tokens ?? 0} input / {council.batchUsage?.output_tokens ?? 0} output tokens, counted once; specialist records do not have separately attributable token usage.</p>}
       <p>{selectedChangeLabel(decision)}</p>
       {decision.scheduledRuleChange && <p>{ruleTimingLabel(decision, state)} · {label(decision.scheduledRuleChange.duration)} duration · {label(decision.scheduledRuleChange.transition)} transition</p>}
@@ -53,6 +54,6 @@ export function RuntimeCouncil({ decision, state, ledger, replay }: { decision?:
         </details>;
       })}
     </>}
-    <p>Cumulative recorded runtime usage: {usage.input} input / {usage.output} output tokens · {usage.calls} council provider calls. Setup usage excluded; failed-call usage is unavailable.</p>
+    <p>Cumulative recorded runtime usage: {usage.input} input / {usage.output} output tokens · {usage.calls} council provider calls. Setup usage excluded; corrected rejected attempts included. Unrecovered failed-call usage is unavailable.</p>
   </section>;
 }
