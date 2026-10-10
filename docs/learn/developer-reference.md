@@ -19,7 +19,7 @@ A deterministic setup example can run without inference or credentials. From the
 npm test -- src/game/setup.test.ts src/game/rules.test.ts src/game/replay.test.ts
 ```
 
-For deployment build requirements, see [Deployment](../deployment.md). Do not send arbitrary requests to production `/api/judge`: it is an internal, quota-protected application route.
+For deployment build requirements, see [Deployment](/learn/deployment). Do not send arbitrary requests to production `/api/judge`: it is an internal, quota-protected application route.
 
 ## Setup schemas and normalization
 
@@ -116,7 +116,7 @@ Any malformed, tampered, unsupported, or semantically unreachable input is rejec
 
 The `/api/judge` route is server-only for interpretation, not a public API. It checks strict payload schemas, limits request bodies to 16 KiB, applies `Cache-Control: no-store`, and uses the Cloudflare `JUDGE_RATE_LIMIT` binding for production call protection. Binding denial, absence, or errors fail closed to deterministic fallback rather than an unmetered model request. The Workers limiter is per client key and Cloudflare location, eventually consistent—not a global billing quota. Provider-side limits remain the spend control.
 
-`TYPESAFE_API_KEY` is optional, server-only, and must never be exposed under `NEXT_PUBLIC_` or bundled to the browser. Do not add provider keys to docs/examples. Local development and tests inject deterministic in-process limiting; that local behavior is not production protection. See [deployment guide](../deployment.md) and [architecture](../architecture.md).
+`TYPESAFE_API_KEY` is optional, server-only, and must never be exposed under `NEXT_PUBLIC_` or bundled to the browser. Do not add provider keys to docs/examples. Local development and tests inject deterministic in-process limiting; that local behavior is not production protection. See [deployment guide](/learn/deployment) and [architecture](/learn/architecture).
 
 ## Source map
 
@@ -127,4 +127,4 @@ The `/api/judge` route is server-only for interpretation, not a public API. It c
 - Replay: `src/game/replay.ts`, `src/game/replay.test.ts`
 - Server schemas, fallback, quota: `src/app/api/judge/`
 - Interface: `src/components/GameCanvas.tsx`, `WorldObservatory.tsx`, `CreatureInspector.tsx`
-- [Player guide](/learn/player-guide) · [Architecture](../architecture.md) · [Simulation contract](../simulation-contract.md) · [Deployment](../deployment.md)
+- [Player guide](/learn/player-guide) · [Architecture](/learn/architecture) · [Simulation contract](/learn/simulation-contract) · [Deployment](/learn/deployment)

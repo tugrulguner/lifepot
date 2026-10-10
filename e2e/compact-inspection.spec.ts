@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 for (const width of [1280, 390, 320]) test(`species controls stay beside the board during compact and expanded inspection at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 850 });
   await page.route("**/api/judge", route => route.abort());
-  await page.goto("/");
+  await page.goto("/play");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("button", { name: "Pause", exact: true }).click();

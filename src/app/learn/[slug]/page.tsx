@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createElement, Fragment } from "react";
 import { FamilyHeader } from "@/components/FamilyHeader";
-import { guideMarkdown, guides, renderMarkdown } from "../content";
+import { guideGroups, guideMarkdown, guides, renderMarkdown } from "../content";
+import { projectSourceRevision } from "../../project-docs/generated-content";
 import { renderInline } from "../inline";
 
 export async function generateStaticParams() { return guides.map(({ slug }) => ({ slug })); }
@@ -20,13 +21,16 @@ export default async function GuidePage({ params }: { params: Promise<{ slug: st
   const { slug } = await params; const markdown = await guideMarkdown(slug); const guide = guides.find((item) => item.slug === slug);
   if (!markdown || !guide) notFound();
   const blocks = renderMarkdown(markdown);
-  return <main className="learn-shell"><FamilyHeader /><div className="learn-toolbar"><Link href="/learn">← All guides</Link><a href={`/learn/${slug}/markdown`}>Download source Markdown ↓</a></div><article className="learn-document"><nav className="learn-docnav"><Link href="/learn/player-guide">Player guide</Link><Link href="/learn/developer-reference">Developer reference</Link></nav><div className="learn-prose">{blocks.map((block, i) => {
+  const sourceUrl = guide.source === "architecture" ? `https://github.com/tugrulguner/lifepot/blob/${projectSourceRevision}/docs/architecture.md` : undefined;
+  const toc = blocks.filter(block => block.kind === "h2");
+  const anchor = (text: string) => text.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
+  return <main className="learn-shell"><FamilyHeader /><div className="learn-toolbar"><Link href="/learn">← All guides</Link><Link href="/play">Play the game →</Link><a href={`/learn/${slug}/markdown`}>Download source Markdown ↓</a></div><article className="learn-document"><nav className="learn-docnav" aria-label="Documentation navigation">{guideGroups.map(group => <section key={group}><h2>{group}</h2>{guides.filter(item => item.group === group).map(item => <Link key={item.slug} aria-current={item.slug === slug ? "page" : undefined} href={`/learn/${item.slug}`}>{item.title}</Link>)}</section>)}</nav><div className="learn-prose"><nav className="learn-toc" aria-label="On this page">{toc.map(block => <a key={block.text} href={`#${anchor(block.text)}`}>{block.text}</a>)}</nav>{blocks.map((block, i) => {
     if (block.kind === "code") return <pre key={i} data-language={block.lang}><code>{block.text}</code></pre>;
     if (block.kind === "ul") return <ul key={i}>{(JSON.parse(block.text) as string[]).map((item, j) => <li key={j}>{renderInline(item)}</li>)}</ul>;
     if (block.kind === "table") return <Fragment key={i}>{table(JSON.parse(block.text) as string[])}</Fragment>;
-    if (block.kind === "quote") return <blockquote key={i}>{renderInline(block.text)}</blockquote>;
+    if (block.kind === "quote") return <blockquote key={i}>{renderInline(block.text, sourceUrl)}</blockquote>;
     const tag = block.kind as "h1" | "h2" | "h3" | "h4" | "p";
     const id = tag.startsWith("h") ? block.text.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-") : undefined;
-    return createElement(tag, { key: i, id }, renderInline(block.text));
-  })}</div></article><footer className="learn-footer"><Link href="/">← Return to the living world</Link><Link href="/llms.txt">Agent documentation map</Link></footer></main>;
+    return createElement(tag, { key: i, id }, renderInline(block.text, sourceUrl));
+  })}</div></article><footer className="learn-footer"><Link href="/">← Return to overview</Link><Link href="/learn/quick-start">Next — Quick start →</Link><Link href="/llms.txt">Agent documentation map</Link></footer></main>;
 }

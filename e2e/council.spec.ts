@@ -13,7 +13,7 @@ test("incomplete council falls back atomically in the browser", async ({ page })
     decision.council!.members.pop();
     return route.fulfill({ json: decision });
   });
-  await page.goto("/");
+  await page.goto("/play");
   for (const answer of ["Rich scattered minerals", "Stable environment", "Coexist and replicate"]) {
     await page.getByRole("textbox").fill(answer);
     await page.keyboard.press("Enter");
@@ -55,7 +55,7 @@ for (const width of [1280, 390]) test(`council provenance and reconciled changes
     const request = route.request().postDataJSON();
     return route.fulfill({ json: request.kind === "evolution" ? await councilDecision(request.summary) : await councilSetup(request.answers) });
   });
-  await page.goto("/");
+  await page.goto("/play");
   for (const answer of ["Rich scattered minerals", "Stable environment", "Coexist and replicate"]) {
     await page.getByRole("textbox").fill(answer);
     await page.keyboard.press("Enter");

@@ -8,6 +8,17 @@ Jev proposes typed ecology choices; LifePot validates them; deterministic code e
 
 - [LifePot overview](https://lifepot.modepot.io/): product overview, mechanism, and learning entry point.
 - [Play LifePot](https://lifepot.modepot.io/play): create and replay an artificial-life world.
+- [Quick start](https://lifepot.modepot.io/learn/quick-start): play a first world or run locally.
+- [Setup and review](https://lifepot.modepot.io/learn/setup-and-review)
+- [Observe and inspect](https://lifepot.modepot.io/learn/observe-and-inspect)
+- [Experiments](https://lifepot.modepot.io/learn/experiments)
+- [Replay](https://lifepot.modepot.io/learn/replay)
+- [Contracts](https://lifepot.modepot.io/learn/contracts)
+- [Engine internals](https://lifepot.modepot.io/learn/engine-internals)
+- [Architecture](https://lifepot.modepot.io/learn/architecture)
+- [Simulation contract](https://lifepot.modepot.io/learn/simulation-contract)
+- [Deployment](https://lifepot.modepot.io/learn/deployment)
+- Every `/learn/<slug>` page exposes the same canonical content at `/learn/<slug>/markdown`.
 - [Player guide](https://lifepot.modepot.io/learn/player-guide): learn setup vocabulary, controls, observation, outcomes, and replay limits.
 - [Developer reference](https://lifepot.modepot.io/learn/developer-reference): exact schemas, rule graph, engine ownership, decision ledger, replay validation, and deployment boundaries.
 - [Agent guide Markdown](https://lifepot.modepot.io/learn/developer-reference/markdown): canonical downloadable developer guide.

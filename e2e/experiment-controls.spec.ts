@@ -11,7 +11,7 @@ test("an adaptive trial leads to a separate reviewable fixed baseline and one-co
   else await route.abort();
  });
  await page.setViewportSize({width:1280,height:850});
- await page.goto("/");
+ await page.goto("/play");
  await page.getByRole("button",{name:"Explore deterministic preset"}).click();
  await page.getByLabel("Your question or prediction (optional)").fill("PRIVATE control question");
  await expect(page.getByLabel("World policy")).toHaveValue("adaptive");
