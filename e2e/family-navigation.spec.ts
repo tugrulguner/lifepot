@@ -76,7 +76,7 @@ test("compact menu keeps ModePot visible and exposes ordered resources before do
       expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest("a")?.textContent?.trim(), { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 })).toBe(name);
     }
     const productLinks = menu.getByRole("navigation", { name: "LifePot navigation" }).getByRole("link");
-    await expect(productLinks).toHaveText(["Overview", "Learn", "Play"]);
+    await expect(productLinks).toHaveText(["Overview", "Documentation", "Play"]);
     for (const [index, href] of ["/", "/learn", "/play"].entries()) {
       await expect(productLinks.nth(index)).toHaveAttribute("href", href);
     }
