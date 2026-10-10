@@ -34,6 +34,7 @@ export function FamilyHeader({ children }: { children?: ReactNode }) {
       </nav>
       <a className="family-compact-home" href="https://modepot.io/">ModePot</a>
       <div className="family-header-actions">
+        <Link className="family-desktop-docs" href="/learn">Documentation</Link>
         {children ?? <SiteThemeControl />}
         <button ref={button} className="family-menu-toggle" type="button" aria-expanded={open} aria-controls="family-menu" onClick={() => setOpen(value => !value)}>Menu</button>
       </div>
@@ -43,7 +44,7 @@ export function FamilyHeader({ children }: { children?: ReactNode }) {
         {resources.slice(1).map(({ label, href }) => <a key={label} href={href}>{label}</a>)}
       </nav>
       <nav aria-label="LifePot navigation" className="family-menu-product">
-        <Link href="/">Overview</Link><Link href="/learn">Learn</Link><Link href="/play">Play</Link>
+        <Link href="/">Overview</Link><Link href="/learn">Documentation</Link><Link href="/play">Play</Link>
       </nav>
     </section>
   </>;

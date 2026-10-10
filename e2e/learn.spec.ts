@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 test("learn index and canonical guide pages render and serve matching Markdown", async ({ page, request }) => {
   const home = await page.goto("/learn");
   expect(home?.status()).toBe(200);
-  await expect(page.getByRole("heading", { name: "Learn LifePot" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "LifePot documentation" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Player guide" }).first()).toHaveAttribute("href", "/learn/player-guide");
   await expect(page.getByRole("link", { name: "Developer reference" }).first()).toHaveAttribute("href", "/learn/developer-reference");
 
