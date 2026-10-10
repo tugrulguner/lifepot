@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
+import { sanitizeAnalyticsProperties } from "@/game/analytics-privacy";
 
 function PostHogPageviewTracker() {
   const pathname = usePathname();
@@ -20,12 +21,14 @@ function PostHogPageviewTracker() {
         capture_pageleave: true,
         autocapture: { dom_event_allowlist: ["click"], element_allowlist: ["a", "button"] },
         disable_session_recording: true,
+        before_send: event => event ? sanitizeAnalyticsProperties(event) : null,
       });
     }
 
     const currentUrl = new URL(window.location.href);
     currentUrl.pathname = pathname;
-    currentUrl.search = queryString;
+    currentUrl.search = "";
+    currentUrl.hash = "";
     const currentUrlString = currentUrl.toString();
 
     if (lastPageviewUrl.current !== currentUrlString) {

@@ -48,6 +48,7 @@ test("renders safely on the server and initializes shared privacy-conscious Post
     capture_pageleave: true,
     autocapture: { dom_event_allowlist: ["click"], element_allowlist: ["a", "button"] },
     disable_session_recording: true,
+    before_send: expect.any(Function),
   });
   expect(mockCapture).toHaveBeenCalledTimes(1);
   expect(mockCapture).toHaveBeenLastCalledWith("$pageview", {
@@ -57,7 +58,7 @@ test("renders safely on the server and initializes shared privacy-conscious Post
   cleanup();
 });
 
-test("captures one initial pageview and one for each distinct pathname or query change", async () => {
+test("captures route changes without counting or exposing query-only changes", async () => {
   const { render, cleanup } = await import("@testing-library/react");
   const { rerender, unmount } = render(<PostHogProvider><main>LifePot</main></PostHogProvider>);
 
@@ -75,20 +76,20 @@ test("captures one initial pageview and one for each distinct pathname or query 
 
   mockSearch.mockReturnValue("topic=ecology");
   rerender(<PostHogProvider><main>LifePot</main></PostHogProvider>);
-  expect(mockCapture).toHaveBeenCalledTimes(3);
+  expect(mockCapture).toHaveBeenCalledTimes(2);
   expect(mockCapture).toHaveBeenLastCalledWith("$pageview", {
-    $current_url: "http://localhost:3000/learn?topic=ecology",
+    $current_url: "http://localhost:3000/learn",
   });
 
   rerender(<PostHogProvider><main>LifePot</main></PostHogProvider>);
-  expect(mockCapture).toHaveBeenCalledTimes(3);
+  expect(mockCapture).toHaveBeenCalledTimes(2);
 
   mockPathname.mockReturnValue("/learn");
   mockSearch.mockReturnValue("topic=other");
   rerender(<PostHogProvider><main>LifePot</main></PostHogProvider>);
-  expect(mockCapture).toHaveBeenCalledTimes(4);
+  expect(mockCapture).toHaveBeenCalledTimes(2);
   expect(mockCapture).toHaveBeenLastCalledWith("$pageview", {
-    $current_url: "http://localhost:3000/learn?topic=other",
+    $current_url: "http://localhost:3000/learn",
   });
 
   unmount();
@@ -100,6 +101,11 @@ test("does not track hash-only URL changes", async () => {
   const { rerender, unmount } = render(<PostHogProvider><main>LifePot</main></PostHogProvider>);
 
   expect(mockCapture).toHaveBeenCalledTimes(1);
+  const config = init.mock.calls[0][1]!;
+  expect(config.before_send).toBeTypeOf("function");
+  const privacyHook = config.before_send as (event: { event: string; properties: Record<string, unknown> } | null) => { properties: Record<string, unknown> } | null;
+  expect(privacyHook(null)).toBeNull();
+  expect(privacyHook({ event: "$pageleave", properties: { $current_url: "http://localhost:3000/play?replay=PRIVATE_REPLAY#PRIVATE_LEDGER" } })?.properties.$current_url).toBe("http://localhost:3000/play");
   window.location.hash = "#section";
   rerender(<PostHogProvider><main>LifePot</main></PostHogProvider>);
   expect(mockCapture).toHaveBeenCalledTimes(1);
