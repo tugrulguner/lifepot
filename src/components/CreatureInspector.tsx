@@ -1,5 +1,6 @@
 import type { SimulationState } from "@/game/world";
 import { inspectCell, lineageCells } from "@/game/inspection";
+import { speciesColor } from "@/game/species-colors";
 
 import type { RunEvidence } from "@/game/run-evidence";
 
@@ -18,6 +19,15 @@ export function CreatureInspector({ state, evidence, index, followed, onFollow, 
       </ul></>}
     </section>}
     {!cell ? <p>Tap a creature to pause and inspect it. Pin its founder lineage, then resume to watch its family spread or disappear. Resuming clears the cell inspection; your lineage pin stays.</p> : <>
+      {cell.occupied && <div className="organism-portrait">
+        <svg viewBox="0 0 100 100" role="img" aria-label={`${cell.species?.role ?? "unknown"} role symbol`}>
+          <circle cx="50" cy="50" r="44" fill="none" stroke={followed === cell.lineage ? "#ffd36a" : "#496b57"} strokeDasharray={followed === cell.lineage ? "5 4" : undefined}/>
+          <g fill={speciesColor(cell.species?.id ?? "")} stroke="#f1f8ed" strokeWidth="2">
+            {cell.species?.role === "hunter" ? <path d="M75 50L28 27L28 73Z"/> : cell.species?.role === "producer" ? <path d="M50 22L74 36L74 64L50 78L26 64L26 36Z"/> : cell.species?.role === "omnivore" ? <path d="M50 22L78 50L50 78L22 50Z"/> : cell.species?.role === "scavenger" ? <rect x="27" y="27" width="46" height="46"/> : <circle cx="50" cy="50" r="25"/>}
+          </g>
+        </svg>
+        <div><strong>Organism #{state.organismId[index!]}</strong><p>Symbol shows feeding role, not biological anatomy.</p><meter aria-label="Organism energy" min={0} max={255} value={cell.energy}/></div>
+      </div>}
       {cell.occupied && <section className="organism-family-summary" aria-label="Organism and family summary"><strong>Species {cell.species?.id ?? "?"} · {cell.species?.role ?? "unknown role"} · founder lineage #{cell.lineage}</strong><span>Energy {cell.energy.toFixed(1)} / 255 · Age {cell.age} ticks</span><span>{family.length} living family {family.length === 1 ? "member" : "members"}</span></section>}
       <h3>{cell.occupied ? `Species ${cell.species?.id ?? "?"} · ${cell.species?.role ?? "unknown role"}` : "Empty cell"} <small>({index! % 50}, {Math.floor(index! / 50)})</small></h3>
       {cell.occupied && <button onClick={() => onFollow(cell.lineage)}>Follow founder lineage #{cell.lineage}</button>}

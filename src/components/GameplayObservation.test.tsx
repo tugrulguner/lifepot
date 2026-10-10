@@ -13,6 +13,25 @@ const state = createSimulation({ seed: 7, config: setup });
 afterEach(cleanup);
 
 describe("near-board observation summary", () => {
+  it("keeps source-backed names beside canonical species IDs", () => {
+    render(<GameplayObservation state={state} evidence={null} followed={null} decision={null} names={{ A: "algae" }} />);
+    expect(screen.getByLabelText("Species A count")).toHaveTextContent("algae · A");
+    expect(screen.getByLabelText("Species B count")).toHaveTextContent(`${state.config.rules!.species[1].role} · B`);
+  });
+  it("puts recorded tick events beside the world without inventing causes", () => {
+    const observed = { ...state, generation: 7, events: [
+      { kind: "birth" as const, generation: 7, organismId: 12, at: 1, energy: 20 },
+      { kind: "feeding" as const, generation: 7, organismId: 12, at: 1, energy: 4, source: "resource" as const },
+      { kind: "death" as const, generation: 7, organismId: 8, at: 2, energy: 0, cause: "starvation" as const },
+    ] };
+    render(<GameplayObservation state={observed} evidence={null} followed={null} decision={null} />);
+    const events = screen.getByRole("region", { name: "Recorded activity" });
+    expect(events).toHaveTextContent("Generation 7");
+    expect(events).toHaveTextContent("1 birth");
+    expect(events).toHaveTextContent("1 feeding");
+    expect(events).toHaveTextContent("1 death");
+    expect(events).not.toHaveTextContent("caused");
+  });
   it("shows every configured species, including extinct configured species with zero", () => {
     const species = state.config.rules!.species;
     state.guild.fill(0);

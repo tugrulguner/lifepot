@@ -148,6 +148,35 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   const pad = 18,
     cw = (rect.width - pad * 2) / GRID_SIZE,
     ch = (rect.height - pad * 2) / GRID_SIZE;
+  // A quiet coordinate lattice gives the board a readable habitat map without
+  // suggesting routes or terrain the simulation does not encode.
+  c.save();
+  c.strokeStyle = "rgba(141, 190, 163, .025)";
+  c.lineWidth = 0.5;
+  c.beginPath();
+  for (let cell = 0; cell <= GRID_SIZE; cell += 5) {
+    const x = pad + cell * cw, y = pad + cell * ch;
+    c.moveTo(x, pad); c.lineTo(x, rect.height - pad);
+    c.moveTo(pad, y); c.lineTo(rect.width - pad, y);
+  }
+  c.stroke();
+  c.restore();
+  // A coarse resource field keeps habitat shading bounded to 100 gradients.
+  // Exact cell resources and hazards remain visible in the marks below.
+  for (let row = 0; row < GRID_SIZE; row += 5) {
+    for (let col = 0; col < GRID_SIZE; col += 5) {
+      let total = 0;
+      for (let y = row; y < row + 5; y++) for (let x = col; x < col + 5; x++) total += state.resources[y * GRID_SIZE + x];
+      const resource = total / (25 * 255);
+      if (resource <= .08) continue;
+      const x = pad + (col + 2.5) * cw, y = pad + (row + 2.5) * ch;
+      const glow = c.createRadialGradient(x, y, 0, x, y, Math.max(cw, ch) * 4);
+      glow.addColorStop(0, `rgba(117, 210, 142, ${resource * .12})`);
+      glow.addColorStop(1, "rgba(117, 210, 142, 0)");
+      c.fillStyle = glow;
+      c.fillRect(x - cw * 4, y - ch * 4, cw * 8, ch * 8);
+    }
+  }
   for (let i = 0; i < state.resources.length; i++) {
     const x = i % 50,
       y = Math.floor(i / 50),
@@ -742,7 +771,7 @@ export function GameCanvas() {
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
       <World state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onInspect={index => { setSelected(index); setPaused(true); }} />
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
-      <GameplayObservation state={simulation} evidence={evidence} followed={followed} decision={active ?? null} />
+      <GameplayObservation state={simulation} evidence={evidence} followed={followed} decision={active ?? null} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
       <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={lineage => {
         setFollowed(lineage);
         if (evidenceRef.current) {
