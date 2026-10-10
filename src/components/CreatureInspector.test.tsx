@@ -8,6 +8,15 @@ import { defaultConfig } from "@/game/setup";
 import { CreatureInspector } from "./CreatureInspector";
 
 describe("creature inspector summary", () => {
+  it("magnifies the inspected role symbol and measured energy without inventing anatomy", () => {
+    const state = createSimulation({ seed: 17, config: defaultConfig() });
+    const index = state.guild.findIndex(Boolean);
+    const role = state.config.rules!.species[state.ruleSpecies[index] - 1].role;
+    render(<CreatureInspector state={state} index={index} followed={null} onFollow={() => {}} onClear={() => {}} onPick={() => {}} />);
+    expect(screen.getByRole("img", { name: `${role} role symbol` })).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Organism energy" })).toHaveAttribute("value", String(state.energy[index]));
+    expect(screen.getByText("Symbol shows feeding role, not biological anatomy.")).toBeInTheDocument();
+  });
   afterEach(cleanup);
   it("keeps current energy and age in the compact summary", () => {
     const state = createSimulation({ seed: 17, config: defaultConfig() });
