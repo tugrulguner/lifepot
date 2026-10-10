@@ -42,7 +42,7 @@ export function FamilyHeader({ children }: { children?: ReactNode }) {
         {resources.slice(1).map(({ label, href }) => <a key={label} href={href}>{label}</a>)}
       </nav>
       <nav aria-label="LifePot navigation" className="family-menu-product">
-        <Link href="/">Configure</Link><Link href="/learn">Learn</Link>
+        <Link href="/">Overview</Link><Link href="/learn">Learn</Link><Link href="/play">Play</Link>
       </nav>
     </section>
   </>;
