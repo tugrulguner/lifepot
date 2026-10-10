@@ -161,16 +161,20 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   }
   c.stroke();
   c.restore();
-  for (let i = 0; i < state.resources.length; i++) {
-    const resource = state.resources[i] / 255;
-    if (resource > .08) {
-      const x = pad + (i % GRID_SIZE + .5) * cw;
-      const y = pad + (Math.floor(i / GRID_SIZE) + .5) * ch;
-      const glow = c.createRadialGradient(x, y, 0, x, y, Math.max(cw, ch) * 2.8);
-      glow.addColorStop(0, `rgba(117, 210, 142, ${.035 + resource * .055})`);
+  // A coarse resource field keeps habitat shading bounded to 100 gradients.
+  // Exact cell resources and hazards remain visible in the marks below.
+  for (let row = 0; row < GRID_SIZE; row += 5) {
+    for (let col = 0; col < GRID_SIZE; col += 5) {
+      let total = 0;
+      for (let y = row; y < row + 5; y++) for (let x = col; x < col + 5; x++) total += state.resources[y * GRID_SIZE + x];
+      const resource = total / (25 * 255);
+      if (resource <= .08) continue;
+      const x = pad + (col + 2.5) * cw, y = pad + (row + 2.5) * ch;
+      const glow = c.createRadialGradient(x, y, 0, x, y, Math.max(cw, ch) * 4);
+      glow.addColorStop(0, `rgba(117, 210, 142, ${resource * .12})`);
       glow.addColorStop(1, "rgba(117, 210, 142, 0)");
       c.fillStyle = glow;
-      c.fillRect(x - cw * 3, y - ch * 3, cw * 6, ch * 6);
+      c.fillRect(x - cw * 4, y - ch * 4, cw * 8, ch * 8);
     }
   }
   for (let i = 0; i < state.resources.length; i++) {
@@ -767,7 +771,7 @@ export function GameCanvas() {
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
       <World state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onInspect={index => { setSelected(index); setPaused(true); }} />
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
-      <GameplayObservation state={simulation} evidence={evidence} followed={followed} decision={active ?? null} />
+      <GameplayObservation state={simulation} evidence={evidence} followed={followed} decision={active ?? null} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
       <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={lineage => {
         setFollowed(lineage);
         if (evidenceRef.current) {

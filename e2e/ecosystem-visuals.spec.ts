@@ -26,6 +26,7 @@ for(const width of [1280,390])for(const theme of ['Light','Dark'])test(`readable
  });
  await page.goto('/play');await page.getByLabel('Theme').selectOption(theme.toLowerCase());await page.getByRole('button',{name:'Explore deterministic preset'}).click();await page.getByLabel('World policy').selectOption('fixed');await page.getByRole('button',{name:/Seed ecosystem/}).click();await page.getByRole('button',{name:'Pause',exact:true}).click();
  await expect(page.getByTestId('generation')).toHaveText('0 / 180');for(let i=0;i<30;i++)await page.getByRole('button',{name:'Step one generation'}).click();await expect(page.getByTestId('generation')).toHaveText('30 / 180');
+ await expect(page.getByRole('region',{name:'Recorded activity'})).toContainText('Generation 30');
  const phase=process.env.LIFEPOT_VISUAL_PHASE??'after';if(phase==='after'){await expect(page.locator('.legend')).toContainText('⬡ Producer');await expect(page.locator('.legend')).toContainText('◇ Omnivore');await expect(page.locator('.legend')).toContainText('local hazard intensity');}
  await page.evaluate(()=>scrollTo(0,0));
  const metrics=await page.evaluate(()=>{const canvas=document.querySelector('canvas.life-canvas') as HTMLCanvasElement;const b=canvas.getBoundingClientRect(),header=document.querySelector('.family-header')!.getBoundingClientRect(),controls=document.querySelector('.controls')!.getBoundingClientRect();const context=canvas.getContext('2d')!,pixels=context.getImageData(0,0,canvas.width,canvas.height).data;const background=Array.from(context.getImageData(0,0,1,1).data);let different=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i]!==background[0]||pixels[i+1]!==background[1]||pixels[i+2]!==background[2])different++;return {canvas:{x:b.x,y:b.y,width:b.width,height:b.height,bottom:b.bottom},headerBottom:header.bottom,controlsTop:controls.top,background,different,overflow:document.documentElement.scrollWidth>innerWidth,generation:document.querySelector('[data-testid=generation]')!.textContent,species:Array.from(document.querySelectorAll('.species-focus button')).map(b=>b.textContent)};});
@@ -34,6 +35,8 @@ for(const width of [1280,390])for(const theme of ['Light','Dark'])test(`readable
  await page.evaluate(()=>{window.ringDraws=[];});
  await page.getByRole('button',{name:'Inspect living organism',exact:true}).click();
  await expect(page.getByRole('button',{name:/^Follow founder lineage #/})).toBeVisible();
+ await expect(page.getByRole('img',{name:/role symbol/})).toBeVisible();
+ await expect(page.getByRole('meter',{name:'Organism energy'})).toBeVisible();
  if(phase==='after'){
   await expect.poll(()=>page.evaluate(()=>window.ringDraws.some(r=>r.color==='#ffffff'&&r.dash.length===0))).toBe(true);
   await page.locator('canvas.life-canvas').screenshot({path:join(dir,key+'-selected.png')});

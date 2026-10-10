@@ -30,6 +30,7 @@ test("theme repaint while paused preserves every engine field and deterministic 
   fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
   expect(captured).toHaveLength(1);
+  expect(context.createRadialGradient.mock.calls.length).toBeLessThanOrEqual(contextCalls.mock.calls.length * 100);
   fireEvent.click(screen.getByRole("button", { name: "Pause" }));
   const engine = captured[0];
   const fullState = (state: SimulationState) => JSON.stringify(state);

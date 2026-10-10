@@ -613,6 +613,14 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .run-status span { font-size: 12px; overflow-wrap: anywhere; }
  .simulation-shell { grid-template-areas: "stats stats" "controls controls" "board observation" "focus-controls observatory" "inspector observatory" "focus observatory" "legend observatory" "status observatory" "event observatory" "decision observatory" "result result"; }
 @media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "observation" "board" "focus-controls" "inspector" "focus" "status" "legend" "observatory" "decision" "event" "result"; } }
+.recorded-activity { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.recorded-activity > strong { color: var(--muted); font: 10px/1.4 var(--mono); }
+.recorded-activity > div { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.activity-birth { color: #f1f8ed; }.activity-feeding { color: #ffd65c; }.activity-death { color: #ff8877; }
+.organism-portrait { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 12px; margin-top: 12px; padding: 12px; background: #020a09; border-radius: 8px; }
+.organism-portrait svg { width: 84px; height: 84px; }
+.organism-portrait p { margin: 6px 0; font-size: 12px; }
+.organism-portrait meter { width: 100%; height: 10px; }
 .gameplay-observation { grid-area: observation; align-self: start; min-width: 0; display: grid; gap: 7px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--text); font: 12px/1.4 var(--mono); }
 .configured-species-counts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
 .configured-species-counts > strong { margin-right: 4px; color: var(--muted); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
@@ -624,7 +632,8 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .gameplay-observation > p[role="status"] { padding-left: 8px; border-left: 2px solid var(--coral); }
 .intervention-status { display: flex; flex-wrap: wrap; gap: 2px 14px; color: var(--muted); }
 .simulation-shell .life-canvas { width: min(100%, var(--board-available-height, calc(100svh - 365px))); }
-@media(max-width: 370px) { .simulation-shell .stats-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }.simulation-shell .stat { padding: 7px 5px; }.simulation-shell .stat span { font-size: 9px; }.simulation-shell .stat strong { font-size: 13px; } }
+@media(max-width: 760px) { .simulation-shell .stats-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }.simulation-shell .stat { padding-top: 9px; padding-bottom: 9px; } }
+@media(max-width: 370px) { .gameplay-observation { gap: 4px; padding: 8px; font-size: 11px; }.configured-species-counts { gap: 4px 8px; }.configured-species-counts > strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }.recorded-activity { gap: 4px 8px; }.recorded-activity > div { gap: 4px 8px; }.simulation-shell .stats-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }.simulation-shell .stat { padding: 7px 5px; }.simulation-shell .stat span { font-size: 9px; }.simulation-shell .stat strong { font-size: 13px; } }
 .species-focus { display: contents; }
 .species-focus-buttons { grid-area: focus-controls; display: flex; flex-wrap: wrap; gap: 8px; }
 .species-focus-description { grid-area: focus; }
