@@ -19,7 +19,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); captur
 
 test("theme repaint while paused preserves every engine field and deterministic continuation", async () => {
   vi.stubGlobal("scrollTo", vi.fn());
-  const context = { setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1 };
+  const context = { setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1 };
   const contextCalls = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
   // jsdom has no layout; provide a drawable board for repaint assertions.
   vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
@@ -44,6 +44,7 @@ test("theme repaint while paused preserves every engine field and deterministic 
     await waitFor(() => expect(contextCalls.mock.calls.length).toBeGreaterThan(paintsBeforeThemeMutation));
     expect(context.fillRect.mock.calls.length).toBeGreaterThan(paintedCells);
     expect(context.arc).toHaveBeenCalled();
+    expect(context.createRadialGradient).toHaveBeenCalled();
     expect(context.lineTo).toHaveBeenCalled();
     expect(fullState(engine), `engine state changed on ${choice} repaint`).toBe(before);
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();

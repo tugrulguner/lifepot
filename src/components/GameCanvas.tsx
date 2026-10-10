@@ -148,6 +148,31 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   const pad = 18,
     cw = (rect.width - pad * 2) / GRID_SIZE,
     ch = (rect.height - pad * 2) / GRID_SIZE;
+  // A quiet coordinate lattice gives the board a readable habitat map without
+  // suggesting routes or terrain the simulation does not encode.
+  c.save();
+  c.strokeStyle = "rgba(141, 190, 163, .025)";
+  c.lineWidth = 0.5;
+  c.beginPath();
+  for (let cell = 0; cell <= GRID_SIZE; cell += 5) {
+    const x = pad + cell * cw, y = pad + cell * ch;
+    c.moveTo(x, pad); c.lineTo(x, rect.height - pad);
+    c.moveTo(pad, y); c.lineTo(rect.width - pad, y);
+  }
+  c.stroke();
+  c.restore();
+  for (let i = 0; i < state.resources.length; i++) {
+    const resource = state.resources[i] / 255;
+    if (resource > .08) {
+      const x = pad + (i % GRID_SIZE + .5) * cw;
+      const y = pad + (Math.floor(i / GRID_SIZE) + .5) * ch;
+      const glow = c.createRadialGradient(x, y, 0, x, y, Math.max(cw, ch) * 2.8);
+      glow.addColorStop(0, `rgba(117, 210, 142, ${.035 + resource * .055})`);
+      glow.addColorStop(1, "rgba(117, 210, 142, 0)");
+      c.fillStyle = glow;
+      c.fillRect(x - cw * 3, y - ch * 3, cw * 6, ch * 6);
+    }
+  }
   for (let i = 0; i < state.resources.length; i++) {
     const x = i % 50,
       y = Math.floor(i / 50),
