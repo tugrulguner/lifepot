@@ -28,7 +28,7 @@ test("mobile simulation keeps every stat label and value inside the viewport", a
   for (const viewport of [{ width: 320, height: 390 }, { width: 390, height: 844 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(viewport);
     await page.route("**/api/judge", (route) => route.abort());
-    await page.goto("/");
+    await page.goto("/play");
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     await expect(page.getByRole("img", { name: /ecosystem generation/i })).toBeVisible();
@@ -71,7 +71,7 @@ test("mobile simulation keeps every stat label and value inside the viewport", a
 test("deterministic preset enters the existing review and simulation without judge calls", async ({ page }) => {
   let judgeCalls = 0;
   await page.route("**/api/judge", async (route) => { judgeCalls += 1; await route.abort(); });
-  await page.goto("/");
+  await page.goto("/play");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
   await expect(page.getByTestId("interpreter-source")).toHaveText("Deterministic fallback");
@@ -85,7 +85,7 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 390 }, { width: 320, height: 844 }]) {
     await page.setViewportSize(viewport);
     await page.route("**/api/judge", (route) => route.abort());
-    await page.goto("/");
+    await page.goto("/play");
     await expect(page.getByText("QUESTION 1 / 3")).toBeVisible();
     await expect(page.getByRole("heading", { name: "What exists in this world?" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "What exists in this world?" })).toBeFocused();
@@ -120,7 +120,7 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
 test("links every game stage back to ModePot on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route("**/api/judge", (route) => route.abort());
-  await page.goto("/");
+  await page.goto("/play");
   await expectModePotLinkFitsViewport(page);
   await answerSetupWithKeyboard(page);
   await expectModePotLinkFitsViewport(page);
@@ -143,7 +143,7 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
     });
   });
 
-  await page.goto("/");
+  await page.goto("/play");
   await answerSetupWithKeyboard(page);
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
   await expect(page.getByLabel("Validated world rules")).toContainText("Species A");
@@ -172,7 +172,7 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
 test("copied replay opens at generation zero and never calls the judge", async ({ page, context }) => {
   await page.route("**/api/judge", route => route.abort());
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.goto("/");
+  await page.goto("/play");
   await answerSetupWithKeyboard(page);
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("button", { name: "3× speed" }).click();
@@ -199,7 +199,7 @@ for (const viewport of [{ width: 1280, height: 633 }, { width: 1440, height: 100
     await page.setViewportSize(viewport);
     await page.route("**/api/judge", (route) => route.abort());
     await page.clock.install();
-    await page.goto("/");
+    await page.goto("/play");
     await answerSetupWithKeyboard(page);
     await page.clock.pauseAt(new Date(Date.now() + 1000));
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
@@ -236,7 +236,7 @@ test("graph preview and runtime show bound species policies, not legacy cohort d
     const request = route.request().postDataJSON();
     return route.fulfill({ json: request.kind === "evolution" ? await councilDecision(request.summary) : await councilSetup(answers) });
   });
-  await page.goto("/");
+  await page.goto("/play");
   await answerSetupWithKeyboard(page);
   const rules = page.getByLabel("Validated world rules");
   await expect(rules).toContainText("Omnivore");
@@ -255,7 +255,7 @@ test("graph preview and runtime show bound species policies, not legacy cohort d
 
 test("setup continues safely when the interpreter is offline", async ({ page }) => {
   await page.route("**/api/judge", (route) => route.abort());
-  await page.goto("/");
+  await page.goto("/play");
   await answerSetupWithKeyboard(page);
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
   await expect(page.getByLabel("Validated world rules")).toContainText("Species A");

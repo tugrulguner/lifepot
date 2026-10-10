@@ -38,7 +38,7 @@ test("learn index and canonical guide pages render and serve matching Markdown",
 test("learn pages stay readable at narrow viewport and keep the game link", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/learn/developer-reference");
-  await expect(page.getByRole("link", { name: "← Return to the living world" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "← Return to overview" })).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(overflow).toBe(false);
 });

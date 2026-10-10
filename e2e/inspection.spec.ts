@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 for (const width of [1280, 390]) test(`inspect and follow real lineage at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 844 });
   await page.route("**/api/judge", route => route.abort());
-  await page.goto("/");
+  await page.goto("/play");
   for (const answer of ["Rich mineral pools with abundant prey", "Toxic waves sweep across the world", "Diversify while prey and predators coexist"]) {
     await page.getByRole("textbox").fill(answer);
     await page.keyboard.press("Enter");

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { defaultConfig } from "../src/game/setup";
 const answers = ["A: algae producer. B eats A. C eats B, not A.", "Moderate drought", "Observe coexistence"];
 async function setup(page: import("@playwright/test").Page) {
- await page.goto("/");
+ await page.goto("/play");
  for (const answer of answers) { await page.locator("input").fill(answer); await page.getByRole("button", { name: /Continue|Review ecosystem/ }).click(); }
 }
 test("unresolved corrected setup identifies one review focus and preserves original answers", async ({ page }) => {

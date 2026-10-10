@@ -20,7 +20,8 @@
 </p>
 
 <p align="center">
-  <a href="https://lifepot.modepot.io/">Play LifePot</a> ·
+  <a href="https://lifepot.modepot.io/play">Play LifePot</a> ·
+  <a href="https://lifepot.modepot.io/learn/quick-start">Player quick start</a> ·
   <a href="https://lifepot.modepot.io/learn/player-guide">Player guide</a> ·
   <a href="https://lifepot.modepot.io/learn/developer-reference">Developer / agent guide</a> ·
   <a href="https://lifepot.modepot.io/project-docs/readme">Public README</a> ·
@@ -77,7 +78,7 @@ cp .env.example .env.local  # optional: add TYPESAFE_API_KEY
 npm run dev -- --hostname 127.0.0.1
 ```
 
-Open `http://127.0.0.1:3000`, answer three prompts, review the validated world, and seed the ecosystem. For local development only, `LIFEPOT_SHOWCASE_MODE=1` enables the larger in-process model-call budget; bind to loopback (`--hostname 127.0.0.1`) and never expose showcase mode through a tunnel or public proxy. It is disabled in production and does not bypass production limits.
+Open `http://127.0.0.1:3000/play`, answer three prompts, review the validated world, and seed the ecosystem. For local development only, `LIFEPOT_SHOWCASE_MODE=1` enables the larger in-process model-call budget; bind to loopback (`--hostname 127.0.0.1`) and never expose showcase mode through a tunnel or public proxy. It is disabled in production and does not bypass production limits.
 
 ## What ships today
 

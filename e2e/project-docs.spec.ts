@@ -32,10 +32,10 @@ test("project docs expose the roadmap link and missing roadmap route stays unava
 test("homepage offers the source-backed roadmap beside its local guide action", async ({ page }) => {
   for (const width of [1280, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
-    await page.goto("/");
+    await page.goto("/play");
     for (const theme of ["auto", "light", "dark"] as const) {
       await page.getByLabel("Color theme").selectOption(theme);
-      await page.goto("/");
+      await page.goto("/play");
       await page.locator(".setup-intro summary").click();
       const roadmap = page.getByRole("link", { name: "Roadmap ↗" });
       await expect(roadmap).toBeVisible();

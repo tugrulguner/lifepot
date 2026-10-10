@@ -6,7 +6,7 @@ test("real species and followed-family extinction remain near the board after in
   const calls: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.route("**/api/judge", async route => { calls.push(route.request().url()); await route.abort(); });
-  await page.goto("/");
+  await page.goto("/play");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByText("Edit world conditions", { exact: true }).click();
   await page.getByLabel("Resource abundance").selectOption("scarce");

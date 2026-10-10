@@ -1,5 +1,6 @@
-import { GameCanvas } from "@/components/GameCanvas";
+import { HomeRoute } from "@/components/HomeRoute";
 
-export default function Home() {
-  return <GameCanvas />;
+export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams;
+  return <HomeRoute legacyQuery={params.replay !== undefined} />;
 }

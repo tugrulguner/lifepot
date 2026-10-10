@@ -50,8 +50,9 @@ describe("project presentation", () => {
   });
 
   it("renders and downloads both guides from the same canonical Markdown sources", async () => {
-    expect(guides.map((guide) => guide.slug)).toEqual(["player-guide", "developer-reference"]);
-    for (const guide of guides) {
+    const manuals = guides.filter(guide => guide.group === "Complete manuals");
+    expect(manuals.map((guide) => guide.slug)).toEqual(["player-guide", "developer-reference"]);
+    for (const guide of manuals) {
       const source = readFileSync(resolve(root, "docs/learn", `${guide.slug}.md`), "utf8");
       expect(await guideMarkdown(guide.slug)).toBe(source);
       const blocks = renderMarkdown(source);
@@ -114,6 +115,7 @@ describe("project presentation", () => {
     expect(existsSync(resolve(root, "docs/assets/lifepot-architecture.svg"))).toBe(true);
     expect(pngDimensions("lifepot.png")).toEqual([1200, 900]);
     expect(pngDimensions("docs/assets/lifepot-architecture.png")).toEqual([1600, 900]);
+    expect(readFileSync(resolve(root, "public/docs/assets/lifepot-architecture.png"))).toEqual(readFileSync(resolve(root, "docs/assets/lifepot-architecture.png")));
   });
 
   it("states the model and biological boundaries", () => {

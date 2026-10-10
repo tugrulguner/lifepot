@@ -9,7 +9,7 @@ async function settle(page: import("@playwright/test").Page) {
 
 test("family foundation renders shared typography, neutral surfaces, and accessible theme control", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/");
+  await page.goto("/play");
   await settle(page);
   const header = page.locator(".family-header");
   await expect(header).toBeVisible();
@@ -42,7 +42,7 @@ test("deterministic setup, simulation controls, pause, and replay remain intact 
   let judgeCalls = 0;
   await page.route("**/api/judge", (route) => { judgeCalls++; return route.abort(); });
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/");
+  await page.goto("/play");
   await page.getByRole("combobox", { name: "Color theme" }).selectOption("light");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
@@ -65,7 +65,7 @@ test("theme controls and layout fit narrow screens and follow live OS Auto chang
   for (const width of [1280, 768, 320]) {
     await page.setViewportSize({ width, height: width === 320 ? 390 : 768 });
     await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
-    await page.goto("/");
+    await page.goto("/play");
     await settle(page);
     const theme = page.getByRole("combobox", { name: "Color theme" });
     await expect(theme).toBeVisible();
@@ -80,7 +80,7 @@ test("theme controls and layout fit narrow screens and follow live OS Auto chang
 
  test("paused ecosystem canvas remains game-dark across shell themes without advancing", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
-  await page.goto("/");
+  await page.goto("/play");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   const canvas = page.locator("canvas.life-canvas");

@@ -7,7 +7,7 @@ async function preset(page: Page) {
     if (payload.kind === "evolution") await route.fulfill({ json: deterministicEvolutionDecision(payload.summary) });
     else await route.abort();
   });
-  await page.goto("/");
+  await page.goto("/play");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
 }
@@ -45,7 +45,7 @@ test("an optional question is not sent to the judge and fixed-rule play requests
   test.setTimeout(210_000);
   const requests: unknown[] = [];
   await page.route("**/api/judge", async route => { requests.push(route.request().postDataJSON()); await route.abort(); });
-  await page.goto("/");
+  await page.goto("/play");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("textbox", { name: "Your question or prediction (optional)" }).fill("Will hunters disappear? This is a prediction, not an instruction.");
   await page.getByLabel("World policy").selectOption("fixed");
@@ -61,7 +61,7 @@ test("fixed-rule replay and a changed-condition trial preserve evidence without 
   const errors: string[] = [], calls: unknown[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.route("**/api/judge", async route => { calls.push(route.request().postDataJSON()); await route.abort(); });
-  await page.goto("/");
+  await page.goto("/play");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByLabel("World policy").selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();

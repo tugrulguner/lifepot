@@ -24,7 +24,7 @@ for(const width of [1280,390])for(const theme of ['Light','Dark'])test(`readable
    return path?originalStroke.call(this,path):(originalStroke as ()=>void).call(this);
   };
  });
- await page.goto('/');await page.getByLabel('Theme').selectOption(theme.toLowerCase());await page.getByRole('button',{name:'Explore deterministic preset'}).click();await page.getByLabel('World policy').selectOption('fixed');await page.getByRole('button',{name:/Seed ecosystem/}).click();await page.getByRole('button',{name:'Pause',exact:true}).click();
+ await page.goto('/play');await page.getByLabel('Theme').selectOption(theme.toLowerCase());await page.getByRole('button',{name:'Explore deterministic preset'}).click();await page.getByLabel('World policy').selectOption('fixed');await page.getByRole('button',{name:/Seed ecosystem/}).click();await page.getByRole('button',{name:'Pause',exact:true}).click();
  await expect(page.getByTestId('generation')).toHaveText('0 / 180');for(let i=0;i<30;i++)await page.getByRole('button',{name:'Step one generation'}).click();await expect(page.getByTestId('generation')).toHaveText('30 / 180');
  const phase=process.env.LIFEPOT_VISUAL_PHASE??'after';if(phase==='after'){await expect(page.locator('.legend')).toContainText('⬡ Producer');await expect(page.locator('.legend')).toContainText('◇ Omnivore');await expect(page.locator('.legend')).toContainText('local hazard intensity');}
  await page.evaluate(()=>scrollTo(0,0));

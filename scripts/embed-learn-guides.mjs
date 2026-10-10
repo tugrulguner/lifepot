@@ -1,13 +1,17 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-const guides = [
-  { slug: "player-guide", title: "Player guide", description: "Shape a world, inspect the ecosystem, and understand outcomes and replays." },
-  { slug: "developer-reference", title: "Developer reference", description: "Schemas, deterministic mechanics, decisions, replay, and operations." },
-];
-
-const entries = await Promise.all(guides.map(async (guide) => {
-  const markdown = await readFile(new URL(`../docs/learn/${guide.slug}.md`, import.meta.url), "utf8");
-  return `  ${JSON.stringify(guide.slug)}: ${JSON.stringify(markdown)},`;
+// Embed canonical sources once; task-focused pages select sections at render time.
+const sources = {
+  "quick-start": "docs/learn/quick-start.md",
+  "player-guide": "docs/learn/player-guide.md",
+  "developer-reference": "docs/learn/developer-reference.md",
+  architecture: "docs/architecture.md",
+  "simulation-contract": "docs/simulation-contract.md",
+  deployment: "docs/deployment.md",
+};
+const entries = await Promise.all(Object.entries(sources).map(async ([slug, path]) => {
+  const markdown = await readFile(new URL(`../${path}`, import.meta.url), "utf8");
+  return `  ${JSON.stringify(slug)}: ${JSON.stringify(markdown)},`;
 }));
 
 const projectSources = ["README.md", "ROADMAP.md"];

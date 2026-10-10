@@ -21,7 +21,7 @@ async function settle(page: import("@playwright/test").Page) {
 
 test("family resources are visible desktop links with the contracted order and target geometry", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/");
+  await page.goto("/play");
   await settle(page);
   const header = page.locator(".family-header");
   await expect(header).toBeVisible();
@@ -50,7 +50,7 @@ test("family resources are visible desktop links with the contracted order and t
 test("compact menu keeps ModePot visible and exposes ordered resources before docs with Escape focus return", async ({ page }) => {
   for (const width of [768, 401, 400, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
-    await page.goto("/");
+    await page.goto("/play");
     await settle(page);
     const header = page.locator(".family-header");
     await expect(header.getByRole("link", { name: "ModePot" })).toBeVisible();
@@ -75,7 +75,11 @@ test("compact menu keeps ModePot visible and exposes ordered resources before do
       expect(box!.y + box!.height).toBeLessThanOrEqual(850);
       expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest("a")?.textContent?.trim(), { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 })).toBe(name);
     }
-    await expect(menu.getByRole("navigation", { name: "LifePot navigation" }).getByRole("link").first()).toHaveText("Configure");
+    const productLinks = menu.getByRole("navigation", { name: "LifePot navigation" }).getByRole("link");
+    await expect(productLinks).toHaveText(["Overview", "Learn", "Play"]);
+    for (const [index, href] of ["/", "/learn", "/play"].entries()) {
+      await expect(productLinks.nth(index)).toHaveAttribute("href", href);
+    }
     await page.keyboard.press("Escape");
     await expect(menuButton).toHaveAttribute("aria-expanded", "false");
     await expect(menuButton).toBeFocused();
@@ -96,7 +100,7 @@ test("creator attribution is in the setup intro and deterministic preset remains
   let judgeCalls = 0;
   await page.route("**/api/judge", (route) => { judgeCalls++; return route.abort(); });
   await page.setViewportSize({ width: 320, height: 850 });
-  await page.goto("/");
+  await page.goto("/play");
   const intro = page.locator(".setup-intro");
   await intro.locator("summary").click();
   await expect(intro.getByRole("link", { name: "Created by Tugrul Guner" })).toHaveAttribute("href", "https://tugrul.modepot.io/");
