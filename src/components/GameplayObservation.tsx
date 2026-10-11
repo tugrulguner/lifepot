@@ -4,7 +4,7 @@ import type { SimulationState } from "@/game/world";
 import { ruleTimingLabel, selectedChangeLabel } from "@/game/council-display";
 import { speciesColor } from "@/game/species-colors";
 
-export function GameplayObservation({ state, evidence, followed, decision, names }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>> }) {
+export function GameplayObservation({ state, evidence, followed, decision, names, worldName }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string }) {
   const rules = state.config.rules!;
   const counts = rules.species.map((species, index) => ({
     species,
@@ -29,7 +29,7 @@ export function GameplayObservation({ state, evidence, followed, decision, names
       })}</div>
     </section>
     <div className="configured-species-counts" aria-label="Configured species counts">
-      <strong>Configured species</strong>
+      <strong className="saved-world-heading" title={worldName}>{worldName ? `Experiment: ${worldName}` : "Configured species"}</strong>
       {counts.map(({ species, count }) => <span key={species.id} aria-label={`Species ${species.id} count`}><i className="species-color" style={{ backgroundColor: speciesColor(species.id) }} />{names?.[species.id] ?? species.role} · {species.id} <b>{count}</b></span>)}
     </div>
     <div className="followed-family-context" aria-live="polite">

@@ -13,6 +13,10 @@ const state = createSimulation({ seed: 7, config: setup });
 afterEach(cleanup);
 
 describe("near-board observation summary", () => {
+  it("keeps the local saved-world identity beside the board", () => {
+    render(<GameplayObservation state={state} evidence={null} followed={null} decision={null} worldName="Pond notebook" />);
+    expect(screen.getByRole("region", {name:"Near-board observations"})).toHaveTextContent("Experiment: Pond notebook");
+  });
   it("keeps source-backed names beside canonical species IDs", () => {
     render(<GameplayObservation state={state} evidence={null} followed={null} decision={null} names={{ A: "algae" }} />);
     expect(screen.getByLabelText("Species A count")).toHaveTextContent("algae · A");
