@@ -99,6 +99,8 @@ test("My Worlds persists, exports/imports, replays exactly and links a reviewed 
   await panel.getByRole("button", { name: "Reopen and replay" }).click();
   await expect(page.getByText(/Exact recorded replay/)).toBeVisible();
   await expect(page).toHaveURL(/\/play$/);
+  // Reload restores the default 1× rate; use the same visible 3× control as the original trial.
+  await page.getByRole("button", { name: "3× speed" }).click();
   await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 100_000 });
   await expect(page.getByRole("img", { name: new RegExp(`Ecosystem generation ${replayed.state.generation}; ${replayed.state.stats.population} organisms`) })).toBeVisible();
   await expect(page.getByRole("region", { name: "Run status" })).not.toContainText("PRIVATE_QUESTION_SENTINEL");

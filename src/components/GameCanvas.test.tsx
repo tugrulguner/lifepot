@@ -69,7 +69,10 @@ test("reviews a separate fixed-rule baseline without auto-seeding or losing priv
   fireEvent.change(screen.getByLabelText("Your question or prediction (optional)"),{target:{value:"PRIVATE test question"}});
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
   fireEvent.click(screen.getByRole("button",{name:"Pause"}));
-  for(let i=0;i<180 && screen.queryByRole("button",{name:"Step one generation"});i++) await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Step one generation"}));});
+  const originalStep = screen.getByRole("button", { name: "Step one generation" });
+  for (let i = 0; i < 180 && originalStep.isConnected; i++) {
+    await act(async () => { fireEvent.click(originalStep); });
+  }
   expect(screen.getByRole("region",{name:"Run results"})).toBeInTheDocument();
   const original=captured.map(state=>JSON.stringify(state));
   fireEvent.click(screen.getByRole("button",{name:"Review fixed-rule baseline"}));
@@ -82,7 +85,11 @@ test("reviews a separate fixed-rule baseline without auto-seeding or losing priv
   expect(fetch).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
   fireEvent.click(screen.getByRole("button", { name: "Pause" }));
-  for (let i=0;i<180 && screen.queryByRole("button", { name: "Step one generation" });i++) await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Step one generation" })); });
+  const baselineStep = screen.getByRole("button", { name: "Step one generation" });
+  for (let i = 0; i < 180 && baselineStep.isConnected; i++) {
+    await act(async () => { fireEvent.click(baselineStep); });
+  }
+  expect(screen.getByRole("region", { name: "Run results" })).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Optional world name (stored locally)"), { target: { value: "Remember this pond" } });
   fireEvent.click(screen.getByRole("button", { name: "Save completed world" }));
   await screen.findByText("Remember this pond");
