@@ -69,3 +69,34 @@ test("real SDK respects an existing browser capture opt-out", async ({ context, 
   await page.waitForTimeout(3500);
   expect(ingest).toEqual([]);
 });
+
+
+test("real SDK captures actual deterministic LifePot run start without setup content", async ({ context, page }) => {
+  const bodies: string[] = [];
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, "webdriver", { get: () => false });
+    Object.defineProperty(navigator, "userAgentData", { get: () => ({ brands: [{ brand: "Google Chrome", version: "140" }, { brand: "Chromium", version: "140" }], mobile: false, platform: "macOS", getHighEntropyValues: async () => ({ brands: [{ brand: "Google Chrome", version: "140" }], mobile: false, platform: "macOS" }) }) });
+  });
+  await context.route("**/*", async route => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (url.hostname.includes("posthog.com") && request.method() === "POST") {
+      let buffer = request.postDataBuffer() ?? Buffer.alloc(0);
+      try { buffer = gunzipSync(buffer); } catch { /* JSON bodies need no decompression. */ }
+      bodies.push(buffer.toString());
+      await route.fulfill({ status: 200, contentType: "application/json", body: '{"status":1}' });
+      return;
+    }
+    if (url.pathname.startsWith("/api/")) { await route.abort(); return; }
+    await route.continue();
+  });
+  await page.goto("/play");
+  await page.getByRole("button", { name: /Explore deterministic preset/ }).click();
+  await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+  await expect(page.getByRole("status").filter({ hasText: /Running|Waiting for a bounded/ })).toBeVisible();
+  await expect.poll(() => bodies.some(body => body.includes('"event":"lifepot_run_started"'))).toBe(true);
+  const decoded = bodies.flatMap(body => { const value = JSON.parse(body); return Array.isArray(value) ? value : value.batch ?? [value]; });
+  const started = decoded.find(event => event.event === "lifepot_run_started");
+  expect(started?.properties).toMatchObject({ entry_method: "fresh", interpretation_mode: "fallback", event_schema_version: 1 });
+  expect(JSON.stringify(decoded)).not.toMatch(/Rich mineral|Predator packs|Diversify while|seed|prompt|ledger/i);
+});

@@ -53,6 +53,7 @@ import { GameplayObservation } from "./GameplayObservation";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
 import { setupFidelitySchema, setupFailureSchema, setupNamedIntentSchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity, type SetupFailure, type SetupNamedIntent } from "@/game/setup-review";
 import { speciesColor } from "@/game/species-colors";
+import { gameplayAnalytics } from "@/app/gameplay-analytics";
 import { isSurvivingNewborn, relationshipLabel, triggerLabel } from "@/game/visuals";
 export type LifePotViewModel = {
   answers: SetupAnswers;
@@ -384,16 +385,21 @@ export function GameCanvas() {
     replayRef = useRef<ReplayData | null>(null),
     pending = useRef<number | null>(null),
     runId = useRef(0),
-    pendingArrival = useRef(false);
+    pendingArrival = useRef(false),
+    analyticsProof = useRef<typeof proof>(null),
+    analyticsBaseline = useRef(false),
+    acceptedFollowup = useRef(false);
+  useEffect(() => { analyticsProof.current = proof; analyticsBaseline.current = Boolean(baseline); }, [proof, baseline]);
   const complete = simulation && simulation.outcome !== "running";
   useEffect(() => {
     if (!complete || stage !== "simulation") return;
     if (!completionSeen.current) {
-      completionSeen.current = true;
-      document.getElementById("run-results")?.focus();
+    completionSeen.current = true;
+    if (!replayMode && simulation) gameplayAnalytics.runCompleted(`run-${runId.current}`, { reason: simulation.outcome, generations: simulation.generation, interpretation: analyticsProof.current?.source ?? "fallback" });
+    document.getElementById("run-results")?.focus();
       document.getElementById("run-results")?.scrollIntoView({ block: "start" });
     }
-  }, [complete, stage]);
+  }, [complete, stage, replayMode, simulation]);
   useLayoutEffect(() => {
     if (stage !== "simulation" || !pendingArrival.current) return;
     pendingArrival.current = false;
@@ -408,6 +414,12 @@ export function GameCanvas() {
       simRef.current = initial;
       initialConfigRef.current = structuredClone(c);
       replayRef.current = replay ?? null;
+      const analyticsRunId = `run-${runId.current}`;
+      if (replay) gameplayAnalytics.replayStarted(analyticsRunId, "local", replay.engineVersion);
+      else {
+        gameplayAnalytics.runStarted(analyticsRunId, { mode: "fresh", interpretation: analyticsProof.current?.source ?? "fallback", engine: initial.engineVersion });
+        if (acceptedFollowup.current) { gameplayAnalytics.followUpAccepted(analyticsRunId, "changed_conditions"); acceptedFollowup.current = false; }
+      }
       setAnswers(a);
       setConfig(c);
       setInitialConfig(structuredClone(c));
@@ -583,6 +595,7 @@ export function GameCanvas() {
       const namedIntent = setupNamedIntentSchema.safeParse(p.evidence?.establishedIntent);
       setConfig(p.config);
       setProof({ source: p.source, model: p.model, usage: p.usage, fidelity: p.fidelity, fallbackReason: p.fallbackReason, failure: p.failure, namedIntent: namedIntent.success ? namedIntent.data : undefined });
+      if (p.fidelity && p.fidelity.verdict !== "approve") gameplayAnalytics.setupFailed("setup_rejected");
     } catch {
       setConfig(deterministicSetup(ca));
       setProof({ source: "fallback" });
@@ -755,7 +768,7 @@ export function GameCanvas() {
           <button
             className="primary-button seed-button"
             disabled={!!proof?.fidelity && proof.fidelity.verdict !== "approve"}
-            onClick={() => { if (proof?.fidelity && proof.fidelity.verdict !== "approve") return; begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined); }}
+            onClick={() => { if (proof?.fidelity && proof.fidelity.verdict !== "approve") { gameplayAnalytics.setupFailed("setup_rejected"); return; } acceptedFollowup.current = Boolean(baseline); begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined); }}
           >
             Seed ecosystem <span>→</span>
           </button>
