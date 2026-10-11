@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { buildRunComparison } from "@/game/run-reflection";
 import { conditionLabel, conditionValue } from "@/game/condition-labels";
 import { deleteWorld, exportWorld, importWorld, listWorlds, saveWorld, MAX_WORLD_EXPORT_BYTES, type WorldRecord } from "@/game/my-worlds";
@@ -59,7 +60,7 @@ export function MyWorldsPanel({ current, entryShortcut = false, onOpen, onReview
     finally { if (url) { const completedUrl = url; setTimeout(() => URL.revokeObjectURL(completedUrl), 1000); } }
   };
   return <>
-  {entryShortcut && records.length > 0 && <button type="button" className="my-worlds-shortcut ph-no-capture" data-ph-no-capture="true" aria-label={`My Worlds (${records.length})`} onClick={() => document.getElementById("my-worlds-shelf")?.scrollIntoView({ behavior: "smooth", block: "start" })}>My Worlds ({records.length})</button>}
+  {entryShortcut && records.length > 0 && (() => { const button = <button type="button" className="my-worlds-shortcut ph-no-capture" data-ph-no-capture="true" aria-label={`My Worlds (${records.length})`} onClick={() => document.getElementById("my-worlds-shelf")?.scrollIntoView({ behavior: "instant", block: "start" })}>My Worlds ({records.length})</button>; const entry = document.getElementById("my-worlds-entry"); return entry ? createPortal(button, entry) : button; })()}
   <section id="my-worlds-shelf" className="my-worlds ph-no-capture" data-ph-no-capture="true" aria-label="My Worlds — browser-local saves" aria-busy={busy}>
     <h2>My Worlds</h2>
     <p>Saved only in this browser and device. No account or sync. Browser storage can be cleared or evicted, so export a backup.</p>

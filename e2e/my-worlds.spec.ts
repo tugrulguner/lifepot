@@ -150,8 +150,14 @@ test("return visit exposes saved history and restores archived highlights, child
   await page.reload();
   const shortcut = page.getByRole("button", { name: "My Worlds (2)" });
   await expect(shortcut).toBeVisible();
+  const entry = await shortcut.boundingBox();
+  expect(entry!.y).toBeGreaterThanOrEqual(64);
+  expect(entry!.y + entry!.height).toBeLessThanOrEqual(850);
   await expect(page.getByRole("heading", { name: "What exists in this world?" })).toBeVisible();
   await shortcut.click();
+  const shelfTop = await page.getByRole("heading", {name:"My Worlds",exact:true}).boundingBox();
+  expect(shelfTop!.y).toBeGreaterThanOrEqual(64);
+  expect(shelfTop!.y + shelfTop!.height).toBeLessThanOrEqual(850);
   const shelf = page.getByRole("region", { name: "My Worlds — browser-local saves" });
   await expect(shelf.getByText("Pond notebook", { exact: true })).toBeVisible();
   await expect(shelf.getByText(/Follow-up to Pond notebook\. Changed conditions:.*Resource abundance/i)).toBeVisible();

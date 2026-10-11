@@ -662,6 +662,7 @@ export function GameCanvas() {
       <main className="setup-shell">
         <FamilyHeader><span className="header-detail">Co-evolution laboratory</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
         <section className="question-panel">
+          <div id="my-worlds-entry" />
           <div className="step-label">QUESTION {qi + 1} / 3</div>
           <div className="progress-track">
             <i style={{ width: `${((qi + 1) / 3) * 100}%` }} />

@@ -90,6 +90,7 @@ test("reviews a separate fixed-rule baseline without auto-seeding or losing priv
   expect(JSON.stringify(saved)).not.toContain("PRIVATE test question");
   expect(saved.parentId).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /new world/i }));
+  await waitFor(() => expect(document.querySelector(".question-panel .my-worlds-shortcut")).not.toBeNull());
   fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
   expect(document.querySelector(".world-identity")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Edit setup answers" }));
