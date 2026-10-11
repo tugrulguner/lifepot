@@ -756,6 +756,8 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .overview-more p { max-width:760px; margin-bottom:23px; }
 .overview-footer { border-top:1px solid var(--mp-border); padding:24px max(24px,calc((100% - 1120px)/2)); color:var(--mp-muted); font-size:13px; }
 .my-worlds { max-width: 68rem; margin: 2rem auto; padding: clamp(1rem, 3vw, 2rem); border: 1px solid var(--line, #cbd5d1); border-radius: 1rem; background: var(--mp-surface); color: var(--mp-ink); overflow-wrap: anywhere; }
+.my-worlds-shortcut { position: fixed; z-index: 80; right: max(1rem, env(safe-area-inset-right)); top: calc(72px + env(safe-area-inset-top)); min-height: 2.75rem; padding: .65rem 1rem; border: 1px solid var(--mp-control-boundary); border-radius: 999px; background: var(--mp-surface); color: var(--mp-ink); box-shadow: 0 4px 18px #0002; font-weight: 700; }
+.my-worlds-shortcut:focus-visible { outline: 3px solid var(--mp-accent); outline-offset: 3px; }
 .my-worlds h2 { margin-top: 0; }
 .my-worlds-summary { flex: 1 1 15rem; min-width: 0; display: grid; gap: .35rem; }
 .my-worlds-summary span { font-size: .875rem; color: var(--mp-muted); }

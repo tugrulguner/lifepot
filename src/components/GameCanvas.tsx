@@ -40,7 +40,7 @@ import { SpeciesFocus } from "./SpeciesFocus";
 import WorldPreview from "./WorldPreview";
 import { RunResults } from "./RunResults";
 import { MyWorldsPanel } from "./MyWorldsPanel";
-import type { WorldRecord } from "@/game/my-worlds";
+import { listWorlds, type WorldRecord } from "@/game/my-worlds";
 import { RunReflectionPanel } from "./RunReflectionPanel";
 import { RunComparison } from "./RunComparison";
 import { decodeDecisionResponse, failureReasonSchema, failureLabels, type FailureReason } from "@/game/decision-status";
@@ -333,6 +333,8 @@ export function GameCanvas() {
   const [showResults, setShowResults] = useState(true);
   const [parentWorldId, setParentWorldId] = useState<string | null>(null);
   const [originWorldId, setOriginWorldId] = useState<string | null>(null);
+  const [localWorldName, setLocalWorldName] = useState("");
+  const [archivedEvidence, setArchivedEvidence] = useState<RunEvidence | null>(null);
   const [recordedPolicy, setRecordedPolicy] = useState<"adaptive" | "fixed" | "recorded">("recorded");
   const [currentReplay, setCurrentReplay] = useState<ReplayData | null>(null);
   const completionSeen = useRef(false);
@@ -416,7 +418,7 @@ export function GameCanvas() {
       initialConfigRef.current = structuredClone(c);
       replayRef.current = replay ?? null;
       setCurrentReplay(replay ?? null);
-      if (!replay) setOriginWorldId(null);
+      if (!replay) { setOriginWorldId(null); setArchivedEvidence(null); }
       setAnswers(a);
       setConfig(c);
       setInitialConfig(structuredClone(c));
@@ -449,14 +451,26 @@ export function GameCanvas() {
     },
     [],
   );
-  function openSavedWorld(record: WorldRecord) {
+  async function openSavedWorld(record: WorldRecord) {
     setOriginWorldId(record.id); setParentWorldId(record.parentId);
+    setLocalWorldName(record.name); setArchivedEvidence(record.evidence);
+    setBaseline(null);
+    let missingParent = false;
+    if (record.parentId) {
+      try {
+        const parent = (await listWorlds()).find(item => item.id === record.parentId);
+        if (parent) setBaseline({ evidence: parent.evidence, config: parent.replay.config, seed: parent.replay.seed, decisions: parent.replay.ledger, policy: parent.policy ?? "recorded" });
+        else missingParent = true;
+      } catch { missingParent = true; }
+    }
     setRecordedPolicy(record.policy ?? "recorded");
-    setQuestion(""); setBaseline(null); setProof(record.setup ?? null);
+    setQuestion(""); setProof(record.setup ?? null);
     setPolicy(record.policy === "fixed" ? "fixed" : "adaptive");
     begin(record.replay.answers, record.replay.config, record.replay.seed, record.replay);
+    if (missingParent) setNotice("Saved follow-up parent is missing; its original comparison is unavailable.");
   }
   function reviewSavedWorld(record: WorldRecord) {
+    setLocalWorldName(record.name); setArchivedEvidence(null);
     const original = structuredClone(record.replay.config);
     setParentWorldId(record.id); setOriginWorldId(null);
     setAnswers(record.replay.answers); setConfig(original); setSeed(record.replay.seed);
@@ -726,7 +740,7 @@ export function GameCanvas() {
           )}
           {qi === 0 && <button type="button" className="back-button" onClick={loadDeterministicPreset}>Explore deterministic preset</button>}
         </section>
-        <MyWorldsPanel onOpen={openSavedWorld} onReview={reviewSavedWorld} />
+        <MyWorldsPanel entryShortcut onOpen={openSavedWorld} onReview={reviewSavedWorld} />
       </main>
     );
   }
@@ -736,6 +750,7 @@ export function GameCanvas() {
         <FamilyHeader><span className="header-detail">Interpretation complete</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
         <section className="review-card">
           <p className="eyebrow">Founder ecology</p>
+          {localWorldName && <p className="world-identity">Experiment: <strong>{localWorldName}</strong></p>}
           <h1>World conditions</h1>
           {fixedBaselineReview && <p className="baseline-notice" role="status">Review a separate fixed-rule baseline. Your prior run is retained with its original policy. Seed the unchanged conditions, then edit one condition for a fixed-rule follow-up; an earlier adaptive run is not a fixed-rule control.</p>}
           {baseline && !fixedBaselineReview && <p className="baseline-notice">Your previous run is kept as the baseline. Edit a condition below and keep the same seed to compare. {baseline.policy === "fixed" && policy === "fixed" ? "Both trials use fixed rules." : "Adaptive AI policies can differ between trials; this is not a controlled causal comparison."}</p>}
@@ -798,7 +813,9 @@ export function GameCanvas() {
     resources = Math.round(simulation.stats.resources / 2500);
   return (
     <main className={`simulation-shell${originWorldId || parentWorldId ? " ph-no-capture" : ""}`} data-ph-no-capture={originWorldId || parentWorldId ? true : undefined}>
-      <section className="run-status" aria-label="Run status"><strong role="status">{complete ? simulation.stats.population === 0 ? "World empty" : "Observation complete" : deciding ? "Waiting for a bounded ecology decision — the world is held still" : paused ? "Paused — inspect life or step one generation" : "Running — watch, inspect, or pause"}</strong><span>{replayMode ? "Exact recorded replay · no inference" : policy === "fixed" ? "Fixed world rules" : "Adaptive ecology"}{question ? ` · Your question: ${question}` : ""}</span></section>
+      <section className="run-status" aria-label="Run status"><strong role="status">{complete ? simulation.stats.population === 0 ? "World empty" : "Observation complete" : deciding ? "Waiting for a bounded ecology decision — the world is held still" : paused ? "Paused — inspect life or step one generation" : "Running — watch, inspect, or pause"}</strong><span>{localWorldName ? `Experiment: ${localWorldName} · ` : ""}{replayMode ? "Exact recorded replay · no inference" : policy === "fixed" ? "Fixed world rules" : "Adaptive ecology"}{question ? ` · Your question: ${question}` : ""}</span></section>
+      {notice && <p className="run-notice" role="status">{notice}</p>}
+      {archivedEvidence && <section className="archived-highlights" aria-label="Recorded highlights"><h2>Recorded highlights</h2><p>Validated from this saved replay; these are archived observations, not newly observed replay events.</p>{archivedEvidence.lineageExtinction.length ? <ul>{archivedEvidence.lineageExtinction.map((item, index) => <li key={`${item.lineage}-${item.generation}-${index}`}>Founder family {item.lineage} disappeared at generation {item.generation} (recorded).</li>)}</ul> : <p>No followed-family extinction milestone was recorded in this save.</p>}</section>}
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
       <World state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onInspect={index => { setSelected(index); setPaused(true); }} />
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
@@ -923,7 +940,7 @@ export function GameCanvas() {
         onInspect={() => { setShowResults(false); document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus(); }}
         onReplay={() => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); }}
         onEdit={() => { setParentWorldId(originWorldId ?? parentWorldId); setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); }}
-        onNew={() => { setOriginWorldId(null); setParentWorldId(null); setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setStage("questions"); window.scrollTo(0, 0); }}>
+        onNew={() => { setLocalWorldName(""); setArchivedEvidence(null); setOriginWorldId(null); setParentWorldId(null); setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setStage("questions"); window.scrollTo(0, 0); }}>
         <button type="button" onClick={() => {
           setParentWorldId(originWorldId ?? parentWorldId);
           setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy });
@@ -948,9 +965,8 @@ export function GameCanvas() {
 
         <ResultImageShare key={`${simulation.seed}-${simulation.generation}`} state={simulation} question={question} evidence={evidence}/>
         <button className="back-button" onClick={async () => { try { if (!replayRef.current) return setNotice("Replay not ready"); const url = new URL(location.origin + location.pathname); url.hash = new URLSearchParams({ replay: encodeReplay(replayRef.current) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
-        {notice && <p role="status">{notice}</p>}
       </RunResults>}
-      {complete && simulation.outcome !== "running" && showResults && evidence && completedReplay && <MyWorldsPanel current={{ replay: completedReplay, evidence, outcome: simulation.outcome, stopReason: simulation.stats.population === 0 ? "World empty" : "Observation horizon reached", parentId: parentWorldId, policy: replayMode ? recordedPolicy : policy, setup: proof ? { source: proof.source, model: proof.model, namedIntent: proof.namedIntent } : undefined }} onOpen={openSavedWorld} onReview={reviewSavedWorld} onSaved={record => setOriginWorldId(record.id)} />}
+      {complete && simulation.outcome !== "running" && showResults && evidence && completedReplay && <MyWorldsPanel current={{ replay: completedReplay, evidence, outcome: simulation.outcome, stopReason: simulation.stats.population === 0 ? "World empty" : "Observation horizon reached", parentId: parentWorldId, policy: replayMode ? recordedPolicy : policy, setup: proof ? { source: proof.source, model: proof.model, namedIntent: proof.namedIntent } : undefined }} onOpen={openSavedWorld} onReview={reviewSavedWorld} onSaved={record => { setOriginWorldId(record.id); setLocalWorldName(record.name); }} />}
     </main>
   );
 }

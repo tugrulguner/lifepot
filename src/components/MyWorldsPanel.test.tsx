@@ -46,3 +46,13 @@ it("shows storage failure without falsely reporting a saved world", async () => 
   expect(await screen.findByRole("alert")).toHaveTextContent(/storage.*full/i);
   expect(saved).not.toHaveBeenCalled();
 });
+it("offers a first-screen generic saved-world shortcut and count when saves exist", async () => {
+  storage.list.mockResolvedValue([record]);
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
+  render(<MyWorldsPanel entryShortcut onOpen={() => {}} />);
+  const shortcut = await screen.findByRole("button", { name: "My Worlds (1)" });
+  expect(shortcut).toBeVisible();
+  expect(shortcut.closest('[data-ph-no-capture="true"]')).not.toBeNull();
+  fireEvent.click(shortcut);
+  expect(document.getElementById("my-worlds-shelf")).toBeInTheDocument();
+});

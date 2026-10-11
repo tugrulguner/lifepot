@@ -90,8 +90,12 @@ test("reviews a separate fixed-rule baseline without auto-seeding or losing priv
   expect(JSON.stringify(saved)).not.toContain("PRIVATE test question");
   expect(saved.parentId).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /new world/i }));
+  fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
+  expect(document.querySelector(".world-identity")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Edit setup answers" }));
   fireEvent.click(await screen.findByRole("button", { name: "Review changed experiment" }));
   expect(screen.getByLabelText("World policy")).toHaveValue("fixed");
+  expect(screen.getByText("Remember this pond", {selector:".world-identity strong"})).toBeInTheDocument();
   expect(screen.getByLabelText("Your question or prediction (optional)")).toHaveValue("");
   expect(screen.queryByRole("region", { name: "Run status" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Seed ecosystem/ })).toBeEnabled();
