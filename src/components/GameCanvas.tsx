@@ -597,6 +597,7 @@ export function GameCanvas() {
       setProof({ source: p.source, model: p.model, usage: p.usage, fidelity: p.fidelity, fallbackReason: p.fallbackReason, failure: p.failure, namedIntent: namedIntent.success ? namedIntent.data : undefined });
       if (p.fidelity && p.fidelity.verdict !== "approve") gameplayAnalytics.setupFailed("setup_rejected");
     } catch {
+      gameplayAnalytics.setupFailed("unknown");
       setConfig(deterministicSetup(ca));
       setProof({ source: "fallback" });
     }
