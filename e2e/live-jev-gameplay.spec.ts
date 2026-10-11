@@ -27,7 +27,7 @@ test.describe("live Jev setup and gameplay", () => {
   await page.goto("/play");
   let response;
   for (const [i, answer] of answers.entries()) {
-   await page.locator("input").fill(answer);
+   await page.locator(".question-panel input").fill(answer);
    if (i === 2) { const pending = page.waitForResponse(r => r.url().endsWith("/api/judge"), { timeout: 90000 }); await page.getByRole("button", { name: /Continue|Review ecosystem/ }).click(); response = await pending; }
    else await page.getByRole("button", { name: /Continue|Review ecosystem/ }).click();
   }
