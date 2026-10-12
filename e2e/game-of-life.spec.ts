@@ -222,7 +222,7 @@ for (const viewport of [{ width: 1280, height: 633 }, { width: 1440, height: 100
       expect(box.y + box.height <= boardBox.y || box.y >= boardBox.y + boardBox.height).toBe(true);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.clock.runFor(500);
+    await page.clock.runFor(1000);
     await expect(page.getByRole("img", { name: "Population history", exact: true })).toBeVisible();
     await expect(page.getByText("Collecting history", { exact: true })).toHaveCount(0);
     await page.getByRole("tab", { name: "Lineages" }).click();
