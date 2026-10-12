@@ -8,7 +8,15 @@ import { stepSimulation, type SimulationState } from "@/game/world";
 import { defaultConfig } from "@/game/setup";
 import { GameCanvas } from "./GameCanvas";
 
-const { captured } = vi.hoisted(() => ({ captured: [] as SimulationState[] }));
+const { captured, advanced } = vi.hoisted(() => ({ captured: [] as SimulationState[], advanced: [] as SimulationState[] }));
+vi.mock("@/game/runtime", async importOriginal => {
+  const actual = await importOriginal<typeof import("@/game/runtime")>();
+  return { ...actual, advanceUntilDecisionTrigger: (...args: Parameters<typeof actual.advanceUntilDecisionTrigger>) => {
+    const state = actual.advanceUntilDecisionTrigger(...args);
+    advanced.push(state);
+    return state;
+  } };
+});
 const analyticsCapture = vi.hoisted(() => vi.fn());
 vi.mock("@/app/gameplay-analytics", async importOriginal => {
   const actual = await importOriginal<typeof import("@/app/gameplay-analytics")>();
@@ -23,7 +31,64 @@ vi.mock("@/game/world", async importOriginal => {
   } };
 });
 vi.mock("next/link", () => ({ default: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a> }));
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); captured.length = 0; analyticsCapture.mockReset(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); captured.length = 0; advanced.length = 0; analyticsCapture.mockReset(); });
+
+function renderPresetForPlayback() {
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal("scrollTo", vi.fn());
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+  render(<GameCanvas />);
+  fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
+  fireEvent.change(screen.getByLabelText("World policy"), { target: { value: "fixed" } });
+  fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
+}
+
+test("default playback leaves a full second to observe each generation", () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  renderPresetForPlayback();
+  act(() => vi.advanceTimersByTime(999));
+  expect(screen.getByTestId("generation")).toHaveTextContent(/^0 \/ 180$/);
+  act(() => vi.advanceTimersByTime(1));
+  expect(screen.getByTestId("generation")).toHaveTextContent(/^1 \/ 180$/);
+  act(() => vi.advanceTimersByTime(999));
+  expect(screen.getByTestId("generation")).toHaveTextContent(/^1 \/ 180$/);
+  act(() => vi.advanceTimersByTime(1));
+  expect(screen.getByTestId("generation")).toHaveTextContent(/^2 \/ 180$/);
+});
+
+test("explicit playback choices change pacing while paused state and single-step stay invariant", () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  renderPresetForPlayback();
+  const speed = screen.getByRole("combobox", { name: "Playback speed" });
+  expect(speed).toHaveValue("slow");
+  expect([...speed.querySelectorAll("option")].map(option => option.textContent)).toEqual(["Slow", "Normal", "Fast"]);
+  act(() => vi.advanceTimersByTime(1000));
+  fireEvent.change(speed, { target: { value: "normal" } });
+  act(() => vi.advanceTimersByTime(219));
+  expect(screen.getByTestId("generation")).toHaveTextContent(/^1 \/ 180$/);
+  act(() => vi.advanceTimersByTime(1));
+  expect(screen.getByTestId("generation")).toHaveTextContent(/^2 \/ 180$/);
+  fireEvent.change(speed, { target: { value: "fast" } });
+  act(() => vi.advanceTimersByTime(34));
+  expect(screen.getByTestId("generation")).toHaveTextContent(/^2 \/ 180$/);
+  act(() => vi.advanceTimersByTime(1));
+  expect(screen.getByTestId("generation")).toHaveTextContent(/^5 \/ 180$/);
+  fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+  const state = advanced.at(-1)!;
+  const snapshot = JSON.stringify(state);
+  const expectedNext = JSON.stringify(stepSimulation(state));
+  for (const choice of ["slow", "normal", "fast"]) {
+    fireEvent.change(speed, { target: { value: choice } });
+    act(() => vi.advanceTimersByTime(5000));
+    expect(JSON.stringify(advanced.at(-1))).toBe(snapshot);
+    expect(screen.getByTestId("generation")).toHaveTextContent(/^5 \/ 180$/);
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+  }
+  fireEvent.click(screen.getByRole("button", { name: "Step one generation" }));
+  expect(JSON.stringify(advanced.at(-1))).toBe(expectedNext);
+  expect(screen.getByTestId("generation")).toHaveTextContent(/^6 \/ 180$/);
+});
 
 test("seeds gameplay when analytics capture throws", () => {
   analyticsCapture.mockImplementation(() => { throw new Error("analytics transport failure"); });

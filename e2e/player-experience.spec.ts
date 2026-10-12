@@ -50,7 +50,7 @@ test("an optional question is not sent to the judge and fixed-rule play requests
   await page.getByRole("textbox", { name: "Your question or prediction (optional)" }).fill("Will hunters disappear? This is a prediction, not an instruction.");
   await page.getByLabel("World policy").selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByRole("heading", { name: "Observation complete", exact: true })).toBeVisible({ timeout: 180_000 });
   expect(requests).toEqual([]);
   await expect(page.getByRole("region", { name: "Run results" })).toContainText("Will hunters disappear?");
@@ -65,7 +65,7 @@ test("fixed-rule replay and a changed-condition trial preserve evidence without 
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByLabel("World policy").selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 180_000 });
   const outcomes = await page.getByLabel("Observed outcomes").textContent();
   await page.getByRole("button", { name: "Replay this run", exact: true }).click();
@@ -85,7 +85,7 @@ test("ending is visible on mobile, explains the horizon, preserves inspection an
   test.setTimeout(210_000);
   await page.setViewportSize({ width: 390, height: 850 });
   await preset(page);
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByRole("heading", { name: "Observation complete", exact: true })).toBeVisible({ timeout: 180_000 });
   const results = page.getByRole("region", { name: "Run results" });
   await expect(results).toContainText("180");

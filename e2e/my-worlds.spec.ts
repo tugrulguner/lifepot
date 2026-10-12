@@ -69,7 +69,7 @@ test("My Worlds persists, exports/imports, replays exactly and links a reviewed 
   await page.getByLabel("World policy").selectOption("fixed");
   await page.getByLabel("Your question or prediction (optional)").fill("PRIVATE_QUESTION_SENTINEL");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 100_000 });
   await page.getByLabel("Optional world name (stored locally)").fill("PRIVATE_NAME_SENTINEL");
   await page.getByRole("button", { name: "Save completed world" }).click();
@@ -102,8 +102,8 @@ test("My Worlds persists, exports/imports, replays exactly and links a reviewed 
   await panel.getByRole("button", { name: "Reopen and replay" }).click();
   await expect(page.getByText(/Exact recorded replay/)).toBeVisible();
   await expect(page).toHaveURL(/\/play$/);
-  // Reload restores the default 1× rate; use the same visible 3× control as the original trial.
-  await page.getByRole("button", { name: "3× speed" }).click();
+  // Reload restores Slow; explicitly select Fast again for this endpoint/replay acceptance check.
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 100_000 });
   await expect(page.getByRole("img", { name: new RegExp(`Ecosystem generation ${replayed.state.generation}; ${replayed.state.stats.population} organisms`) })).toBeVisible();
   await expect(page.getByRole("region", { name: "Run status" })).not.toContainText("PRIVATE_QUESTION_SENTINEL");
@@ -171,7 +171,7 @@ test("return visit exposes saved history and restores archived highlights, child
   await expect(page.getByRole("region", { name: "Recorded highlights" })).toContainText("Founder family 29 disappeared at generation 85 (recorded)");
   await expect(page.getByRole("region", { name: "Run status" })).toContainText("Experiment: Pond notebook");
   await expect(page.getByRole("region", { name: "Run status" })).toContainText("Exact recorded replay · no inference");
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 100_000 });
   await expect(page.getByRole("region", { name: "Recorded highlights" })).toContainText("generation 85");
   const resultsShelf = page.getByRole("region", { name: "My Worlds — browser-local saves" });

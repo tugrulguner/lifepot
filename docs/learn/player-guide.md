@@ -32,6 +32,8 @@ The review step exposes the generated configuration and its source/provenance. C
 
 ## Observe and inspect
 
+Playback starts at **Slow**, targeting one generation per second so you can notice changes. The **Speed** selector offers Slow, Normal (the previous default pace), and Fast. Pause for close inspection, or use Step to advance one generation while paused. Speed changes playback timing, not ecological rules, decision checkpoints or recorded outcomes. Your selection stays in effect during the current visit, including restarts and follow-up trials; a fresh page starts at Slow.
+
 The world is a 50×50 toroidal grid: movement across an edge wraps to the opposite edge. The canvas depicts organisms, species colors, and resource patches. Use **Pause** before close inspection: a paused run keeps the state stable while you select an organism. On a narrow screen, the interface stacks the world, controls, inspector, event feed, statistics, and observatory vertically; scroll to reach them.
 
 Select a living organism to open the Creature Inspector. It describes the selected individual's current species, guild, strategy, energy/age/traits, and lineage context where available. Selection is an observation, not an intervention: it does not change the simulation. A selected organism may die as the world advances, so inspect its status again after resuming.

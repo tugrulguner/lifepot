@@ -106,7 +106,7 @@ test("real SDK captures actual deterministic LifePot terminal completion without
   const started = decodedPostHogEvents(bodies).find(event => event.event === "lifepot_run_started");
   expect(started?.properties).toMatchObject({ entry_method: "fresh", interpretation_mode: "fallback", event_schema_version: 1 });
   expect(JSON.stringify(decodedPostHogEvents(bodies))).not.toMatch(/Rich mineral|Predator packs|Diversify while|seed|prompt|ledger/i);
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.locator("section.run-status")).toContainText(/World empty|Observation complete/, { timeout: 90_000 });
   await expect.poll(() => decodedPostHogEvents(bodies).some(event => event.event === "lifepot_run_completed")).toBe(true);
   const completed = decodedPostHogEvents(bodies).find(event => event.event === "lifepot_run_completed");

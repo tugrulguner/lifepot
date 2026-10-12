@@ -65,7 +65,7 @@ test.describe("live Jev setup and gameplay", () => {
   await page.getByRole("button", { name: /Follow founder lineage/ }).click();
   await page.getByRole("button", { name: "Step one generation", exact: true }).click();
   await page.getByRole("button", { name: "Resume", exact: true }).click();
-  await page.getByRole("button", { name: "3× speed", exact: true }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   const results = page.getByRole("region", { name: "Run results", exact: true });
   await expect(results).toBeVisible({ timeout: 240000 });
   await writeFile(info.outputPath("live-trial.txt"), await page.locator("body").innerText());

@@ -64,6 +64,7 @@ export type LifePotViewModel = {
 };
 type Stage = "questions" | "review" | "simulation";
 type Theme = "light" | "dark" | "auto";
+type PlaybackSpeed = "slow" | "normal" | "fast";
 function ThemeControl({ theme, onChange }: { theme: Theme; onChange: (theme: Theme) => void }) {
   return <label className="theme-control">Theme <select aria-label="Color theme" value={theme} onChange={event => onChange(event.target.value as Theme)}><option value="auto">Auto</option><option value="light">Light</option><option value="dark">Dark</option></select></label>;
 }
@@ -381,7 +382,7 @@ export function GameCanvas() {
     [paused, setPaused] = useState(false),
     [selected, setSelected] = useState<number | null>(null),
     [followed, setFollowed] = useState<number | null>(null),
-    [speed, setSpeed] = useState<1 | 3>(1),
+    [speed, setSpeed] = useState<PlaybackSpeed>("slow"),
     [ledger, setLedger] = useState<EvolutionLedger>([]),
     [deciding, setDeciding] = useState(false),
     [event, setEvent] = useState("Founders await selection"),
@@ -582,7 +583,7 @@ export function GameCanvas() {
           const next = advanceUntilDecisionTrigger(
             simulation,
             ledgerRef.current,
-            speed,
+            speed === "fast" ? 3 : 1,
             step => { if (evidenceRef.current) evidenceRef.current = observeRun(evidenceRef.current, step); },
           );
           if (next === simulation) return;
@@ -598,7 +599,7 @@ export function GameCanvas() {
           setEvent("Replay ledger verification failed");
         }
       },
-      simulation.generation === 0 ? 450 : speed === 3 ? 35 : 220,
+      speed === "slow" ? 1000 : simulation.generation === 0 ? 450 : speed === "fast" ? 35 : 220,
     );
     return () => clearTimeout(timer);
   }, [deciding, ledger, paused, simulation, speed]);
@@ -971,12 +972,13 @@ export function GameCanvas() {
           {paused ? "Resume" : "Pause"}
         </button>}
         {!complete && <button aria-label="Step one generation" disabled={!paused || deciding} onClick={stepOnce}>Step</button>}
-        <button
-          aria-label={speed === 1 ? "3× speed" : "1× speed"}
-          onClick={() => setSpeed(speed === 1 ? 3 : 1)}
-        >
-          {speed}×
-        </button>
+        <label className="playback-speed">Speed
+          <select aria-label="Playback speed" value={speed} onChange={event => setSpeed(event.target.value as PlaybackSpeed)}>
+            <option value="slow">Slow</option>
+            <option value="normal">Normal</option>
+            <option value="fast">Fast</option>
+          </select>
+        </label>
         <button onClick={() => begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined)}>{replayMode ? "Restart replay" : "Restart trial"}</button>
         {complete && <button onClick={() => { setShowResults(true); completionSeen.current = false; queueMicrotask(() => { document.getElementById("run-results")?.scrollIntoView({ block: "start" }); document.getElementById("run-results")?.focus(); }); }}>View results</button>}
         <button onClick={() => { const index = simulation.guild.findIndex(value => value > 0); if (index >= 0) { setSelected(index); setPaused(true); document.getElementById("creature-inspector")?.scrollIntoView({ behavior: "smooth", block: "start" }); } }}>Inspect living organism</button>

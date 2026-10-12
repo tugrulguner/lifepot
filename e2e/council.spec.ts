@@ -19,7 +19,7 @@ test("incomplete council falls back atomically in the browser", async ({ page })
     await page.keyboard.press("Enter");
   }
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByLabel("Runtime council")).toContainText("Council abstained", { timeout: 15000 });
   await page.getByRole("button", { name: "Pause" }).click();
   await expect(page.getByLabel("Species birth policies")).not.toContainText("Next births");
@@ -36,7 +36,7 @@ test("exact council replay and restart never call the API", async ({ page }) => 
   let calls = 0;
   await page.route("**/api/judge", route => { calls++; return route.abort(); });
   await page.goto(`/#replay=${encodeReplay(replay)}`);
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByLabel("Runtime council")).toContainText("runtime_orchestrator", { timeout: 15000 });
   await page.getByRole("button", { name: "Pause" }).click();
   await expect(page.getByLabel("Runtime council")).toContainText("zero live API calls");
@@ -69,7 +69,7 @@ for (const width of [1280, 390]) test(`council provenance and reconciled changes
   await expect(setup.getByText("setup_orchestrator", { exact: true })).toBeVisible();
   await expect(page.getByTestId("interpreter-source")).toContainText("Jev API");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await page.getByText("Jev input, policies & council evidence", { exact: true }).click();
   const runtime = page.getByLabel("Runtime council");
   await expect(runtime).toContainText("runtime_orchestrator", { timeout: 15000 });

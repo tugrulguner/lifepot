@@ -175,7 +175,7 @@ test("copied replay opens at generation zero and never calls the judge", async (
   await page.goto("/play");
   await answerSetupWithKeyboard(page);
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 90_000 });
   await page.getByRole("button", { name: "Copy challenge link" }).click();
   const replayUrl = await page.evaluate(() => navigator.clipboard.readText());
@@ -243,7 +243,7 @@ test("graph preview and runtime show bound species policies, not legacy cohort d
   await expect(rules).toContainText("Stability");
   await expect(rules).toContainText("neutral");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   const policies = page.getByLabel("Species birth policies");
   await expect(policies).toContainText("Next births: Armored", { timeout: 15000 });
   await page.getByRole("button", { name: "Pause" }).click();
