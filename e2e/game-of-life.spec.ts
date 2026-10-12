@@ -170,6 +170,9 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
 });
 
 test("copied replay opens at generation zero and never calls the judge", async ({ page, context }) => {
+  // Serialization/replay contract: retain the full real-engine trajectory without
+  // decorative event-animation work. Normal-motion playback has separate coverage.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.route("**/api/judge", route => route.abort());
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/play");
