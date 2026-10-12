@@ -537,7 +537,7 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .simulation-shell .playback-speed select:focus-visible { outline: 2px solid var(--mint); outline-offset: -3px; }
 @media (max-width: 1000px) {
   /* Keep the world readable: compact horizontal chrome, not the 44px targets. */
-  .simulation-shell .controls button { padding-inline: 8px; }
+  .simulation-shell .controls button { min-width: 44px; padding-inline: 6px; }
   .simulation-shell .playback-speed { gap: 6px; padding-inline: 6px; }
 }
 .simulation-shell .controls button:hover,
