@@ -46,8 +46,13 @@ test("renders safely on the server and initializes shared privacy-conscious Post
     person_profiles: "identified_only",
     capture_pageview: false,
     capture_pageleave: true,
-    autocapture: { dom_event_allowlist: ["click"], element_allowlist: ["a", "button"] },
+    autocapture: false,
     disable_session_recording: true,
+    advanced_disable_flags: true,
+    save_campaign_params: false,
+    save_referrer: false,
+    disable_capture_url_hashes: true,
+    capture_performance: true,
     before_send: expect.any(Function),
   });
   expect(mockCapture).toHaveBeenCalledTimes(1);
@@ -58,7 +63,7 @@ test("renders safely on the server and initializes shared privacy-conscious Post
   cleanup();
 });
 
-test("captures route changes without counting or exposing query-only changes", async () => {
+test("captures one initial pageview and distinct pathnames, ignoring private query changes", async () => {
   const { render, cleanup } = await import("@testing-library/react");
   const { rerender, unmount } = render(<PostHogProvider><main>LifePot</main></PostHogProvider>);
 
@@ -112,4 +117,32 @@ test("does not track hash-only URL changes", async () => {
 
   unmount();
   cleanup();
+});
+
+
+test("sanitizes every URL in the event envelope while retaining Dates and safe referrer domains", async () => {
+  const { sanitizePostHogEvent } = await import("./posthog-provider");
+  const date = new Date("2024-01-02T03:04:05.000Z");
+  const cleaned = sanitizePostHogEvent({ uuid: "fixture", event: "$pageview", properties: { $current_url: "https://lifepot.modepot.io/play?private=secret#prompt", $initial_referrer: "https://source.example/path?token=secret#fragment", safeDate: date, nested: { destination: "https://other.example/path?q=private#x", campaign: "secret" } }, $set: { $initial_referrer: "https://source.example/path?private=secret" }, $set_once: { $initial_campaign: "utm_source=private" } });
+  expect(cleaned?.properties).toEqual({ $current_url: "https://lifepot.modepot.io/play", $initial_referrer: "https://source.example", safeDate: date, nested: { destination: "https://other.example/path" } });
+  expect(cleaned?.$set).toEqual({ $initial_referrer: "https://source.example" });
+  expect(cleaned?.$set_once).toEqual({});
+});
+
+test("drops raw campaign and advertising identifiers from nested acquisition envelopes", async () => {
+  const { sanitizePostHogEvent } = await import("./posthog-provider");
+  const cleaned = sanitizePostHogEvent({
+    uuid: "fixture", event: "$pageleave",
+    properties: { $utm_source: "PRIVATE", $initial_utm_source: "PRIVATE", $session_entry_utm_source: "PRIVATE", $session_entry_gclid: "PRIVATE", $session_entry_mc_cid: "PRIVATE", gclid: "PRIVATE", $initial_gclid: "PRIVATE", $fbc: "PRIVATE", $fbp: "PRIVATE", $referring_domain: "source.example" },
+    $set: { $initial_utm_content: "PRIVATE" },
+    $set_once: { $initial_msclkid: "PRIVATE" },
+  });
+  expect(cleaned?.properties).toEqual({ $referring_domain: "source.example" });
+  expect(cleaned?.$set).toEqual({});
+  expect(cleaned?.$set_once).toEqual({});
+});
+
+test("drops an event if a sensitive page element was captured", async () => {
+  const { sanitizePostHogEvent } = await import("./posthog-provider");
+  expect(sanitizePostHogEvent({ uuid: "fixture", event: "$autocapture", properties: { $el_text: "private name", $el_tag_name: "INPUT" } })).toBeNull();
 });

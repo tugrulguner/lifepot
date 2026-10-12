@@ -55,6 +55,7 @@ import { GameplayObservation } from "./GameplayObservation";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
 import { setupFidelitySchema, setupFailureSchema, setupNamedIntentSchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity, type SetupFailure, type SetupNamedIntent } from "@/game/setup-review";
 import { speciesColor } from "@/game/species-colors";
+import { gameplayAnalytics } from "@/app/gameplay-analytics";
 import { isSurvivingNewborn, relationshipLabel, triggerLabel } from "@/game/visuals";
 export type LifePotViewModel = {
   answers: SetupAnswers;
@@ -123,7 +124,7 @@ const RESPONSE = z
     fidelity: setupFidelitySchema.optional(),
     fallbackReason: failureReasonSchema.optional(),
     failure: setupFailureSchema.optional(),
-    provenance: z.object({ outcome: z.string(), reason: z.string().optional() }).optional(),
+    provenance: z.object({ outcome: z.enum(["decided", "abstained", "reselect", "reject", "needs_clarification"]), reason: failureReasonSchema.optional() }).optional(),
   })
   .strict();
 function seedFromHash(hash: string) {
@@ -392,17 +393,22 @@ export function GameCanvas() {
     replayRef = useRef<ReplayData | null>(null),
     pending = useRef<number | null>(null),
     runId = useRef(0),
-    pendingArrival = useRef(false);
+    pendingArrival = useRef(false),
+    analyticsProof = useRef<typeof proof>(null),
+    analyticsBaseline = useRef(false),
+    acceptedFollowup = useRef(false);
+  useEffect(() => { analyticsProof.current = proof; analyticsBaseline.current = Boolean(baseline); }, [proof, baseline]);
   const complete = simulation && simulation.outcome !== "running";
   const completedReplay = currentReplay;
   useEffect(() => {
     if (!complete || stage !== "simulation") return;
     if (!completionSeen.current) {
-      completionSeen.current = true;
-      document.getElementById("run-results")?.focus();
+    completionSeen.current = true;
+    if (!replayMode && simulation) gameplayAnalytics.runCompleted(`run-${runId.current}`, { reason: simulation.outcome, generations: simulation.generation, interpretation: analyticsProof.current?.source ?? "fallback" });
+    document.getElementById("run-results")?.focus();
       document.getElementById("run-results")?.scrollIntoView({ block: "start" });
     }
-  }, [complete, stage]);
+  }, [complete, stage, replayMode, simulation]);
   useLayoutEffect(() => {
     if (stage !== "simulation" || !pendingArrival.current) return;
     pendingArrival.current = false;
@@ -419,6 +425,12 @@ export function GameCanvas() {
       replayRef.current = replay ?? null;
       setCurrentReplay(replay ?? null);
       if (!replay) { setOriginWorldId(null); setArchivedEvidence(null); }
+      const analyticsRunId = `run-${runId.current}`;
+      if (replay) gameplayAnalytics.replayStarted(analyticsRunId, "local", replay.engineVersion);
+      else {
+        gameplayAnalytics.runStarted(analyticsRunId, { mode: "fresh", interpretation: analyticsProof.current?.source ?? "fallback", engine: initial.engineVersion });
+        if (acceptedFollowup.current) { gameplayAnalytics.followUpAccepted(analyticsRunId, "changed_conditions"); acceptedFollowup.current = false; }
+      }
       setAnswers(a);
       setConfig(c);
       setInitialConfig(structuredClone(c));
@@ -614,19 +626,52 @@ export function GameCanvas() {
     setInterpreting(true);
     const ca = canonicalAnswers(a),
       hash = hashSetupRequest(ca);
+    let failureCategory: "rate_limited" | "provider_unavailable" | "invalid_response" | "unknown" = "unknown";
     try {
       const r = await fetch("/api/judge", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ answers: ca, requestHash: hash }),
           signal: AbortSignal.timeout(20_000),
-        }),
-        p = RESPONSE.parse(await r.json());
-      if (p.requestHash !== hash) throw 0;
+        });
+      if (!r.ok) {
+        if (r.status === 429) failureCategory = "rate_limited";
+        else if (r.status >= 500) failureCategory = "provider_unavailable";
+        throw new Error("Setup request failed");
+      }
+      let payload: unknown;
+      try {
+        payload = await r.json();
+      } catch {
+        failureCategory = "invalid_response";
+        throw new Error("Setup response was not valid JSON");
+      }
+      let p: z.infer<typeof RESPONSE>;
+      try {
+        p = RESPONSE.parse(payload);
+      } catch {
+        failureCategory = "invalid_response";
+        throw new Error("Setup response did not match its schema");
+      }
+      if (p.requestHash !== hash) {
+        failureCategory = "invalid_response";
+        throw new Error("Setup response did not match its request");
+      }
       const namedIntent = setupNamedIntentSchema.safeParse(p.evidence?.establishedIntent);
       setConfig(p.config);
       setProof({ source: p.source, model: p.model, usage: p.usage, fidelity: p.fidelity, fallbackReason: p.fallbackReason, failure: p.failure, namedIntent: namedIntent.success ? namedIntent.data : undefined });
+      if (p.fidelity && p.fidelity.verdict !== "approve") gameplayAnalytics.setupFailed("setup_rejected");
+      if (p.source === "fallback") {
+        const reason = p.fallbackReason ?? p.failure?.code ?? p.fidelity?.failure?.code ?? p.provenance?.reason;
+        if (reason) {
+          const category = reason === "rate_limited" ? "rate_limited"
+            : reason === "unavailable" || reason === "missing_credentials" ? "provider_unavailable"
+            : reason === "invalid_response" ? "invalid_response" : "unknown";
+          gameplayAnalytics.setupFailed(category);
+        }
+      }
     } catch {
+      gameplayAnalytics.setupFailed(failureCategory);
       setConfig(deterministicSetup(ca));
       setProof({ source: "fallback" });
     }
@@ -802,7 +847,7 @@ export function GameCanvas() {
           <button
             className="primary-button seed-button"
             disabled={!!proof?.fidelity && proof.fidelity.verdict !== "approve"}
-            onClick={() => { if (proof?.fidelity && proof.fidelity.verdict !== "approve") return; begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined); }}
+            onClick={() => { if (proof?.fidelity && proof.fidelity.verdict !== "approve") { gameplayAnalytics.setupFailed("setup_rejected"); return; } acceptedFollowup.current = Boolean(baseline); begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined); }}
           >
             Seed ecosystem <span>→</span>
           </button>
