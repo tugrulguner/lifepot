@@ -122,7 +122,7 @@ const RESPONSE = z
     fidelity: setupFidelitySchema.optional(),
     fallbackReason: failureReasonSchema.optional(),
     failure: setupFailureSchema.optional(),
-    provenance: z.object({ outcome: z.string(), reason: z.string().max(64).optional() }).optional(),
+    provenance: z.object({ outcome: z.enum(["decided", "abstained", "reselect", "reject", "needs_clarification"]), reason: failureReasonSchema.optional() }).optional(),
   })
   .strict();
 function seedFromHash(hash: string) {
