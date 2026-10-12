@@ -93,6 +93,9 @@ test("captures one initial pageview and distinct pathnames, ignoring private que
   mockSearch.mockReturnValue("topic=other");
   rerender(<PostHogProvider><main>LifePot</main></PostHogProvider>);
   expect(mockCapture).toHaveBeenCalledTimes(2);
+  expect(mockCapture).toHaveBeenLastCalledWith("$pageview", {
+    $current_url: "http://localhost:3000/learn",
+  });
 
   unmount();
   cleanup();
@@ -103,6 +106,11 @@ test("does not track hash-only URL changes", async () => {
   const { rerender, unmount } = render(<PostHogProvider><main>LifePot</main></PostHogProvider>);
 
   expect(mockCapture).toHaveBeenCalledTimes(1);
+  const config = init.mock.calls[0][1]!;
+  expect(config.before_send).toBeTypeOf("function");
+  const privacyHook = config.before_send as (event: { event: string; properties: Record<string, unknown> } | null) => { properties: Record<string, unknown> } | null;
+  expect(privacyHook(null)).toBeNull();
+  expect(privacyHook({ event: "$pageleave", properties: { $current_url: "http://localhost:3000/play?replay=PRIVATE_REPLAY#PRIVATE_LEDGER" } })?.properties.$current_url).toBe("http://localhost:3000/play");
   window.location.hash = "#section";
   rerender(<PostHogProvider><main>LifePot</main></PostHogProvider>);
   expect(mockCapture).toHaveBeenCalledTimes(1);

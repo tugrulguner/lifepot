@@ -755,4 +755,23 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .overview-more { padding:38px 0 64px; border-top:1px solid var(--mp-border); }
 .overview-more p { max-width:760px; margin-bottom:23px; }
 .overview-footer { border-top:1px solid var(--mp-border); padding:24px max(24px,calc((100% - 1120px)/2)); color:var(--mp-muted); font-size:13px; }
-@media(max-width:700px) { .overview-hero,.overview-mechanism,.overview-more { width:calc(100% - 40px); } .overview-hero { min-height:0; grid-template-columns:1fr; gap:18px; padding:54px 0 44px; } .overview-copy h1 { font-size:clamp(43px,12vw,64px); } .overview-copy>p:not(.overview-kicker,.overview-credit) { font-size:16px; } .overview-lockup { width:min(100%,480px); margin:0 auto; } .overview-actions { gap:17px; } .overview-mechanism { grid-template-columns:1fr; gap:25px; padding:38px 0 48px; } }
+.my-worlds { max-width: 68rem; margin: 2rem auto; padding: clamp(1rem, 3vw, 2rem); border: 1px solid var(--line, #cbd5d1); border-radius: 1rem; background: var(--mp-surface); color: var(--mp-ink); overflow-wrap: anywhere; }
+.my-worlds-shortcut { display: block; margin: 0 auto 14px; min-height: 2.75rem; padding: .65rem 1rem; border: 1px solid var(--mp-control-boundary); border-radius: 999px; background: var(--mp-surface); color: var(--mp-ink); box-shadow: 0 4px 18px #0002; font-weight: 700; }
+.my-worlds-shortcut:focus-visible { outline: 3px solid var(--mp-accent); outline-offset: 3px; }
+.my-worlds h2 { margin-top: 0; }
+.my-worlds { scroll-margin-top: 80px; }
+.saved-world-heading { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.my-worlds-summary { flex: 1 1 15rem; min-width: 0; display: grid; gap: .35rem; }
+.my-worlds-summary span { font-size: .875rem; color: var(--mp-muted); }
+.my-worlds-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.my-worlds button { padding: .5rem .75rem; border: 1px solid var(--mp-control-boundary); border-radius: .4rem; background: var(--mp-surface); color: var(--mp-ink); }
+.my-worlds button:disabled { opacity: .6; }
+.my-worlds input { background: var(--mp-surface); color: var(--mp-ink); border: 1px solid var(--mp-control-boundary); }
+.my-worlds [role=alert] { color: var(--mp-error); }
+.my-worlds-save, .my-worlds-import { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: 1rem 0; }
+.my-worlds-save input { flex: 1 1 14rem; min-width: 0; padding: .65rem; }
+.my-worlds ul { padding-left: 1.2rem; }
+.my-worlds li { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .7rem 0; border-top: 1px solid var(--line, #cbd5d1); }
+.my-worlds-import input[type=file] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.my-worlds button { min-height: 2.5rem; }
+@media(max-width:700px) { .overview-hero,.overview-mechanism,.overview-more { width:calc(100% - 40px); } .overview-hero { min-height:0; grid-template-columns:1fr; gap:18px; padding:54px 0 44px; } .overview-copy h1 { font-size:clamp(43px,12vw,64px); } .overview-copy>p:not(.overview-kicker,.overview-credit) { font-size:16px; } .overview-lockup { width:min(100%,480px); margin:0 auto; } .overview-actions { gap:17px; } .overview-mechanism { grid-template-columns:1fr; gap:25px; padding:38px 0 48px; } .my-worlds li { align-items:stretch; } }

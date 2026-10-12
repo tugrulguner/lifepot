@@ -2,6 +2,8 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
+import { IDBFactory } from "fake-indexeddb";
+import { listWorlds } from "@/game/my-worlds";
 import { stepSimulation, type SimulationState } from "@/game/world";
 import { defaultConfig } from "@/game/setup";
 import { GameCanvas } from "./GameCanvas";
@@ -78,6 +80,7 @@ test("reviews a separate fixed-rule baseline without auto-seeding or losing priv
   vi.stubGlobal("scrollTo", vi.fn());
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
   Object.defineProperty(HTMLElement.prototype,"scrollIntoView",{configurable:true,value:vi.fn()});
+  vi.stubGlobal("indexedDB", new IDBFactory());
   const fetch=vi.fn();vi.stubGlobal("fetch",fetch);
   render(<GameCanvas />);
   fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
@@ -85,7 +88,10 @@ test("reviews a separate fixed-rule baseline without auto-seeding or losing priv
   fireEvent.change(screen.getByLabelText("Your question or prediction (optional)"),{target:{value:"PRIVATE test question"}});
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
   fireEvent.click(screen.getByRole("button",{name:"Pause"}));
-  for(let i=0;i<180 && screen.queryByRole("button",{name:"Step one generation"});i++) await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Step one generation"}));});
+  const originalStep = screen.getByRole("button", { name: "Step one generation" });
+  for (let i = 0; i < 180 && originalStep.isConnected; i++) {
+    await act(async () => { fireEvent.click(originalStep); });
+  }
   expect(screen.getByRole("region",{name:"Run results"})).toBeInTheDocument();
   const original=captured.map(state=>JSON.stringify(state));
   fireEvent.click(screen.getByRole("button",{name:"Review fixed-rule baseline"}));
@@ -95,6 +101,31 @@ test("reviews a separate fixed-rule baseline without auto-seeding or losing priv
   expect(screen.getByRole("button",{name:/Seed ecosystem/})).toBeEnabled();
   expect(screen.queryByRole("region",{name:"Run status"})).not.toBeInTheDocument();
   expect(captured.slice(0,original.length).map(state=>JSON.stringify(state))).toEqual(original);
+  expect(fetch).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+  const baselineStep = screen.getByRole("button", { name: "Step one generation" });
+  for (let i = 0; i < 180 && baselineStep.isConnected; i++) {
+    await act(async () => { fireEvent.click(baselineStep); });
+  }
+  expect(screen.getByRole("region", { name: "Run results" })).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Optional world name (stored locally)"), { target: { value: "Remember this pond" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save completed world" }));
+  await screen.findByText("Remember this pond");
+  const [saved] = await listWorlds();
+  expect(JSON.stringify(saved)).not.toContain("PRIVATE test question");
+  expect(saved.parentId).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /new world/i }));
+  await waitFor(() => expect(document.querySelector(".question-panel .my-worlds-shortcut")).not.toBeNull());
+  fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
+  expect(document.querySelector(".world-identity")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Edit setup answers" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Review changed experiment" }));
+  expect(screen.getByLabelText("World policy")).toHaveValue("fixed");
+  expect(screen.getByText("Remember this pond", {selector:".world-identity strong"})).toBeInTheDocument();
+  expect(screen.getByLabelText("Your question or prediction (optional)")).toHaveValue("");
+  expect(screen.queryByRole("region", { name: "Run status" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Seed ecosystem/ })).toBeEnabled();
   expect(fetch).not.toHaveBeenCalled();
 }, 30_000);
 
