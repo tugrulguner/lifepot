@@ -19,7 +19,7 @@ describe("POST /api/judge setup interpretation", () => {
     const response = await POST(new Request("http://localhost/api/judge", { method: "POST", body: JSON.stringify(input) }));
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(body).toMatchObject({ source: "fallback", requestHash: input.requestHash, config: { environment: { abundance: "scarce", distribution: "clustered", hazard: "toxin", volatility: "pulsing" } } });
+    expect(body).toMatchObject({ source: "fallback", requestHash: input.requestHash, provenance: { outcome: "abstained", reason: "missing_credentials" }, config: { environment: { abundance: "scarce", distribution: "clustered", hazard: "toxin", volatility: "pulsing" } } });
   });
   it("batches world questions then selects a dynamic council in a dependent call", async () => {
     const fidelity = { model: "jev-test", usage: { input_tokens: 1, output_tokens: 1 }, answers: { verdict: { type: "choice", choice: "approve", confidence: 1, probabilities: { approve: 1, reselect: 0, reject: 0, needs_clarification: 0 } } } };

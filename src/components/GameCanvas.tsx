@@ -122,7 +122,7 @@ const RESPONSE = z
     fidelity: setupFidelitySchema.optional(),
     fallbackReason: failureReasonSchema.optional(),
     failure: setupFailureSchema.optional(),
-    provenance: z.object({ outcome: z.string(), reason: z.string().optional() }).optional(),
+    provenance: z.object({ outcome: z.string(), reason: z.string().max(64).optional() }).optional(),
   })
   .strict();
 function seedFromHash(hash: string) {
@@ -618,6 +618,15 @@ export function GameCanvas() {
       setConfig(p.config);
       setProof({ source: p.source, model: p.model, usage: p.usage, fidelity: p.fidelity, fallbackReason: p.fallbackReason, failure: p.failure, namedIntent: namedIntent.success ? namedIntent.data : undefined });
       if (p.fidelity && p.fidelity.verdict !== "approve") gameplayAnalytics.setupFailed("setup_rejected");
+      if (p.source === "fallback") {
+        const reason = p.fallbackReason ?? p.failure?.code ?? p.fidelity?.failure?.code ?? p.provenance?.reason;
+        if (reason) {
+          const category = reason === "rate_limited" ? "rate_limited"
+            : reason === "unavailable" || reason === "missing_credentials" ? "provider_unavailable"
+            : reason === "invalid_response" ? "invalid_response" : "unknown";
+          gameplayAnalytics.setupFailed(category);
+        }
+      }
     } catch {
       gameplayAnalytics.setupFailed(failureCategory);
       setConfig(deterministicSetup(ca));

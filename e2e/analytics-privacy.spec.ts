@@ -134,11 +134,7 @@ test("real SDK captures setup failure from an actual failed setup request", asyn
       await route.fulfill({ status: 200, contentType: "application/json", body: '{"status":1}' });
       return;
     }
-    if (url.pathname.endsWith("/api/judge") && request.method() === "POST") {
-      setupRequests++;
-      await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"fixture unavailable"}' });
-      return;
-    }
+    if (url.pathname.endsWith("/api/judge") && request.method() === "POST") setupRequests++;
     await route.continue();
   });
   await page.goto("/play");

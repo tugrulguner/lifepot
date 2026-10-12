@@ -11,7 +11,9 @@ export function createGameplayAnalytics(capture: Capture) {
   const started = new Set<string>();
   const terminal = new Set<string>();
   const replayed = new Set<string>();
-  const emit = (event: string, properties: Record<string, string | number>) => capture(event, { ...properties, event_schema_version: 1 });
+  const emit = (event: string, properties: Record<string, string | number>) => {
+    try { capture(event, { ...properties, event_schema_version: 1 }); } catch { /* Analytics must never interrupt gameplay. */ }
+  };
   return {
     runStarted(id: string, context: { mode: "fresh" | "replay"; interpretation: Mode; engine: string }) {
       if (started.has(id)) return;

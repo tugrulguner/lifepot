@@ -6,6 +6,11 @@ import { stepSimulation, type SimulationState } from "@/game/world";
 import { GameCanvas } from "./GameCanvas";
 
 const { captured } = vi.hoisted(() => ({ captured: [] as SimulationState[] }));
+const analyticsCapture = vi.hoisted(() => vi.fn());
+vi.mock("@/app/gameplay-analytics", async importOriginal => {
+  const actual = await importOriginal<typeof import("@/app/gameplay-analytics")>();
+  return { gameplayAnalytics: actual.createGameplayAnalytics((event, properties) => analyticsCapture(event, properties)) };
+});
 vi.mock("@/game/world", async importOriginal => {
   const actual = await importOriginal<typeof import("@/game/world")>();
   return { ...actual, createSimulation: (...args: Parameters<typeof actual.createSimulation>) => {
@@ -15,7 +20,20 @@ vi.mock("@/game/world", async importOriginal => {
   } };
 });
 vi.mock("next/link", () => ({ default: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a> }));
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); captured.length = 0; });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); captured.length = 0; analyticsCapture.mockReset(); });
+
+test("seeds gameplay when analytics capture throws", () => {
+  analyticsCapture.mockImplementation(() => { throw new Error("analytics transport failure"); });
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal("scrollTo", vi.fn());
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+  render(<GameCanvas />);
+  fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
+  fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
+  expect(captured).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
+});
 
 test("theme repaint while paused preserves every engine field and deterministic continuation", async () => {
   vi.stubGlobal("scrollTo", vi.fn());

@@ -2,6 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import { createGameplayAnalytics } from "./gameplay-analytics";
 
 describe("privacy-safe gameplay analytics", () => {
+  it("keeps capture failures from changing lifecycle deduplication", () => {
+    const capture = vi.fn(() => { throw new Error("analytics transport failure"); });
+    const analytics = createGameplayAnalytics(capture);
+    expect(() => analytics.runStarted("run", { mode: "fresh", interpretation: "fallback", engine: "v3" })).not.toThrow();
+    expect(() => analytics.runStarted("run", { mode: "fresh", interpretation: "fallback", engine: "v3" })).not.toThrow();
+    expect(() => analytics.runCompleted("run", { reason: "extinct", generations: 10, interpretation: "fallback" })).not.toThrow();
+    expect(() => analytics.runCompleted("run", { reason: "extinct", generations: 10, interpretation: "fallback" })).not.toThrow();
+    expect(capture).toHaveBeenCalledTimes(2);
+  });
   it("emits bounded lifecycle events once per run and ignores private fields", () => {
     const capture = vi.fn();
     const analytics = createGameplayAnalytics(capture);
