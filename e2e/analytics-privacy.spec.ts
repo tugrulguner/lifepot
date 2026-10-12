@@ -151,6 +151,6 @@ test("real SDK captures setup failure from an actual failed setup request", asyn
   expect(setupRequests).toBe(1);
   await expect.poll(() => decodedPostHogEvents(bodies).some(event => event.event === "lifepot_setup_failed")).toBe(true);
   const failed = decodedPostHogEvents(bodies).find(event => event.event === "lifepot_setup_failed");
-  expect(failed?.properties).toMatchObject({ failure_category: "unknown", event_schema_version: 1 });
+  expect(failed?.properties).toMatchObject({ failure_category: "provider_unavailable", event_schema_version: 1 });
   expect(JSON.stringify(decodedPostHogEvents(bodies))).not.toMatch(/stable test ecosystem|Predators may threaten|persistence|fixture unavailable/i);
 });

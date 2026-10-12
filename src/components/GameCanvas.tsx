@@ -583,21 +583,43 @@ export function GameCanvas() {
     setInterpreting(true);
     const ca = canonicalAnswers(a),
       hash = hashSetupRequest(ca);
+    let failureCategory: "rate_limited" | "provider_unavailable" | "invalid_response" | "unknown" = "unknown";
     try {
       const r = await fetch("/api/judge", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ answers: ca, requestHash: hash }),
           signal: AbortSignal.timeout(20_000),
-        }),
-        p = RESPONSE.parse(await r.json());
-      if (p.requestHash !== hash) throw 0;
+        });
+      if (!r.ok) {
+        if (r.status === 429) failureCategory = "rate_limited";
+        else if (r.status >= 500) failureCategory = "provider_unavailable";
+        throw new Error("Setup request failed");
+      }
+      let payload: unknown;
+      try {
+        payload = await r.json();
+      } catch {
+        failureCategory = "invalid_response";
+        throw new Error("Setup response was not valid JSON");
+      }
+      let p: z.infer<typeof RESPONSE>;
+      try {
+        p = RESPONSE.parse(payload);
+      } catch {
+        failureCategory = "invalid_response";
+        throw new Error("Setup response did not match its schema");
+      }
+      if (p.requestHash !== hash) {
+        failureCategory = "invalid_response";
+        throw new Error("Setup response did not match its request");
+      }
       const namedIntent = setupNamedIntentSchema.safeParse(p.evidence?.establishedIntent);
       setConfig(p.config);
       setProof({ source: p.source, model: p.model, usage: p.usage, fidelity: p.fidelity, fallbackReason: p.fallbackReason, failure: p.failure, namedIntent: namedIntent.success ? namedIntent.data : undefined });
       if (p.fidelity && p.fidelity.verdict !== "approve") gameplayAnalytics.setupFailed("setup_rejected");
     } catch {
-      gameplayAnalytics.setupFailed("unknown");
+      gameplayAnalytics.setupFailed(failureCategory);
       setConfig(deterministicSetup(ca));
       setProof({ source: "fallback" });
     }
