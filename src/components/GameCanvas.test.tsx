@@ -3,9 +3,15 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { stepSimulation, type SimulationState } from "@/game/world";
+import { defaultConfig } from "@/game/setup";
 import { GameCanvas } from "./GameCanvas";
 
 const { captured } = vi.hoisted(() => ({ captured: [] as SimulationState[] }));
+const analyticsCapture = vi.hoisted(() => vi.fn());
+vi.mock("@/app/gameplay-analytics", async importOriginal => {
+  const actual = await importOriginal<typeof import("@/app/gameplay-analytics")>();
+  return { gameplayAnalytics: actual.createGameplayAnalytics((event, properties) => analyticsCapture(event, properties)) };
+});
 vi.mock("@/game/world", async importOriginal => {
   const actual = await importOriginal<typeof import("@/game/world")>();
   return { ...actual, createSimulation: (...args: Parameters<typeof actual.createSimulation>) => {
@@ -15,7 +21,20 @@ vi.mock("@/game/world", async importOriginal => {
   } };
 });
 vi.mock("next/link", () => ({ default: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a> }));
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); captured.length = 0; });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); captured.length = 0; analyticsCapture.mockReset(); });
+
+test("seeds gameplay when analytics capture throws", () => {
+  analyticsCapture.mockImplementation(() => { throw new Error("analytics transport failure"); });
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal("scrollTo", vi.fn());
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+  render(<GameCanvas />);
+  fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
+  fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
+  expect(captured).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
+});
 
 test("theme repaint while paused preserves every engine field and deterministic continuation", async () => {
   vi.stubGlobal("scrollTo", vi.fn());
@@ -79,10 +98,56 @@ test("reviews a separate fixed-rule baseline without auto-seeding or losing priv
   expect(fetch).not.toHaveBeenCalled();
 }, 30_000);
 
+
+test("maps HTTP 200 fallback reasons to one exact setup failure event", async () => {
+  const cases = [
+    ["rate_limited", "rate_limited"],
+    ["unavailable", "provider_unavailable"],
+    ["missing_credentials", "provider_unavailable"],
+    ["invalid_response", "invalid_response"],
+    ["unknown", "unknown"],
+  ] as const;
+  for (const [reason, category] of cases) {
+    cleanup(); analyticsCapture.mockClear();
+    const answers = { world: "Rich mineral pools with abundant prey", threat: "Predator packs hunt through pulsing droughts", reward: "Diversify while prey and predators coexist" };
+    vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+    vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+    vi.stubGlobal("scrollTo", vi.fn());
+    const fetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ config: defaultConfig(), source: "fallback", requestHash: body.requestHash, fallbackReason: reason }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetch);
+    render(<GameCanvas />);
+    for (const [label, value] of [["What exists in this world?", answers.world], ["What threatens life here?", answers.threat], ["What should evolution favor?", answers.reward]] as const) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+      fireEvent.click(screen.getByRole("button", { name: /Continue|Review ecosystem/ }));
+    }
+    await screen.findByRole("heading", { name: "World conditions" });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(analyticsCapture.mock.calls.filter(([event]) => event === "lifepot_setup_failed")).toEqual([["lifepot_setup_failed", { failure_category: category, event_schema_version: 1 }]]);
+  }
+});
+
 test("offers a no-model preset through the existing guided setup", () => {
   render(<GameCanvas />);
   fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
   expect(screen.getByTestId("interpreter-source")).toHaveTextContent("Deterministic fallback");
   expect(screen.getByRole("button", { name: /Seed ecosystem/ })).toBeInTheDocument();
   expect(screen.getByText(/configured species/)).toBeInTheDocument();
+  expect(analyticsCapture).not.toHaveBeenCalledWith("lifepot_setup_failed", expect.anything());
+});
+
+test("invalid HTTP 200 setup response emits one invalid_response failure", async () => {
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal("scrollTo", vi.fn());
+  vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
+  render(<GameCanvas />);
+  for (const label of ["What exists in this world?", "What threatens life here?", "What should evolution favor?"]) {
+    fireEvent.change(screen.getByLabelText(label), { target: { value: "A sufficiently clear ecological world" } });
+    fireEvent.click(screen.getByRole("button", { name: /Continue|Review ecosystem/ }));
+  }
+  await screen.findByRole("heading", { name: "World conditions" });
+  expect(analyticsCapture.mock.calls.filter(([event]) => event === "lifepot_setup_failed")).toEqual([["lifepot_setup_failed", { failure_category: "invalid_response", event_schema_version: 1 }]]);
 });
