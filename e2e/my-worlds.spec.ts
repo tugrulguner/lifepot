@@ -48,6 +48,9 @@ async function interceptAnalytics(page: Page) {
       if (new URL(request.url()).pathname.endsWith("/config.js")) {
         const token = new URL(request.url()).pathname.split("/").at(-2)!;
         await route.fulfill({ status: 200, contentType: "application/javascript", body: `window._POSTHOG_REMOTE_CONFIG = {...(window._POSTHOG_REMOTE_CONFIG || {}), ${JSON.stringify(token)}: {config: ${JSON.stringify(config)}}};` });
+      } else if (["web-vitals.js", "web-vitals-with-attribution.js", "web-vitals-soft-navs.js", "web-vitals-with-attribution-soft-navs.js"].includes(new URL(request.url()).pathname.split("/").at(-1)!)) {
+        const asset = new URL(request.url()).pathname.split("/").at(-1)!;
+        await route.fulfill({ status: 200, contentType: "application/javascript", body: await readFile(new URL(`../node_modules/posthog-js/dist/${asset}`, import.meta.url), "utf8") });
       } else await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(config) });
     }
   });
