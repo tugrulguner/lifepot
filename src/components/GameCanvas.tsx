@@ -211,7 +211,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     // Role silhouettes use the same species palette; interior marks distinguish
     // trophic role without implying unrecorded physiology or behavior.
     c.strokeStyle = "rgba(241,248,237,.9)";
-    c.lineWidth = Math.max(.8, Math.min(cw, ch) * .12);
+    c.lineWidth = Math.min(Math.min(cw, ch) * .18, Math.max(.8, Math.min(cw, ch) * .12));
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
     const radius = Math.min(cw, ch) * .4;
     c.beginPath();
@@ -239,12 +239,15 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     c.fill();
     // A cell-bounded dark under-stroke separates each role shape from resource
     // marks and busy neighboring cells; the fine pale edge retains visibility.
+    const previousJoin = c.lineJoin;
+    c.lineJoin = "round";
     c.strokeStyle = "#07100f";
-    c.lineWidth = Math.max(1, Math.min(cw, ch) * .18);
+    c.lineWidth = Math.min(cw, ch) * .18;
     c.stroke();
     c.strokeStyle = "rgba(241,248,237,.9)";
-    c.lineWidth = Math.max(.8, Math.min(cw, ch) * .12);
+    c.lineWidth = Math.min(Math.min(cw, ch) * .18, Math.max(.8, Math.min(cw, ch) * .12));
     c.stroke();
+    c.lineJoin = previousJoin;
     if (role === "hunter" && Math.min(cw, ch) >= 7) {
       c.beginPath(); c.arc(cx - radius * .25, cy, Math.max(.65, radius * .16), 0, Math.PI * 2); c.fillStyle = "#17201b"; c.fill();
     } else if (role === "producer" && Math.min(cw, ch) >= 7) {

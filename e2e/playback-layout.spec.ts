@@ -1,17 +1,17 @@
 import { expect, test } from "@playwright/test";
 
-for (const width of [375, 390]) {
-  test(`recorded replay controls stay compact and usable at ${width}px${width === 390 ? " with a classic scrollbar" : ""}`, async ({ page }) => {
+for (const { width, gutter } of [{ width: 375, gutter: 0 }, { width: 390, gutter: 0 }, { width: 390, gutter: 15 }]) {
+  test(`recorded replay controls stay compact and usable at ${width}px with ${gutter}px gutter`, async ({ page }) => {
     await page.setViewportSize({ width, height: 850 });
     await page.goto("/play");
-    if (width === 390) {
+    if (gutter) {
       await page.addStyleTag({ content: "body { margin-right: 15px !important; }" });
     }
     await page.clock.install();
     await page.clock.pauseAt(new Date(Date.now() + 1000));
     await page.locator('input[type="file"]').setInputFiles("e2e/fixtures/my-worlds/pond-notebook.json");
     await page.getByRole("button", { name: "Reopen and replay" }).click();
-    if (width === 390) {
+    if (gutter) {
       await expect.poll(() => page.evaluate(() => ({ innerWidth, contentWidth: document.querySelector(".simulation-shell")!.clientWidth }))).toEqual({ innerWidth: 390, contentWidth: 375 });
     }
 
@@ -68,15 +68,15 @@ for (const viewport of [
     await page.getByLabel("World policy").selectOption("fixed");
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     const speed = page.getByRole("combobox", { name: "Playback speed" });
-    const minimumBoard = viewport.width === 320 ? 0 : viewport.width === 375 ? 330 : viewport.width === 390 ? 350 : 300;
+    const minimumBoard = viewport.width === 320 ? 296 : viewport.width === 375 ? 330 : viewport.width === 390 ? 350 : 300;
     for (const choice of ["slow", "normal", "fast"]) {
       await speed.selectOption(choice);
       for (const paused of [true, false]) {
         await page.getByRole("button", { name: paused ? "Pause" : "Resume", exact: true }).click();
         // Commit responsive layout without reaching even Fast's initial 450ms tick.
         await page.clock.runFor(32);
+        await expect.poll(async () => (await page.locator("canvas.life-canvas").boundingBox())!.width).toBeGreaterThanOrEqual(minimumBoard);
         const board = (await page.locator("canvas.life-canvas").boundingBox())!;
-        if (minimumBoard > 0) expect(board.width).toBeGreaterThanOrEqual(minimumBoard);
         expect(board.y + board.height).toBeLessThanOrEqual(viewport.height - 12);
         const controls = await page.locator(".controls button, .controls select").evaluateAll(elements => elements.map(element => {
           const r = element.getBoundingClientRect();
