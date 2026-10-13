@@ -71,10 +71,13 @@ describe("near-board observation summary", () => {
   });
 
   it("describes per-species birth policy separately from a graph patch", () => {
-    const decision = { generation: 12, trigger: "stagnation", source: "jev", speciesDirectives: [{ species: "A", strategy: { choice: "forage", confidence: 1, probabilities: { forage: 1 } }, mutationTarget: { choice: "metabolism", confidence: 1, probabilities: { metabolism: 1 } }, mutationTempo: { choice: "low", confidence: 1, probabilities: { low: 1 } } }] } as never;
+    const decision = { generation: 12, trigger: "stagnation", source: "jev", speciesDirectives: [{ species: "A", strategy: { choice: "early_brood", confidence: 1, probabilities: { efficient_grazing: 0, early_brood: 1, armored: 0, swarming: 0, dispersal: 0 } }, mutationTarget: { choice: "metabolism", confidence: 1, probabilities: { metabolism: 1, fecundity: 0, mobility: 0, defense: 0, sensing: 0 } }, mutationTempo: { choice: "slow", confidence: 1, probabilities: { slow: 1, steady: 0, rapid: 0 } } }] } as never;
     const { container } = render(<GameplayObservation state={state} evidence={createRunEvidence(state)} followed={null} decision={decision} />);
     expect(container.querySelector(".intervention-status")).toHaveTextContent("Birth policies");
     expect(container.querySelector(".intervention-status")).not.toHaveTextContent("Proposed graph change");
+    expect(container.querySelector(".intervention-status")).toHaveTextContent("Future births of species A");
+    expect(container.querySelector(".intervention-status")).toHaveTextContent("lower energy threshold");
+    expect(container.querySelector(".intervention-status")).not.toHaveTextContent("early_brood");
   });
 
   it("does not claim a proposed graph change is queued or active", () => {
