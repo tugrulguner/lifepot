@@ -22,8 +22,8 @@ export function CreatureInspector({ state, evidence, index, followed, onFollow, 
       {cell.occupied && <div className="organism-portrait">
         <svg viewBox="0 0 100 100" role="img" aria-label={`${cell.species?.role ?? "unknown"} role symbol`}>
           <circle cx="50" cy="50" r="44" fill="none" stroke={followed === cell.lineage ? "#ffd36a" : "#496b57"} strokeDasharray={followed === cell.lineage ? "5 4" : undefined}/>
-          <g fill={speciesColor(cell.species?.id ?? "")} stroke="#f1f8ed" strokeWidth="2">
-            {cell.species?.role === "hunter" ? <path d="M75 50L28 27L28 73Z"/> : cell.species?.role === "producer" ? <path d="M50 22L74 36L74 64L50 78L26 64L26 36Z"/> : cell.species?.role === "omnivore" ? <path d="M50 22L78 50L50 78L22 50Z"/> : cell.species?.role === "scavenger" ? <rect x="27" y="27" width="46" height="46"/> : <circle cx="50" cy="50" r="25"/>}
+          <g fill={speciesColor(cell.species?.id ?? "")} stroke="#f1f8ed" strokeWidth="2" strokeLinejoin="round">
+            {cell.species?.role === "hunter" ? <path d="M84 50 Q54 29 18 35 Q26 50 18 65 Q54 71 84 50Z"/> : cell.species?.role === "producer" ? <path d="M50 12 Q72 20 68 38 Q90 42 82 60 Q73 77 57 65 Q50 90 38 74 Q22 81 18 62 Q13 43 34 38 Q28 20 50 12Z"/> : cell.species?.role === "omnivore" ? <path d="M50 15 C68 15 72 30 68 39 C84 30 94 43 84 57 C78 69 66 66 60 61 C66 80 50 91 39 77 C30 68 36 58 40 52 C21 63 9 49 20 36 C29 24 40 33 45 38 C39 20 50 15 50 15Z"/> : cell.species?.role === "scavenger" ? <path d="M18 34H68 A16 16 0 0 1 68 66H18 A16 16 0 0 1 18 34Z"/> : <ellipse cx="50" cy="50" rx="39" ry="29"/>}
           </g>
         </svg>
         <div><strong>Organism #{state.organismId[index!]}</strong><p>Symbol shows feeding role, not biological anatomy.</p><meter aria-label="Organism energy" min={0} max={255} value={cell.energy}/></div>

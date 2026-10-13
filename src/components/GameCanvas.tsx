@@ -215,80 +215,63 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     c.globalAlpha = focusedSpecies && state.config.rules?.species[state.ruleSpecies[i] - 1]?.id !== focusedSpecies ? .15 : 1;
     const x = i % 50,
       y = Math.floor(i / 50),
-      role = state.config.rules?.species[state.ruleSpecies[i] - 1]?.role,
-      pred = role === "hunter";
+      role = state.config.rules?.species[state.ruleSpecies[i] - 1]?.role;
     c.fillStyle = speciesColor(
       state.config.rules?.species[state.ruleSpecies[i] - 1]?.id ?? "",
     );
-    // Role silhouettes use the same species palette; interior marks distinguish
-    // trophic role without implying unrecorded physiology or behavior.
-    c.strokeStyle = "rgba(241,248,237,.9)";
-    c.lineWidth = Math.min(Math.min(cw, ch) * .18, Math.max(.8, Math.min(cw, ch) * .12));
+    // Role-specific bodies are deliberately full-cell silhouettes, not tiny
+    // interior marks. Their shapes are illustrative role icons, not anatomy.
+    c.strokeStyle = "rgba(241,248,237,.94)";
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
-    const radius = Math.min(cw, ch) * .4;
+    const radius = Math.min(cw, ch) * .44;
     c.beginPath();
-    if (pred) {
-      c.moveTo(cx + radius, cy);
-      c.lineTo(cx - radius, cy - radius * .82);
-      c.lineTo(cx - radius, cy + radius * .82);
-      c.closePath();
-    } else if (role === "omnivore") {
-      c.moveTo(cx, cy - radius); c.lineTo(cx + radius, cy);
-      c.lineTo(cx, cy + radius); c.lineTo(cx - radius, cy); c.closePath();
-    } else if (role === "producer") {
-      for (let side = 0; side < 6; side++) {
-        const angle = Math.PI / 3 * side - Math.PI / 6;
-        const px = cx + radius * Math.cos(angle), py = cy + radius * Math.sin(angle);
-        if (side === 0) c.moveTo(px, py);
-        else c.lineTo(px, py);
+    if (role === "producer") {
+      // Six broad rounded leaves form an unmistakable rosette at tiny pitch.
+      for (let petal = 0; petal < 6; petal++) {
+        const a = petal * Math.PI / 3;
+        const ux = Math.cos(a), uy = Math.sin(a), px = -uy, py = ux;
+        const tipX = cx + ux * radius, tipY = cy + uy * radius;
+        if (!petal) c.moveTo(cx + px * radius * .28, cy + py * radius * .28);
+        c.quadraticCurveTo(cx + ux * radius * .7 + px * radius * .42, cy + uy * radius * .7 + py * radius * .42, tipX, tipY);
+        c.quadraticCurveTo(cx + ux * radius * .7 - px * radius * .42, cy + uy * radius * .7 - py * radius * .42, cx + px * radius * .28, cy + py * radius * .28);
       }
       c.closePath();
+    } else if (role === "hunter") {
+      // A long, forward-pointed spindle, distinct from the rounded guilds.
+      c.moveTo(cx + radius, cy);
+      c.quadraticCurveTo(cx + radius * .08, cy - radius * .64, cx - radius, cy - radius * .42);
+      c.quadraticCurveTo(cx - radius * .7, cy, cx - radius, cy + radius * .42);
+      c.quadraticCurveTo(cx + radius * .08, cy + radius * .64, cx + radius, cy);
+      c.closePath();
     } else if (role === "scavenger") {
-      c.rect(cx - radius * .8, cy - radius * .8, radius * 1.6, radius * 1.6);
+      // Three joined body segments create a chunky articulated silhouette.
+      c.moveTo(cx - radius, cy - radius * .5); c.lineTo(cx + radius * .45, cy - radius * .5);
+      c.arc(cx + radius * .45, cy, radius * .5, -Math.PI / 2, Math.PI / 2);
+      c.lineTo(cx - radius, cy + radius * .5); c.arc(cx - radius, cy, radius * .5, Math.PI / 2, -Math.PI / 2);
+      c.closePath();
+    } else if (role === "omnivore") {
+      // Broad three-lobed clover: neither a rosette nor a plain grazer orb.
+      for (let lobe = 0; lobe < 3; lobe++) {
+        const a = -Math.PI / 2 + lobe * Math.PI * 2 / 3;
+        const px = cx + Math.cos(a) * radius * .54, py = cy + Math.sin(a) * radius * .54;
+        if (!lobe) c.moveTo(px + radius * .44, py);
+        c.arc(px, py, radius * .44, 0, Math.PI * 2);
+      }
+      c.closePath();
     } else {
-      c.arc(cx, cy, radius, 0, Math.PI * 2);
+      // Grazer remains a soft, broad capsule as the visual counterpoint.
+      c.ellipse(cx, cy, radius * .88, radius * .68, 0, 0, Math.PI * 2);
     }
     c.fill();
-    // A cell-bounded dark under-stroke separates each role shape from resource
-    // marks and busy neighboring cells; the fine pale edge retains visibility.
     const previousJoin = c.lineJoin;
     c.lineJoin = "round";
     c.strokeStyle = "#07100f";
-    c.lineWidth = Math.min(cw, ch) * .18;
+    c.lineWidth = Math.min(cw, ch) * .07;
     c.stroke();
-    c.strokeStyle = "rgba(241,248,237,.9)";
-    c.lineWidth = Math.min(Math.min(cw, ch) * .18, Math.max(.8, Math.min(cw, ch) * .12));
+    c.strokeStyle = "rgba(241,248,237,.94)";
+    c.lineWidth = Math.min(cw, ch) * .035;
     c.stroke();
     c.lineJoin = previousJoin;
-    // Role-specific interior motifs give the small silhouettes a second
-    // recognition cue. They are intentionally abstract marks, not anatomy.
-    if (Math.min(cw, ch) >= 7) {
-      const detail = Math.max(.65, radius * .16);
-      c.save();
-      c.fillStyle = "#17201b";
-      c.strokeStyle = "#17201b";
-      c.lineWidth = Math.max(.65, radius * .14);
-      if (role === "hunter") {
-        c.beginPath(); c.arc(cx - radius * .22, cy, detail, 0, Math.PI * 2); c.fill();
-      } else if (role === "producer") {
-        c.beginPath(); c.arc(cx, cy, detail, 0, Math.PI * 2); c.fill();
-        for (const side of [-1, 1]) {
-          c.beginPath(); c.moveTo(cx + side * radius * .56, cy - radius * .3);
-          c.lineTo(cx + side * radius * .56, cy + radius * .3); c.stroke();
-        }
-      } else if (role === "grazer") {
-        c.beginPath(); c.arc(cx, cy, detail * .72, 0, Math.PI * 2); c.fill();
-        c.beginPath(); c.moveTo(cx - radius * .35, cy + radius * .28);
-        c.lineTo(cx + radius * .35, cy + radius * .28); c.stroke();
-      } else if (role === "scavenger") {
-        c.beginPath(); c.moveTo(cx - radius * .3, cy); c.lineTo(cx + radius * .3, cy);
-        c.moveTo(cx, cy - radius * .3); c.lineTo(cx, cy + radius * .3); c.stroke();
-      } else if (role === "omnivore") {
-        c.beginPath(); c.arc(cx, cy, detail * .7, 0, Math.PI * 2); c.fill();
-        c.beginPath(); c.moveTo(cx - radius * .34, cy); c.lineTo(cx + radius * .34, cy); c.stroke();
-      }
-      c.restore();
-    }
     if (i === selected || state.lineage[i] === followed) {
       const isSelected = i === selected;
       c.save();
@@ -1005,15 +988,12 @@ export function GameCanvas() {
         </details>
       </aside>
       <div className="legend">
-        <span>
-          <i className="resource-key" />
-          Resource beads
-        </span>
-        <span>⬡ Producer</span><span>○ Grazer</span><span>□ Scavenger</span>
-        <span>▷ Hunter</span><span>◇ Omnivore</span>
+        <span><i className="resource-key" />Resource field</span>
+        <span><b className="role-key role-producer" />Producer rosette</span><span><b className="role-key role-grazer" />Grazer capsule</span>
+        <span><b className="role-key role-scavenger" />Scavenger segments</span><span><b className="role-key role-hunter" />Hunter spindle</span>
+        <span><b className="role-key role-omnivore" />Omnivore clover</span>
         <span>Coral chevrons = local hazard intensity</span>
         <span>White ring = selected · dashed gold ring = followed family</span>
-        <span>White = birth · gold pulse = feeding · red cross = death</span>
         <span>Color = species in observatory</span>
       </div>
       <div className="ticker">

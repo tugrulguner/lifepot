@@ -105,7 +105,7 @@ test("seeds gameplay when analytics capture throws", () => {
 
 test("theme repaint while paused preserves every engine field and deterministic continuation", async () => {
   vi.stubGlobal("scrollTo", vi.fn());
-  const context = { setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1 };
+  const context = { setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), quadraticCurveTo: vi.fn(), ellipse: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1 };
   const contextCalls = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
   // jsdom has no layout; provide a drawable board for repaint assertions.
   vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
@@ -145,7 +145,7 @@ test.each([180, 240, 318, 600])("organism marks stay cell-bounded on a %ipx boar
   const arcRadii: number[] = [];
   const cellPitch = (boardSize - 36) / 50;
   const context = {
-    setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn((_x: number, _y: number, radius: number) => { arcRadii.push(radius); }), fill: vi.fn(),
+    setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), quadraticCurveTo: vi.fn(), ellipse: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn((_x: number, _y: number, radius: number) => { arcRadii.push(radius); }), fill: vi.fn(),
     stroke: vi.fn(function (this: CanvasRenderingContext2D) { organismStrokes.push({ color: this.strokeStyle as string, width: this.lineWidth }); }),
     save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1,
   };
@@ -158,14 +158,13 @@ test.each([180, 240, 318, 600])("organism marks stay cell-bounded on a %ipx boar
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
 
   const roleEdges = organismStrokes.filter(stroke => stroke.color === "#07100f");
-  const speciesEdges = organismStrokes.filter(stroke => stroke.color === "rgba(241,248,237,.9)");
+  const speciesEdges = organismStrokes.filter(stroke => stroke.color === "rgba(241,248,237,.94)");
   expect(roleEdges.length).toBeGreaterThan(0);
   expect(speciesEdges.length).toBeGreaterThan(0);
-  expect(roleEdges[0].width).toBeCloseTo(cellPitch * .18, 1);
-  expect(speciesEdges[0].width).toBeLessThanOrEqual(cellPitch * .18);
-  expect(arcRadii.some(radius => Math.abs(radius - cellPitch * .4) < .01)).toBe(true);
-  expect(cellPitch * .4 + roleEdges[0].width / 2).toBeLessThan(cellPitch / 2);
-  expect(cellPitch * .4 + speciesEdges[0].width / 2).toBeLessThan(cellPitch / 2);
+  expect(roleEdges[0].width).toBeCloseTo(cellPitch * .07, 4);
+  expect(speciesEdges[0].width).toBeCloseTo(cellPitch * .035, 4);
+  expect(cellPitch * .44 + roleEdges[0].width / 2).toBeLessThan(cellPitch / 2);
+  expect(cellPitch * .44 + speciesEdges[0].width / 2).toBeLessThan(cellPitch / 2);
 });
 
 test("reviews a separate fixed-rule baseline without auto-seeding or losing private context", async () => {

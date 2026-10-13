@@ -167,6 +167,13 @@ button:disabled { cursor: not-allowed; opacity: .42; }
 .fitness-overlay { position: absolute; z-index: 3; right: clamp(16px, 2.4vw, 36px); top: 363px; width: 190px; padding: 12px 14px; border: 1px solid var(--line); background: rgba(3,16,14,.76); backdrop-filter: blur(10px); }
 .fitness-overlay > p { margin: 0 0 9px; color: var(--dim); font: 8px var(--mono); letter-spacing: .13em; }
 .legend { position: absolute; z-index: 3; left: clamp(16px, 2.4vw, 36px); bottom: 64px; display: flex; gap: 17px; padding: 8px 10px; background: rgba(3,16,14,.7); color: var(--muted); font: 8px var(--mono); text-transform: uppercase; }
+.legend .role-key { width: 14px; height: 12px; flex: 0 0 14px; display: inline-block; background: #a9d878; border: 1px solid rgba(241,248,237,.9); }
+.legend .role-producer { border-radius: 45%; clip-path: polygon(50% 0,65% 28%,100% 15%,80% 50%,100% 85%,62% 72%,50% 100%,38% 72%,0 85%,20% 50%,0 15%,38% 28%); }
+.legend .role-grazer { border-radius: 50%; transform: scaleX(1.25); }
+.legend .role-scavenger { border-radius: 40%; background: linear-gradient(90deg,#a9d878 0 29%,#17201b 30% 34%,#a9d878 35% 64%,#17201b 65% 69%,#a9d878 70%); }
+.legend .role-hunter { clip-path: polygon(100% 50%,0 0,15% 50%,0 100%); }
+.legend .role-omnivore { clip-path: polygon(50% 0,64% 25%,100% 25%,82% 55%,72% 100%,48% 76%,20% 100%,18% 62%,0 35%,36% 30%); }
+.legend .resource-key { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #83d99a; }
 .legend span { display: flex; align-items: center; gap: 6px; }
 .legend i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 .resource-key { background: #75bc89; }.birth-key { border: 1px solid var(--mint); box-shadow: 0 0 6px var(--mint); }.hazard-key { background: var(--coral); }
