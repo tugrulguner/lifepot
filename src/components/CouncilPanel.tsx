@@ -41,7 +41,7 @@ export function RuntimeCouncil({ decision, state, ledger, replay }: { decision?:
       <p><strong>Reconciled patch owner: {council.selectedPatch}</strong> · {council.calls} provider calls</p>
       {council.correction && <p>Protocol correction: {council.correction.stage} · one fresh model response. Rejected attempt: {council.correction.rejectedUsage.input_tokens} input / {council.correction.rejectedUsage.output_tokens} output tokens, included in total usage. Invalid evidence was not applied.</p>}
       {council.batching && <p>Grouped specialist inference: scoped answers share one provider request. Batch usage: {council.batchUsage?.input_tokens ?? 0} input / {council.batchUsage?.output_tokens ?? 0} output tokens, counted once; specialist records do not have separately attributable token usage.</p>}
-      <p>{selectedChangeLabel(decision)}</p>
+      <p>{selectedChangeLabel(decision, state.engineVersion)}</p>
       {decision.scheduledRuleChange && <p>{ruleTimingLabel(decision, state)} · {label(decision.scheduledRuleChange.duration)} duration · {label(decision.scheduledRuleChange.transition)} transition</p>}
       <details open><summary>Runtime orchestrator</summary><RecordEvidence record={council.orchestrator} history={recorded}/></details>
       {council.manifest.members.map(member => {

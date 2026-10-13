@@ -84,7 +84,7 @@ for (const width of [1280, 390]) test(`council provenance and reconciled changes
   await expect(runtime).toContainText("17 input / 9 output tokens");
   await expect(page.getByLabel("Species birth policies")).toContainText("Next births: Armored");
   await page.getByRole("tab", { name: "Timeline" }).click();
-  await expect(page.getByLabel("World observatory panel")).toContainText("Species A self interaction → cooperative");
+  await expect(page.getByLabel("World observatory panel")).toContainText("Species A self-interaction change: nearby same-species organisms can reduce upkeep");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: `test-results/council-${width}.png`, fullPage: true });
 });

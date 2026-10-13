@@ -105,7 +105,7 @@ export function buildWorldReport(state: SimulationState, ledger: EvolutionLedger
       generation: decision.generation,
       trigger: decision.trigger,
       source: decision.source,
-      changes: selectedChangeLabel(decision),
+      changes: selectedChangeLabel(decision, state.engineVersion),
       timing: ruleTimingLabel(decision, state),
       pressure: decision.environmentPressure.choice,
       intensity: decision.environmentIntensity.choice,

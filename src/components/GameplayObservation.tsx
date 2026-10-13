@@ -37,11 +37,11 @@ export function GameplayObservation({ state, evidence, followed, decision, names
     {latest.length > 0 && <p role="status" aria-label="Latest retained extinction">{latest.map(item => `Generation ${item.generation}: ${item.text}`).join(" · ")}</p>}
     <div className="intervention-status" aria-label="Intervention status">
       {decision ? <>
-        <span>{conciseChangeLabel(decision)}</span>
+        <span>{conciseChangeLabel(decision, state.engineVersion)}</span>
         {timing && <span>{timing}</span>}
         <details aria-label="Policy explanation">
           <summary>Why this policy matters</summary>
-          <p>{selectedChangeLabel(decision)}</p>
+          <p>{selectedChangeLabel(decision, state.engineVersion)}</p>
         </details>
       </> : <span>No active decision · inherited rules continue</span>}
       {state.activeRuleChange && <span>Graph change active since generation {state.activeRuleChange.activatedAt}</span>}

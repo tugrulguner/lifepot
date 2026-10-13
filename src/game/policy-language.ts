@@ -1,5 +1,6 @@
 import type { PredatorStrategy, PreyStrategy } from "./decisions";
 import type { RulePatch } from "./rules";
+import { ENGINE_VERSION, LEGACY_ENGINE_VERSION, type EngineVersion } from "./world";
 
 type Strategy = PreyStrategy | PredatorStrategy;
 
@@ -29,11 +30,19 @@ const STRATEGY_SUMMARIES: Record<Strategy, string> = {
   brood_hunting: "targets older-lineage prey; lower reproduction threshold",
 };
 
-export function strategyMeaning(strategy: Strategy): string {
+export function strategyMeaning(strategy: Strategy, engineVersion: EngineVersion = ENGINE_VERSION): string {
+  if (engineVersion === LEGACY_ENGINE_VERSION) {
+    if (strategy === "pack_hunting") return "Searches farther than ambush; a successful catch awards a fixed feeding gain of 62 energy, before costs and the energy cap.";
+    if (strategy === "efficient_kill") return "A successful catch awards a fixed feeding gain of 72 energy, before costs and the energy cap; this does not guarantee a catch.";
+  }
   return STRATEGY_MEANINGS[strategy];
 }
 
-export function strategySummary(strategy: Strategy): string {
+export function strategySummary(strategy: Strategy, engineVersion: EngineVersion = ENGINE_VERSION): string {
+  if (engineVersion === LEGACY_ENGINE_VERSION) {
+    if (strategy === "pack_hunting") return "wider prey search; 62 energy on a catch";
+    if (strategy === "efficient_kill") return "72 energy on a catch before costs";
+  }
   return STRATEGY_SUMMARIES[strategy];
 }
 

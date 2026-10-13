@@ -5,7 +5,7 @@ import type { RulePatch } from "./rules";
 
 describe("recorded policy language", () => {
   it("explains the bounded engine meaning of every supported birth strategy", () => {
-    const meanings = [...PREY_STRATEGIES, ...PREDATOR_STRATEGIES].map(strategyMeaning);
+    const meanings = [...PREY_STRATEGIES, ...PREDATOR_STRATEGIES].map(strategy => strategyMeaning(strategy));
     expect(meanings).toHaveLength(PREY_STRATEGIES.length + PREDATOR_STRATEGIES.length);
     for (const meaning of meanings) {
       expect(meaning.length).toBeGreaterThan(25);
