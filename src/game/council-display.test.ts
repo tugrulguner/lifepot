@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ruleTimingLabel, selectedChangeLabel } from "./council-display";
+import { ruleTimingLabel, selectedChangeLabel, conciseChangeLabel } from "./council-display";
 import { deterministicSetup } from "./setup";
 import { createSimulation } from "./world";
 import { deterministicEvolutionDecision, summarizeEcology } from "./decisions";
@@ -33,6 +33,16 @@ describe("council display truthfulness", () => {
     expect(label).not.toMatch(/early_brood/);
     expect(decision).toEqual(before);
   });
+  it("summarizes the longest species policy set compactly without changing its input", () => {
+    const { decision } = fixture();
+    decision.source = "jev";
+    decision.speciesDirectives = (["A", "B", "C", "D"] as const).map(species => ({ species, strategy: { choice: "early_brood" as const, confidence: 1, probabilities: { efficient_grazing: 0, early_brood: 1, armored: 0, swarming: 0, dispersal: 0 } }, mutationTarget: { choice: "fecundity" as const, confidence: 1, probabilities: { metabolism: 0, fecundity: 1, mobility: 0, defense: 0, sensing: 0 } }, mutationTempo: { choice: "steady" as const, confidence: 1, probabilities: { slow: 0, steady: 1, rapid: 0 } } }));
+    const before = structuredClone(decision);
+    expect(conciseChangeLabel(decision)).toBe("Species A births: lower reproduction threshold · Species B births: lower reproduction threshold · Species C births: lower reproduction threshold · Species D births: lower reproduction threshold · Existing world rules unchanged");
+    expect(conciseChangeLabel(decision).length).toBeLessThan(230);
+    expect(decision).toEqual(before);
+  });
+
   it("uses application evidence rather than elapsed time for queued, active and past labels", () => {
     const { state, decision } = fixture();
     decision.source = "jev";

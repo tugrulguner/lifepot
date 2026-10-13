@@ -1,7 +1,7 @@
 import type { RunEvidence } from "@/game/run-evidence";
 import type { EvolutionDecision } from "@/game/decisions";
 import type { SimulationState } from "@/game/world";
-import { ruleTimingLabel, selectedChangeLabel } from "@/game/council-display";
+import { ruleTimingLabel, selectedChangeLabel, conciseChangeLabel } from "@/game/council-display";
 import { speciesColor } from "@/game/species-colors";
 
 export function GameplayObservation({ state, evidence, followed, decision, names, worldName }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string }) {
@@ -17,7 +17,6 @@ export function GameplayObservation({ state, evidence, followed, decision, names
   ] : [];
   const latestFor = (kind: "species" | "family") => milestones.filter(item => item.kind === kind).reduce<typeof milestones>((latest, item) => item.generation > (latest[0]?.generation ?? -1) ? [item] : item.generation === latest[0]?.generation ? [...latest, item] : latest, []);
   const latest = [...latestFor("species"), ...latestFor("family")];
-  const change = decision?.scheduledRuleChange;
   const timing = decision ? ruleTimingLabel(decision, state) : "";
 
   return <section className="gameplay-observation" aria-label="Near-board observations">
@@ -38,8 +37,12 @@ export function GameplayObservation({ state, evidence, followed, decision, names
     {latest.length > 0 && <p role="status" aria-label="Latest retained extinction">{latest.map(item => `Generation ${item.generation}: ${item.text}`).join(" · ")}</p>}
     <div className="intervention-status" aria-label="Intervention status">
       {decision ? <>
-        <span>{change ? "Proposed graph change" : decision.speciesDirectives?.length ? "Birth policies" : "Intervention"}: {selectedChangeLabel(decision)}</span>
-        <span>{timing || (decision.source === "fallback" ? "No intervention; inherited policies continue" : "Decision recorded; no graph patch selected")}</span>
+        <span>{conciseChangeLabel(decision)}</span>
+        {timing && <span>{timing}</span>}
+        <details aria-label="Policy explanation">
+          <summary>Why this policy matters</summary>
+          <p>{selectedChangeLabel(decision)}</p>
+        </details>
       </> : <span>No active decision · inherited rules continue</span>}
       {state.activeRuleChange && <span>Graph change active since generation {state.activeRuleChange.activatedAt}</span>}
     </div>

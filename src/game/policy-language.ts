@@ -7,7 +7,7 @@ const STRATEGY_MEANINGS: Record<Strategy, string> = {
   efficient_grazing: "Can take in more resource energy per feeding than other strategies, depending on feeding traits and available food.",
   early_brood: "Can reproduce at a lower energy threshold; each birth still transfers energy from the parent to the offspring.",
   armored: "Pays extra upkeep to reduce hazard damage; attackers also spend extra energy attacking it.",
-  swarming: "Nearby same-species neighbors can reduce hazard exposure, while upkeep and attack costs rise with the group.",
+  swarming: "Defense maintenance stays fixed at 1 energy; nearby same-species neighbors reduce hazard damage, while attackers pay an additional attack cost that grows with the defender's neighbor count.",
   dispersal: "May move to an adjacent empty cell on a turn when it does not reproduce.",
   ambush: "Searches only nearby cells for edible prey and skips empty-cell movement on alternating turns when no prey is found.",
   pursuit: "Searches farther for edible prey than the basic sensing range.",
@@ -16,8 +16,25 @@ const STRATEGY_MEANINGS: Record<Strategy, string> = {
   brood_hunting: "When edible prey is nearby, prioritizes prey from the oldest lineage generation; can reproduce at a lower energy threshold.",
 };
 
+const STRATEGY_SUMMARIES: Record<Strategy, string> = {
+  efficient_grazing: "more resource energy per feeding",
+  early_brood: "lower reproduction threshold",
+  armored: "reduced hazard damage; higher maintenance",
+  swarming: "neighbor-based hazard protection",
+  dispersal: "may move to an empty adjacent cell",
+  ambush: "nearby prey search; alternating stationary turns",
+  pursuit: "wider prey search",
+  pack_hunting: "wider prey search; smaller energy share",
+  efficient_kill: "larger prey-energy share on a catch",
+  brood_hunting: "targets older-lineage prey; lower reproduction threshold",
+};
+
 export function strategyMeaning(strategy: Strategy): string {
   return STRATEGY_MEANINGS[strategy];
+}
+
+export function strategySummary(strategy: Strategy): string {
+  return STRATEGY_SUMMARIES[strategy];
 }
 
 const SELF_MEANINGS: Record<string, string> = {

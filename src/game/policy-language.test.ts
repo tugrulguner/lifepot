@@ -16,6 +16,9 @@ describe("recorded policy language", () => {
     expect(strategyMeaning("efficient_grazing")).toMatch(/more resource energy per feeding/i);
     expect(strategyMeaning("armored")).toMatch(/hazard damage/i);
     expect(strategyMeaning("swarming")).toMatch(/same-species neighbors/i);
+    expect(strategyMeaning("swarming")).toMatch(/maintenance stays fixed at 1 energy/i);
+    expect(strategyMeaning("swarming")).toMatch(/attack cost that grows with the defender's neighbor count/i);
+    expect(strategyMeaning("swarming")).not.toMatch(/upkeep.*rise.*group/i);
     expect(strategyMeaning("dispersal")).toMatch(/may move/i);
     expect(strategyMeaning("ambush")).toMatch(/nearby cells/i);
     expect(strategyMeaning("pursuit")).toMatch(/farther/i);
