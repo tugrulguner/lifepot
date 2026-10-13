@@ -1,13 +1,36 @@
 import type { EvolutionDecision } from "./decisions";
-import type { SimulationState } from "./world";
-import { relationshipLabel } from "./visuals";
+import { ENGINE_VERSION, type EngineVersion, type SimulationState } from "./world";
+import { rulePatchMeaning, strategyMeaning, strategySummary } from "./policy-language";
 
-export function selectedChangeLabel(decision: EvolutionDecision): string {
-  if (decision.source === "fallback") return "No intervention · inherited policies continue";
+export function selectedChangeLabel(decision: EvolutionDecision, engineVersion: EngineVersion = ENGINE_VERSION): string {
+  if (decision.source === "fallback") return "No intervention selected; existing world rules and birth policies continue";
+
+  const policies = decision.speciesDirectives?.map(item =>
+    `Future births of species ${item.species}: ${strategyMeaning(item.strategy.choice, engineVersion)}`,
+  ) ?? (decision.speciesDirectives === undefined ? [
+    decision.preyStrategy?.choice ? `Future basal-consumer births: ${strategyMeaning(decision.preyStrategy.choice, engineVersion)}` : "",
+    decision.predatorStrategy?.choice ? `Future hunter births: ${strategyMeaning(decision.predatorStrategy.choice, engineVersion)}` : "",
+  ].filter(Boolean) : []);
   const patch = decision.scheduledRuleChange?.patch;
-  const policies = decision.speciesDirectives?.map(item => `Species ${item.species} births → ${item.strategy.choice}`).join("; ");
-  const change = !patch ? "No graph patch selected" : patch.kind === "self" ? `Species ${patch.species} self interaction → ${patch.value}` : patch.kind === "pair" ? relationshipLabel(patch.pair, patch.mode) : `Environment ${patch.field} → ${patch.value}`;
-  return [policies, change].filter(Boolean).join("; ");
+  const change = patch
+    ? rulePatchMeaning(patch)
+    : policies.length
+      ? ""
+      : "No ecosystem rule change selected; existing world rules and birth policies continue";
+  return [...policies, change].filter(Boolean).join("; ");
+}
+
+export function conciseChangeLabel(decision: EvolutionDecision, engineVersion: EngineVersion = ENGINE_VERSION): string {
+  if (decision.source === "fallback") return "No policy change selected";
+  const policies = decision.speciesDirectives?.map(item =>
+    `Species ${item.species} births: ${strategySummary(item.strategy.choice, engineVersion)}`,
+  ) ?? (decision.speciesDirectives === undefined ? [
+    decision.preyStrategy?.choice ? `Basal-consumer births: ${strategySummary(decision.preyStrategy.choice, engineVersion)}` : "",
+    decision.predatorStrategy?.choice ? `Hunter births: ${strategySummary(decision.predatorStrategy.choice, engineVersion)}` : "",
+  ].filter(Boolean) : []);
+  if (decision.scheduledRuleChange) return [...policies, "World rule change selected"].filter(Boolean).join(" · ");
+  if (policies.length) return [...policies, "Existing world rules unchanged"].join(" · ");
+  return "No policy change selected";
 }
 
 // Only engine state proves activation. A selected or elapsed schedule is not proof.

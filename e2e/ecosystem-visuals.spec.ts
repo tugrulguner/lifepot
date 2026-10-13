@@ -51,5 +51,5 @@ for(const width of [1280,390])for(const theme of ['Light','Dark'])test(`readable
   await page.locator('canvas.life-canvas').screenshot({path:join(dir,key+'-followed.png')});
  }
  await expect(page.getByTestId('generation')).toHaveText('30 / 180');
- await page.getByRole('button',{name:'Resume',exact:true}).click();await page.clock.runFor(650);await expect(page.getByTestId('generation')).not.toHaveText('30 / 180');expect(calls).toEqual([]);expect(errors).toEqual([]);
+ await page.getByRole('button',{name:'Resume',exact:true}).click();await page.clock.runFor(1000);await expect(page.getByTestId('generation')).not.toHaveText('30 / 180');expect(calls).toEqual([]);expect(errors).toEqual([]);
 });

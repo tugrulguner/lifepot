@@ -170,12 +170,15 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
 });
 
 test("copied replay opens at generation zero and never calls the judge", async ({ page, context }) => {
+  // Serialization/replay contract: retain the full real-engine trajectory without
+  // decorative event-animation work. Normal-motion playback has separate coverage.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.route("**/api/judge", route => route.abort());
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/play");
   await answerSetupWithKeyboard(page);
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 90_000 });
   await page.getByRole("button", { name: "Copy challenge link" }).click();
   const replayUrl = await page.evaluate(() => navigator.clipboard.readText());
@@ -222,7 +225,7 @@ for (const viewport of [{ width: 1280, height: 633 }, { width: 1440, height: 100
       expect(box.y + box.height <= boardBox.y || box.y >= boardBox.y + boardBox.height).toBe(true);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.clock.runFor(500);
+    await page.clock.runFor(1000);
     await expect(page.getByRole("img", { name: "Population history", exact: true })).toBeVisible();
     await expect(page.getByText("Collecting history", { exact: true })).toHaveCount(0);
     await page.getByRole("tab", { name: "Lineages" }).click();
@@ -243,7 +246,7 @@ test("graph preview and runtime show bound species policies, not legacy cohort d
   await expect(rules).toContainText("Stability");
   await expect(rules).toContainText("neutral");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   const policies = page.getByLabel("Species birth policies");
   await expect(policies).toContainText("Next births: Armored", { timeout: 15000 });
   await page.getByRole("button", { name: "Pause" }).click();

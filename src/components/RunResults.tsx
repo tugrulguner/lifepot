@@ -37,6 +37,7 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
       <p>This is a toy model, not biological proof; it is an observation, not a universal survival score.</p>
     </header>
     {question.trim() && <p><strong>Your question:</strong> {question}</p>}
+    <nav aria-label="Run actions"><button type="button" onClick={onInspect}>Inspect final world</button><button type="button" onClick={onReplay}>Replay this run</button><button type="button" onClick={onEdit}>Edit this world</button><button type="button" onClick={onNew}>New world</button></nav>
     {last && <ul aria-label="Observed outcomes">
       <li>Peak population: {evidence.peakPopulation}</li>
       {configured.map(rule => <li key={rule.id}>{rule.role} species {rule.id}: {last.species.find(item => item.speciesId === rule.id)?.population ?? 0} at final observation</li>)}
@@ -71,6 +72,5 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
     {evidence.ruleEvents.length > 0 && <section aria-label="Observed rule events"><h3>Rule events</h3><ol>{evidence.ruleEvents.map((event, index) => <li key={`${event.kind}-${event.generation}-${index}`}>{event.kind === "activated" ? `Rule change activated at generation ${event.generation} (source generation ${event.sourceGeneration})${event.revertAt === null ? "; no scheduled reversion" : `; scheduled to revert at generation ${event.revertAt}`}` : `Rule change reverted at generation ${event.generation}`}</li>)}</ol></section>}
     <p>Only sampled generations are shown. This cannot establish unobserved events, explain causes, or evaluate free-text predictions.</p>
     {children}
-    <nav aria-label="Run actions"><button type="button" onClick={onInspect}>Inspect final world</button><button type="button" onClick={onReplay}>Replay this run</button><button type="button" onClick={onEdit}>Edit this world</button><button type="button" onClick={onNew}>New world</button></nav>
   </section>;
 }

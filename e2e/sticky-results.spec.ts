@@ -19,7 +19,7 @@ test("real 180-generation results graph and actions stay unobscured at scrolled 
   await page.goto("/play");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByTestId("generation")).toHaveText("180 / 180", { timeout: 180_000 });
   const results = page.getByRole("region", { name: "Run results" });
   await expect(results).toBeVisible();

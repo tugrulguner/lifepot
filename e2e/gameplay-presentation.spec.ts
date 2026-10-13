@@ -189,7 +189,7 @@ test("running game keeps its intended dark canvas and semantic game colors under
     for (let i = 0; i < data.length; i += 4) if (data[i] < 80 && data[i + 1] < 120 && data[i + 2] < 100) varied++;
     return { backdrop, varied, organisms };
   });
-  await page.waitForTimeout(700);
+  await expect(page.getByTestId("generation")).not.toHaveText("0 / 180");
   const runningGeneration = await page.getByTestId("generation").textContent();
   const runningMetrics = await page.getByLabel("Live ecosystem statistics").innerText();
   expect(runningMetrics).toContain("LIVING VARIANTS");
@@ -257,7 +257,7 @@ test("gameplay header, stats, controls, and useful board geometry do not overlap
     expect(geometry.inspector.y, `inspector follows the board at ${width}x${height}`).toBeGreaterThanOrEqual(geometry.board.bottom);
     expect(geometry.inspector.y - geometry.board.bottom, `inspector is near the board at ${width}x${height}`).toBeLessThanOrEqual(geometry.focus.height + 24);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const buttonCenters = await page.locator(".controls button").evaluateAll((buttons) => buttons.map(button => {
+    const buttonCenters = await page.locator(".controls button, .controls select").evaluateAll((buttons) => buttons.map(button => {
       const r = button.getBoundingClientRect();
       return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === button;
     }));

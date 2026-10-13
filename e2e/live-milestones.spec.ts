@@ -18,7 +18,7 @@ test("real species and followed-family extinction remain near the board after in
   const lineage = (await follow.innerText()).match(/#(\d+)/)![1];
   await follow.click();
   await page.getByRole("button", { name: "Resume", exact: true }).click();
-  await page.getByRole("button", { name: "3× speed" }).click();
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   const milestones = page.getByRole("region", { name: "Observed extinction milestones" });
   await expect(milestones).toContainText("Species B first observed extinct at generation", { timeout: 120_000 });
   // Under ca8 the hunters disappear while grazers survive; verify the event during play.

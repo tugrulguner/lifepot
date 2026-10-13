@@ -16,7 +16,7 @@ test("an adaptive trial leads to a separate reviewable fixed baseline and one-co
  await page.getByLabel("Your question or prediction (optional)").fill("PRIVATE control question");
  await expect(page.getByLabel("World policy")).toHaveValue("adaptive");
  await page.getByRole("button",{name:/Seed ecosystem/}).click();
- await page.getByRole("button",{name:"3× speed"}).click();
+ await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
  const results=page.getByRole("region",{name:"Run results",exact:true});
  await expect(results).toBeVisible({timeout:180_000});
  expect(requests.length).toBeGreaterThan(0);

@@ -19,10 +19,14 @@ test("replay arrival positions the board once and later ticks preserve deliberat
   await expect(canvas).toBeVisible();
   await expect(page.getByText(/Exact recorded replay/)).toBeVisible();
   await expect.poll(() => canvas.evaluate((element) => element.getBoundingClientRect().top)).toBeGreaterThanOrEqual(0);
+  // Keep arrival assertions at the Slow default; accelerate only the completion acceptance.
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const deliberateScroll = await page.evaluate(() => window.scrollY);
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(deliberateScroll);
   await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 180000 });
+  // Preserve the original Normal-speed multi-tick scrolling check after completion.
+  await page.getByRole("combobox", { name: "Playback speed" }).selectOption("normal");
   const replayButton = page.getByRole("button", { name: "Replay this run" });
   await replayButton.scrollIntoViewIfNeeded();
   expect(await canvas.evaluate(e => e.getBoundingClientRect().top)).toBeLessThan(0);

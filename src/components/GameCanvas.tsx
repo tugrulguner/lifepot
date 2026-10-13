@@ -64,6 +64,7 @@ export type LifePotViewModel = {
 };
 type Stage = "questions" | "review" | "simulation";
 type Theme = "light" | "dark" | "auto";
+type PlaybackSpeed = "slow" | "normal" | "fast";
 function ThemeControl({ theme, onChange }: { theme: Theme; onChange: (theme: Theme) => void }) {
   return <label className="theme-control">Theme <select aria-label="Color theme" value={theme} onChange={event => onChange(event.target.value as Theme)}><option value="auto">Auto</option><option value="light">Light</option><option value="dark">Dark</option></select></label>;
 }
@@ -210,9 +211,9 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     // Role silhouettes use the same species palette; interior marks distinguish
     // trophic role without implying unrecorded physiology or behavior.
     c.strokeStyle = "rgba(241,248,237,.9)";
-    c.lineWidth = Math.max(.7, Math.min(cw, ch) * .12);
+    c.lineWidth = Math.min(Math.min(cw, ch) * .18, Math.max(.8, Math.min(cw, ch) * .12));
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
-    const radius = Math.max(1.25, Math.min(cw, ch) * .34);
+    const radius = Math.min(cw, ch) * .4;
     c.beginPath();
     if (pred) {
       c.moveTo(cx + radius, cy);
@@ -236,7 +237,17 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       c.arc(cx, cy, radius, 0, Math.PI * 2);
     }
     c.fill();
+    // A cell-bounded dark under-stroke separates each role shape from resource
+    // marks and busy neighboring cells; the fine pale edge retains visibility.
+    const previousJoin = c.lineJoin;
+    c.lineJoin = "round";
+    c.strokeStyle = "#07100f";
+    c.lineWidth = Math.min(cw, ch) * .18;
     c.stroke();
+    c.strokeStyle = "rgba(241,248,237,.9)";
+    c.lineWidth = Math.min(Math.min(cw, ch) * .18, Math.max(.8, Math.min(cw, ch) * .12));
+    c.stroke();
+    c.lineJoin = previousJoin;
     if (role === "hunter" && Math.min(cw, ch) >= 7) {
       c.beginPath(); c.arc(cx - radius * .25, cy, Math.max(.65, radius * .16), 0, Math.PI * 2); c.fillStyle = "#17201b"; c.fill();
     } else if (role === "producer" && Math.min(cw, ch) >= 7) {
@@ -247,8 +258,9 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       c.save();
       c.strokeStyle = isSelected ? "#ffffff" : "#ffd36a";
       c.lineWidth = Math.max(1.4, Math.min(cw, ch) * .16);
+      const focusRadius = Math.max(1.25, Math.min(cw, ch) * .34);
       c.setLineDash(isSelected ? [] : [Math.max(1.2, cw * .22), Math.max(1, cw * .13)]);
-      c.beginPath(); c.arc(cx, cy, radius * 1.48, 0, Math.PI * 2); c.stroke(); c.restore();
+      c.beginPath(); c.arc(cx, cy, focusRadius * 1.48, 0, Math.PI * 2); c.stroke(); c.restore();
     }
     if (isSurvivingNewborn(state.generation, state.age[i], state.organismGeneration[i], state.guild[i])) {
       c.strokeStyle = "#ffffff"; c.lineWidth = 1; c.beginPath();
@@ -381,7 +393,7 @@ export function GameCanvas() {
     [paused, setPaused] = useState(false),
     [selected, setSelected] = useState<number | null>(null),
     [followed, setFollowed] = useState<number | null>(null),
-    [speed, setSpeed] = useState<1 | 3>(1),
+    [speed, setSpeed] = useState<PlaybackSpeed>("slow"),
     [ledger, setLedger] = useState<EvolutionLedger>([]),
     [deciding, setDeciding] = useState(false),
     [event, setEvent] = useState("Founders await selection"),
@@ -582,7 +594,7 @@ export function GameCanvas() {
           const next = advanceUntilDecisionTrigger(
             simulation,
             ledgerRef.current,
-            speed,
+            speed === "fast" ? 3 : 1,
             step => { if (evidenceRef.current) evidenceRef.current = observeRun(evidenceRef.current, step); },
           );
           if (next === simulation) return;
@@ -598,7 +610,7 @@ export function GameCanvas() {
           setEvent("Replay ledger verification failed");
         }
       },
-      simulation.generation === 0 ? 450 : speed === 3 ? 35 : 220,
+      speed === "slow" ? 1000 : simulation.generation === 0 ? 450 : speed === "fast" ? 35 : 220,
     );
     return () => clearTimeout(timer);
   }, [deciding, ledger, paused, simulation, speed]);
@@ -971,12 +983,13 @@ export function GameCanvas() {
           {paused ? "Resume" : "Pause"}
         </button>}
         {!complete && <button aria-label="Step one generation" disabled={!paused || deciding} onClick={stepOnce}>Step</button>}
-        <button
-          aria-label={speed === 1 ? "3× speed" : "1× speed"}
-          onClick={() => setSpeed(speed === 1 ? 3 : 1)}
-        >
-          {speed}×
-        </button>
+        <label className="playback-speed">Speed
+          <select aria-label="Playback speed" value={speed} onChange={event => setSpeed(event.target.value as PlaybackSpeed)}>
+            <option value="slow">Slow</option>
+            <option value="normal">Normal</option>
+            <option value="fast">Fast</option>
+          </select>
+        </label>
         <button onClick={() => begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined)}>{replayMode ? "Restart replay" : "Restart trial"}</button>
         {complete && <button onClick={() => { setShowResults(true); completionSeen.current = false; queueMicrotask(() => { document.getElementById("run-results")?.scrollIntoView({ block: "start" }); document.getElementById("run-results")?.focus(); }); }}>View results</button>}
         <button onClick={() => { const index = simulation.guild.findIndex(value => value > 0); if (index >= 0) { setSelected(index); setPaused(true); document.getElementById("creature-inspector")?.scrollIntoView({ behavior: "smooth", block: "start" }); } }}>Inspect living organism</button>

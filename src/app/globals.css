@@ -532,6 +532,19 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .simulation-shell .timeline-empty strong,
 .simulation-shell .timeline-empty p { color: var(--text); }
 .simulation-shell .controls button { border-color: var(--line); color: #c9d9d4; }
+.simulation-shell .playback-speed { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border-right: 1px solid var(--line); color: #c9d9d4; font: 14px/1.4 var(--mp-font); }
+.simulation-shell .playback-speed select { min-height: 44px; min-width: 88px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--ink); color: #c9d9d4; color-scheme: dark; font: inherit; cursor: pointer; }
+.simulation-shell .playback-speed select:focus-visible { outline: 2px solid var(--mint); outline-offset: -3px; }
+@media (max-width: 1000px) {
+  /* Keep the world readable: compact horizontal chrome, not the 44px targets. */
+  .simulation-shell .controls button { min-width: 44px; padding-inline: 6px; }
+  .simulation-shell .playback-speed { gap: 6px; padding-inline: 6px; }
+}
+@media (max-width: 395px) {
+  .simulation-shell { row-gap: 6px; }
+  .simulation-shell .controls button { padding-inline: 2px; font-size: 12px; }
+  .simulation-shell .playback-speed { gap: 4px; padding-inline: 4px; }
+}
 .simulation-shell .controls button:hover,
 .simulation-shell .controls button[aria-pressed="true"] { color: var(--mint); background: rgba(121, 235, 195, .08); }
 .simulation-shell .creature-inspector button { border-color: #496b57; color: #eeffd9; background: #102b20; }

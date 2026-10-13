@@ -10,6 +10,8 @@ Review the proposed resources, hazard, species roles and food web before selecti
 
 ## Observe a generation
 
+Playback starts at **Slow**, targeting one generation per second. Use the **Speed** selector to choose Normal or Fast when you want to move through the run more quickly. Speed changes timing only; it does not change the world rules or replayed result.
+
 Watch population, resources and the generation counter. Pause before selecting a living organism in the Creature Inspector. Follow its family to examine lineage context, or use the World Observatory for aggregate measurements. Resume to watch what changes. Selection observes the world; it does not change its rules.
 
 The deterministic engine owns movement, feeding, reproduction, mutation and death. Jev can propose only bounded, validated choices. A fallback or abstention is not a live model decision. The run ends at extinction or its observation horizon; completion is not proof that your idea succeeded.
