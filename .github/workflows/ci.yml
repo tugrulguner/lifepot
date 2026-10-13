@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  checks:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -23,5 +23,37 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Test discovery imports embedded guides before Playwright starts Next.js.
+      - run: npm run predev
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: npm run test:e2e -- --shard="$PLAYWRIGHT_SHARD/2"
+        env:
+          PLAYWRIGHT_SHARD: ${{ matrix.shard }}
+
+  # Keep the existing check name and fail closed on a failed/skipped dependency.
+  verify:
+    if: ${{ always() }}
+    needs: [checks, browser]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Require all verification jobs to succeed
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+        run: test "$CHECKS_RESULT" = success && test "$BROWSER_RESULT" = success
