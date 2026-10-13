@@ -211,9 +211,9 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     // Role silhouettes use the same species palette; interior marks distinguish
     // trophic role without implying unrecorded physiology or behavior.
     c.strokeStyle = "rgba(241,248,237,.9)";
-    c.lineWidth = Math.max(.7, Math.min(cw, ch) * .12);
+    c.lineWidth = Math.max(.8, Math.min(cw, ch) * .12);
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
-    const radius = Math.max(1.25, Math.min(cw, ch) * .34);
+    const radius = Math.min(cw, ch) * .4;
     c.beginPath();
     if (pred) {
       c.moveTo(cx + radius, cy);
@@ -237,6 +237,13 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       c.arc(cx, cy, radius, 0, Math.PI * 2);
     }
     c.fill();
+    // A cell-bounded dark under-stroke separates each role shape from resource
+    // marks and busy neighboring cells; the fine pale edge retains visibility.
+    c.strokeStyle = "#07100f";
+    c.lineWidth = Math.max(1, Math.min(cw, ch) * .18);
+    c.stroke();
+    c.strokeStyle = "rgba(241,248,237,.9)";
+    c.lineWidth = Math.max(.8, Math.min(cw, ch) * .12);
     c.stroke();
     if (role === "hunter" && Math.min(cw, ch) >= 7) {
       c.beginPath(); c.arc(cx - radius * .25, cy, Math.max(.65, radius * .16), 0, Math.PI * 2); c.fillStyle = "#17201b"; c.fill();
@@ -248,8 +255,9 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       c.save();
       c.strokeStyle = isSelected ? "#ffffff" : "#ffd36a";
       c.lineWidth = Math.max(1.4, Math.min(cw, ch) * .16);
+      const focusRadius = Math.max(1.25, Math.min(cw, ch) * .34);
       c.setLineDash(isSelected ? [] : [Math.max(1.2, cw * .22), Math.max(1, cw * .13)]);
-      c.beginPath(); c.arc(cx, cy, radius * 1.48, 0, Math.PI * 2); c.stroke(); c.restore();
+      c.beginPath(); c.arc(cx, cy, focusRadius * 1.48, 0, Math.PI * 2); c.stroke(); c.restore();
     }
     if (isSurvivingNewborn(state.generation, state.age[i], state.organismGeneration[i], state.guild[i])) {
       c.strokeStyle = "#ffffff"; c.lineWidth = 1; c.beginPath();

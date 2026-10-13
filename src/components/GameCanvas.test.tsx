@@ -139,6 +139,34 @@ test("theme repaint while paused preserves every engine field and deterministic 
   expect(fullState(stepSimulation(engine))).toBe(expectedNext);
 });
 
+test("mobile organism marks draw a bounded dark halo and a larger role silhouette", () => {
+  vi.stubGlobal("scrollTo", vi.fn());
+  const organismStrokes: Array<{ color: string; width: number }> = [];
+  const arcRadii: number[] = [];
+  const cellPitch = (318 - 36) / 50;
+  const context = {
+    setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn((_x: number, _y: number, radius: number) => { arcRadii.push(radius); }), fill: vi.fn(),
+    stroke: vi.fn(function (this: CanvasRenderingContext2D) { organismStrokes.push({ color: this.strokeStyle as string, width: this.lineWidth }); }),
+    save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1,
+  };
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 318, bottom: 318, width: 318, height: 318, toJSON() {} });
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+  render(<GameCanvas />);
+  fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
+  fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
+
+  const roleEdges = organismStrokes.filter(stroke => stroke.color === "#07100f");
+  const speciesEdges = organismStrokes.filter(stroke => stroke.color === "rgba(241,248,237,.9)");
+  expect(roleEdges.length).toBeGreaterThan(0);
+  expect(speciesEdges.length).toBeGreaterThan(0);
+  expect(roleEdges[0].width).toBeCloseTo(cellPitch * .18, 1);
+  expect(speciesEdges[0].width).toBe(Math.max(.8, cellPitch * .12));
+  expect(arcRadii.some(radius => Math.abs(radius - cellPitch * .4) < .01)).toBe(true);
+  expect(cellPitch * .4 + roleEdges[0].width / 2).toBeLessThan(cellPitch / 2);
+});
+
 test("reviews a separate fixed-rule baseline without auto-seeding or losing private context", async () => {
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
   vi.stubGlobal("ResizeObserver",class { observe() {} disconnect() {} });
