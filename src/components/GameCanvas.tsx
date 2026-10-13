@@ -297,7 +297,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       // family trail legible over pale habitat marks and colorful organisms.
       c.setLineDash(isSelected ? [] : [Math.max(1.2, cw * .22), Math.max(1, cw * .13)]);
       c.strokeStyle = "#07100f";
-      c.lineWidth = Math.max(2.8, Math.min(cw, ch) * .3);
+      c.lineWidth = Math.max(1, Math.min(cw, ch) * .3);
       c.beginPath(); c.arc(cx, cy, focusRadius, 0, Math.PI * 2); c.stroke();
       c.strokeStyle = isSelected ? "#ffffff" : "#ffd36a";
       c.lineWidth = Math.max(1.5, Math.min(cw, ch) * .17);
