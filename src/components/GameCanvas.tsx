@@ -244,20 +244,20 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       c.quadraticCurveTo(cx + radius * .08, cy + radius * .64, cx + radius, cy);
       c.closePath();
     } else if (role === "scavenger") {
-      // Three joined body segments create a chunky articulated silhouette.
-      c.moveTo(cx - radius, cy - radius * .5); c.lineTo(cx + radius * .45, cy - radius * .5);
-      c.arc(cx + radius * .45, cy, radius * .5, -Math.PI / 2, Math.PI / 2);
-      c.lineTo(cx - radius, cy + radius * .5); c.arc(cx - radius, cy, radius * .5, Math.PI / 2, -Math.PI / 2);
-      c.closePath();
+      // Three distinct, overlapping body plates; each is a bounded subpath.
+      for (let segment = 0; segment < 3; segment++) {
+        const sx = cx + (segment - 1) * radius * .48;
+        c.moveTo(sx + radius * .29, cy);
+        c.ellipse(sx, cy, radius * .29, radius * .36, 0, 0, Math.PI * 2);
+      }
     } else if (role === "omnivore") {
-      // Broad three-lobed clover: neither a rosette nor a plain grazer orb.
+      // Three independent round lobes make a clover without connector strokes.
       for (let lobe = 0; lobe < 3; lobe++) {
         const a = -Math.PI / 2 + lobe * Math.PI * 2 / 3;
-        const px = cx + Math.cos(a) * radius * .54, py = cy + Math.sin(a) * radius * .54;
-        if (!lobe) c.moveTo(px + radius * .44, py);
-        c.arc(px, py, radius * .44, 0, Math.PI * 2);
+        const px = cx + Math.cos(a) * radius * .38, py = cy + Math.sin(a) * radius * .38;
+        c.moveTo(px + radius * .34, py);
+        c.arc(px, py, radius * .34, 0, Math.PI * 2);
       }
-      c.closePath();
     } else {
       // Grazer remains a soft, broad capsule as the visual counterpoint.
       c.ellipse(cx, cy, radius * .88, radius * .68, 0, 0, Math.PI * 2);
@@ -994,6 +994,7 @@ export function GameCanvas() {
         <span><b className="role-key role-omnivore" />Omnivore clover</span>
         <span>Coral chevrons = local hazard intensity</span>
         <span>White ring = selected · dashed gold ring = followed family</span>
+        <span>White = birth · gold = feeding · red = death</span>
         <span>Color = species in observatory</span>
       </div>
       <div className="ticker">
