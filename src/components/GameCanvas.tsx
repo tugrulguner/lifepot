@@ -55,6 +55,7 @@ import { GameplayObservation } from "./GameplayObservation";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
 import { setupFidelitySchema, setupFailureSchema, setupNamedIntentSchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity, type SetupFailure, type SetupNamedIntent } from "@/game/setup-review";
 import { speciesColor } from "@/game/species-colors";
+import { organismPath, traceOrganism } from "@/game/organism-glyphs";
 import { gameplayAnalytics } from "@/app/gameplay-analytics";
 import { isSurvivingNewborn, relationshipLabel, triggerLabel } from "@/game/visuals";
 export type LifePotViewModel = {
@@ -189,7 +190,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     if (r > 0.08) {
       // Small, cell-centered resource beads read as a field, not as organisms.
       // Their area and opacity encode the existing resource amount only.
-      c.globalAlpha = .24 + r * .58;
+      c.globalAlpha = .12 + r * .32;
       c.fillStyle = "#83d99a";
       c.beginPath();
       c.arc(cx, cy, Math.max(.55, Math.min(cw, ch) * (.08 + r * .2)), 0, Math.PI * 2);
@@ -199,7 +200,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     if (hazard > .025) {
       // A compact coral chevron is distinct from circular resources and keeps
       // the established semantic hazard palette at narrow mobile cell pitches.
-      c.globalAlpha = .3 + hazard * .6;
+      c.globalAlpha = .14 + hazard * .3;
       c.strokeStyle = "#ff806d";
       c.lineWidth = Math.max(.55, Math.min(cw, ch) * .12);
       c.beginPath();
@@ -224,44 +225,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     c.strokeStyle = "rgba(241,248,237,.94)";
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
     const radius = Math.min(cw, ch) * .44;
-    c.beginPath();
-    if (role === "producer") {
-      // Six broad rounded leaves form an unmistakable rosette at tiny pitch.
-      for (let petal = 0; petal < 6; petal++) {
-        const a = petal * Math.PI / 3;
-        const ux = Math.cos(a), uy = Math.sin(a), px = -uy, py = ux;
-        const tipX = cx + ux * radius, tipY = cy + uy * radius;
-        if (!petal) c.moveTo(cx + px * radius * .28, cy + py * radius * .28);
-        c.quadraticCurveTo(cx + ux * radius * .7 + px * radius * .42, cy + uy * radius * .7 + py * radius * .42, tipX, tipY);
-        c.quadraticCurveTo(cx + ux * radius * .7 - px * radius * .42, cy + uy * radius * .7 - py * radius * .42, cx + px * radius * .28, cy + py * radius * .28);
-      }
-      c.closePath();
-    } else if (role === "hunter") {
-      // A long, forward-pointed spindle, distinct from the rounded guilds.
-      c.moveTo(cx + radius, cy);
-      c.quadraticCurveTo(cx + radius * .08, cy - radius * .64, cx - radius, cy - radius * .42);
-      c.quadraticCurveTo(cx - radius * .7, cy, cx - radius, cy + radius * .42);
-      c.quadraticCurveTo(cx + radius * .08, cy + radius * .64, cx + radius, cy);
-      c.closePath();
-    } else if (role === "scavenger") {
-      // Three distinct, overlapping body plates; each is a bounded subpath.
-      for (let segment = 0; segment < 3; segment++) {
-        const sx = cx + (segment - 1) * radius * .48;
-        c.moveTo(sx + radius * .29, cy);
-        c.ellipse(sx, cy, radius * .29, radius * .36, 0, 0, Math.PI * 2);
-      }
-    } else if (role === "omnivore") {
-      // Three independent round lobes make a clover without connector strokes.
-      for (let lobe = 0; lobe < 3; lobe++) {
-        const a = -Math.PI / 2 + lobe * Math.PI * 2 / 3;
-        const px = cx + Math.cos(a) * radius * .38, py = cy + Math.sin(a) * radius * .38;
-        c.moveTo(px + radius * .34, py);
-        c.arc(px, py, radius * .34, 0, Math.PI * 2);
-      }
-    } else {
-      // Grazer remains a soft, broad capsule as the visual counterpoint.
-      c.ellipse(cx, cy, radius * .88, radius * .68, 0, 0, Math.PI * 2);
-    }
+    traceOrganism(c, role, cx, cy, radius);
     c.fill();
     const previousJoin = c.lineJoin;
     c.lineJoin = "round";
@@ -989,9 +953,7 @@ export function GameCanvas() {
       </aside>
       <div className="legend">
         <span><i className="resource-key" />Resource field</span>
-        <span><b className="role-key role-producer" />Producer rosette</span><span><b className="role-key role-grazer" />Grazer capsule</span>
-        <span><b className="role-key role-scavenger" />Scavenger segments</span><span><b className="role-key role-hunter" />Hunter spindle</span>
-        <span><b className="role-key role-omnivore" />Omnivore clover</span>
+        {(["producer", "grazer", "scavenger", "hunter", "omnivore"] as const).map(role => <span key={role}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><path d={organismPath(role)} fill="#a9d878" stroke="#f1f8ed" strokeWidth="2" strokeLinejoin="round" /></svg>{({ producer: "Producer rosette", grazer: "Grazer capsule", scavenger: "Scavenger segments", hunter: "Hunter spindle", omnivore: "Omnivore clover" })[role]}</span>) }
         <span>Coral chevrons = local hazard intensity</span>
         <span>White ring = selected · dashed gold ring = followed family</span>
         <span>White = birth · gold = feeding · red = death</span>
