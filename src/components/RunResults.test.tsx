@@ -31,10 +31,14 @@ it("renders an accessible, compact observation summary without treating survivor
   expect(screen.getByLabelText("Whole-run population history").tagName.toLowerCase()).toBe("svg");
   expect(screen.getByText("Generation measurements")).toBeInTheDocument();
   expect(screen.getByRole("table").closest("details")).not.toHaveAttribute("open");
-  expect(screen.getByRole("navigation", { name: "Run actions" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Inspect final world" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Edit this world" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "New world" })).toBeInTheDocument();
+  const actions = screen.getByRole("navigation", { name: "Run actions" });
+  expect(actions).toBeInTheDocument();
+  expect(actions.compareDocumentPosition(screen.getByRole("heading", { name: "Observation complete" })) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+  expect(actions.compareDocumentPosition(screen.getByRole("list", { name: "Observed outcomes" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.getAllByRole("button", { name: "Inspect final world" })).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: "Replay this run" })).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: "Edit this world" })).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: "New world" })).toHaveLength(1);
 });
 
 it("retains the first observed species-extinction generation in completed results", () => {
