@@ -185,16 +185,28 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     const x = i % 50,
       y = Math.floor(i / 50),
       r = state.resources[i] / 255;
+    const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
     if (r > 0.08) {
-      c.globalAlpha = 0.1 + r * 0.3;
+      // Small, cell-centered resource beads read as a field, not as organisms.
+      // Their area and opacity encode the existing resource amount only.
+      c.globalAlpha = .24 + r * .58;
       c.fillStyle = "#83d99a";
-      c.fillRect(pad + x * cw + cw * .2, pad + y * ch + ch * .2, Math.max(1, cw * .58), Math.max(1, ch * .58));
+      c.beginPath();
+      c.arc(cx, cy, Math.max(.55, Math.min(cw, ch) * (.08 + r * .2)), 0, Math.PI * 2);
+      c.fill();
     }
     const hazard = state.hazards[i] / 255;
     if (hazard > .025) {
-      c.globalAlpha = .12 + hazard * .34;
-      c.fillStyle = "#ff806d";
-      c.fillRect(pad + x * cw + cw * .72, pad + y * ch + ch * .1, Math.max(1, cw * .18), Math.max(1, ch * .8));
+      // A compact coral chevron is distinct from circular resources and keeps
+      // the established semantic hazard palette at narrow mobile cell pitches.
+      c.globalAlpha = .3 + hazard * .6;
+      c.strokeStyle = "#ff806d";
+      c.lineWidth = Math.max(.55, Math.min(cw, ch) * .12);
+      c.beginPath();
+      const d = Math.min(cw, ch) * .22;
+      c.moveTo(cx - d, cy - d); c.lineTo(cx, cy + d);
+      c.lineTo(cx + d, cy - d);
+      c.stroke();
     }
   }
   c.globalAlpha = 1;
@@ -965,11 +977,11 @@ export function GameCanvas() {
       <div className="legend">
         <span>
           <i className="resource-key" />
-          Resource
+          Resource beads
         </span>
         <span>⬡ Producer</span><span>○ Grazer</span><span>□ Scavenger</span>
         <span>▷ Hunter</span><span>◇ Omnivore</span>
-        <span>Coral marks = local hazard intensity</span>
+        <span>Coral chevrons = local hazard intensity</span>
         <span>White ring = selected · dashed gold ring = followed family</span>
         <span>White = birth · gold pulse = feeding · red cross = death</span>
         <span>Color = species in observatory</span>
