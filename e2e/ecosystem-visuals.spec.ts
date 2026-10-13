@@ -19,8 +19,8 @@ for(const width of [1280,390])for(const theme of ['Light','Dark'])test(`readable
   CanvasRenderingContext2D.prototype.stroke=function(path?:Path2D){
    const radius=radii.get(this);
    const bounds=this.canvas.getBoundingClientRect();
-   const ringRadius=Math.max(1.25,Math.min(bounds.width-36,bounds.height-36)/50*.34)*1.48;
-   if(radius!==undefined&&Math.abs(radius-ringRadius)<.001&&this.lineWidth>=1.3&&(this.strokeStyle==='#ffffff'||this.strokeStyle==='#ffd36a'))window.ringDraws.push({color:String(this.strokeStyle),width:this.lineWidth,dash:this.getLineDash(),radius});
+   const ringRadius=Math.min(bounds.width-36,bounds.height-36)/50*.32;
+   if(radius!==undefined&&Math.abs(radius-ringRadius)<.001&&this.lineWidth>=1.3&&['#07100f','#ffffff','#ffd36a'].includes(String(this.strokeStyle)))window.ringDraws.push({color:String(this.strokeStyle),width:this.lineWidth,dash:this.getLineDash(),radius});
    return path?originalStroke.call(this,path):(originalStroke as ()=>void).call(this);
   };
  });
@@ -38,6 +38,7 @@ for(const width of [1280,390])for(const theme of ['Light','Dark'])test(`readable
  await expect(page.getByRole('img',{name:/role symbol/})).toBeVisible();
  await expect(page.getByRole('meter',{name:'Organism energy'})).toBeVisible();
  if(phase==='after'){
+  await expect.poll(()=>page.evaluate(()=>window.ringDraws.some(r=>r.color==='#07100f'&&r.dash.length===0))).toBe(true);
   await expect.poll(()=>page.evaluate(()=>window.ringDraws.some(r=>r.color==='#ffffff'&&r.dash.length===0))).toBe(true);
   await page.locator('canvas.life-canvas').screenshot({path:join(dir,key+'-selected.png')});
  }
@@ -45,6 +46,7 @@ for(const width of [1280,390])for(const theme of ['Light','Dark'])test(`readable
  await page.evaluate(()=>{window.ringDraws=[];});
  await page.getByRole('button',{name:'Clear inspection',exact:true}).click();
  if(phase==='after'){
+  await expect.poll(()=>page.evaluate(()=>window.ringDraws.some(r=>r.color==='#07100f'&&r.dash.length===2&&r.dash.every(v=>v>0)))).toBe(true);
   await expect.poll(()=>page.evaluate(()=>window.ringDraws.some(r=>r.color==='#ffd36a'&&r.dash.length===2&&r.dash.every(v=>v>0)))).toBe(true);
   expect(await page.evaluate(()=>window.ringDraws.some(r=>r.color==='#ffffff'))).toBe(false);
   writeFileSync(join(dir,key+'-rings.json'),JSON.stringify(await page.evaluate(()=>window.ringDraws),null,2));

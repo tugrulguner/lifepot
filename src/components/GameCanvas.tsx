@@ -260,19 +260,49 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     c.lineWidth = Math.min(Math.min(cw, ch) * .18, Math.max(.8, Math.min(cw, ch) * .12));
     c.stroke();
     c.lineJoin = previousJoin;
-    if (role === "hunter" && Math.min(cw, ch) >= 7) {
-      c.beginPath(); c.arc(cx - radius * .25, cy, Math.max(.65, radius * .16), 0, Math.PI * 2); c.fillStyle = "#17201b"; c.fill();
-    } else if (role === "producer" && Math.min(cw, ch) >= 7) {
-      c.beginPath(); c.arc(cx, cy, Math.max(.6, radius * .2), 0, Math.PI * 2); c.fillStyle = "#17201b"; c.fill();
+    // Role-specific interior motifs give the small silhouettes a second
+    // recognition cue. They are intentionally abstract marks, not anatomy.
+    if (Math.min(cw, ch) >= 7) {
+      const detail = Math.max(.65, radius * .16);
+      c.save();
+      c.fillStyle = "#17201b";
+      c.strokeStyle = "#17201b";
+      c.lineWidth = Math.max(.65, radius * .14);
+      if (role === "hunter") {
+        c.beginPath(); c.arc(cx - radius * .22, cy, detail, 0, Math.PI * 2); c.fill();
+      } else if (role === "producer") {
+        c.beginPath(); c.arc(cx, cy, detail, 0, Math.PI * 2); c.fill();
+        for (const side of [-1, 1]) {
+          c.beginPath(); c.moveTo(cx + side * radius * .56, cy - radius * .3);
+          c.lineTo(cx + side * radius * .56, cy + radius * .3); c.stroke();
+        }
+      } else if (role === "grazer") {
+        c.beginPath(); c.arc(cx, cy, detail * .72, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.moveTo(cx - radius * .35, cy + radius * .28);
+        c.lineTo(cx + radius * .35, cy + radius * .28); c.stroke();
+      } else if (role === "scavenger") {
+        c.beginPath(); c.moveTo(cx - radius * .3, cy); c.lineTo(cx + radius * .3, cy);
+        c.moveTo(cx, cy - radius * .3); c.lineTo(cx, cy + radius * .3); c.stroke();
+      } else if (role === "omnivore") {
+        c.beginPath(); c.arc(cx, cy, detail * .7, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.moveTo(cx - radius * .34, cy); c.lineTo(cx + radius * .34, cy); c.stroke();
+      }
+      c.restore();
     }
     if (i === selected || state.lineage[i] === followed) {
       const isSelected = i === selected;
       c.save();
-      c.strokeStyle = isSelected ? "#ffffff" : "#ffd36a";
-      c.lineWidth = Math.max(1.4, Math.min(cw, ch) * .16);
-      const focusRadius = Math.max(1.25, Math.min(cw, ch) * .34);
+      const focusRadius = Math.min(cw, ch) * .32;
+      // A dark contrast keyline keeps both the solid selection and dashed
+      // family trail legible over pale habitat marks and colorful organisms.
       c.setLineDash(isSelected ? [] : [Math.max(1.2, cw * .22), Math.max(1, cw * .13)]);
-      c.beginPath(); c.arc(cx, cy, focusRadius * 1.48, 0, Math.PI * 2); c.stroke(); c.restore();
+      c.strokeStyle = "#07100f";
+      c.lineWidth = Math.max(2.8, Math.min(cw, ch) * .3);
+      c.beginPath(); c.arc(cx, cy, focusRadius, 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = isSelected ? "#ffffff" : "#ffd36a";
+      c.lineWidth = Math.max(1.5, Math.min(cw, ch) * .17);
+      c.beginPath(); c.arc(cx, cy, focusRadius, 0, Math.PI * 2); c.stroke();
+      c.restore();
     }
     if (isSurvivingNewborn(state.generation, state.age[i], state.organismGeneration[i], state.guild[i])) {
       c.strokeStyle = "#ffffff"; c.lineWidth = 1; c.beginPath();
