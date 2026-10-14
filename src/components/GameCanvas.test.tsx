@@ -103,9 +103,10 @@ test("seeds gameplay when analytics capture throws", () => {
   expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
 });
 
-test("theme repaint while paused preserves every engine field and deterministic continuation", async () => {
+test.each([false, true])("theme repaint preserves every engine field and continuation (sprites: %s)", async (sprites) => {
   vi.stubGlobal("scrollTo", vi.fn());
-  const context = { setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1 };
+  if (sprites) vi.stubGlobal("Path2D", class { moveTo() {} lineTo() {} closePath() {} });
+  const context = { setTransform: vi.fn(), translate: vi.fn(), drawImage: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), quadraticCurveTo: vi.fn(), ellipse: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1 };
   const contextCalls = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
   // jsdom has no layout; provide a drawable board for repaint assertions.
   vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
@@ -127,9 +128,12 @@ test("theme repaint while paused preserves every engine field and deterministic 
   for (const choice of ["light", "dark", "auto"]) {
     const paintsBeforeThemeMutation = contextCalls.mock.calls.length;
     const paintedCells = context.fillRect.mock.calls.length;
+    const paintedSprites = context.drawImage.mock.calls.length;
     fireEvent.change(theme, { target: { value: choice } });
     await waitFor(() => expect(contextCalls.mock.calls.length).toBeGreaterThan(paintsBeforeThemeMutation));
     expect(context.fillRect.mock.calls.length).toBeGreaterThan(paintedCells);
+    if (sprites) expect(context.drawImage.mock.calls.length).toBeGreaterThan(paintedSprites);
+    else expect(context.drawImage).not.toHaveBeenCalled();
     expect(context.arc).toHaveBeenCalled();
     expect(context.createRadialGradient).toHaveBeenCalled();
     expect(context.lineTo).toHaveBeenCalled();
@@ -139,13 +143,36 @@ test("theme repaint while paused preserves every engine field and deterministic 
   expect(fullState(stepSimulation(engine))).toBe(expectedNext);
 });
 
+test("reuses DPR-sized role sprites for populated organism cells", () => {
+  vi.stubGlobal("scrollTo", vi.fn());
+  class TestPath2D {
+    moveTo() {} lineTo() {} closePath() {}
+  }
+  vi.stubGlobal("Path2D", TestPath2D);
+  const context = { setTransform: vi.fn(), translate: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), arc: vi.fn(), fill: vi.fn(), drawImage: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1, lineJoin: "miter" };
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+  render(<GameCanvas />);
+  fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
+  fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
+
+  const population = captured.at(-1)!.guild.reduce((count, guild) => count + Number(Boolean(guild)), 0);
+  expect(population).toBeGreaterThan(1);
+  const drawnSprites = context.drawImage.mock.calls.map(call => call[0]);
+  expect(drawnSprites).toHaveLength(population);
+  expect(new Set(drawnSprites).size).toBeLessThan(population);
+  expect(drawnSprites.every(sprite => sprite instanceof HTMLCanvasElement)).toBe(true);
+});
+
 test.each([180, 240, 318, 600])("organism marks stay cell-bounded on a %ipx board", (boardSize) => {
   vi.stubGlobal("scrollTo", vi.fn());
   const organismStrokes: Array<{ color: string; width: number }> = [];
   const arcRadii: number[] = [];
   const cellPitch = (boardSize - 36) / 50;
   const context = {
-    setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn((_x: number, _y: number, radius: number) => { arcRadii.push(radius); }), fill: vi.fn(),
+    setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), quadraticCurveTo: vi.fn(), ellipse: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn((_x: number, _y: number, radius: number) => { arcRadii.push(radius); }), fill: vi.fn(),
     stroke: vi.fn(function (this: CanvasRenderingContext2D) { organismStrokes.push({ color: this.strokeStyle as string, width: this.lineWidth }); }),
     save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1,
   };
@@ -158,14 +185,13 @@ test.each([180, 240, 318, 600])("organism marks stay cell-bounded on a %ipx boar
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
 
   const roleEdges = organismStrokes.filter(stroke => stroke.color === "#07100f");
-  const speciesEdges = organismStrokes.filter(stroke => stroke.color === "rgba(241,248,237,.9)");
+  const speciesEdges = organismStrokes.filter(stroke => stroke.color === "rgba(241,248,237,.94)");
   expect(roleEdges.length).toBeGreaterThan(0);
   expect(speciesEdges.length).toBeGreaterThan(0);
-  expect(roleEdges[0].width).toBeCloseTo(cellPitch * .18, 1);
-  expect(speciesEdges[0].width).toBeLessThanOrEqual(cellPitch * .18);
-  expect(arcRadii.some(radius => Math.abs(radius - cellPitch * .4) < .01)).toBe(true);
-  expect(cellPitch * .4 + roleEdges[0].width / 2).toBeLessThan(cellPitch / 2);
-  expect(cellPitch * .4 + speciesEdges[0].width / 2).toBeLessThan(cellPitch / 2);
+  expect(roleEdges[0].width).toBeCloseTo(cellPitch * .07, 4);
+  expect(speciesEdges[0].width).toBeCloseTo(cellPitch * .035, 4);
+  expect(cellPitch * .44 + roleEdges[0].width / 2).toBeLessThan(cellPitch / 2);
+  expect(cellPitch * .44 + speciesEdges[0].width / 2).toBeLessThan(cellPitch / 2);
 });
 
 test("reviews a separate fixed-rule baseline without auto-seeding or losing private context", async () => {

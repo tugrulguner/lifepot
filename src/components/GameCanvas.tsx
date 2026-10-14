@@ -55,6 +55,7 @@ import { GameplayObservation } from "./GameplayObservation";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
 import { setupFidelitySchema, setupFailureSchema, setupNamedIntentSchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity, type SetupFailure, type SetupNamedIntent } from "@/game/setup-review";
 import { speciesColor } from "@/game/species-colors";
+import { organismPath, organismSprite, traceOrganism } from "@/game/organism-glyphs";
 import { gameplayAnalytics } from "@/app/gameplay-analytics";
 import { isSurvivingNewborn, relationshipLabel, triggerLabel } from "@/game/visuals";
 export type LifePotViewModel = {
@@ -185,86 +186,62 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     const x = i % 50,
       y = Math.floor(i / 50),
       r = state.resources[i] / 255;
+    const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
     if (r > 0.08) {
-      c.globalAlpha = 0.1 + r * 0.3;
+      // Small, cell-centered resource beads read as a field, not as organisms.
+      // Their area and opacity encode the existing resource amount only.
+      c.globalAlpha = .12 + r * .32;
       c.fillStyle = "#83d99a";
-      c.fillRect(pad + x * cw + cw * .2, pad + y * ch + ch * .2, Math.max(1, cw * .58), Math.max(1, ch * .58));
+      c.beginPath();
+      c.arc(cx, cy, Math.max(.55, Math.min(cw, ch) * (.08 + r * .2)), 0, Math.PI * 2);
+      c.fill();
     }
     const hazard = state.hazards[i] / 255;
     if (hazard > .025) {
-      c.globalAlpha = .12 + hazard * .34;
-      c.fillStyle = "#ff806d";
-      c.fillRect(pad + x * cw + cw * .72, pad + y * ch + ch * .1, Math.max(1, cw * .18), Math.max(1, ch * .8));
+      // A compact coral chevron is distinct from circular resources and keeps
+      // the established semantic hazard palette at narrow mobile cell pitches.
+      c.globalAlpha = .14 + hazard * .3;
+      c.strokeStyle = "#ff806d";
+      c.lineWidth = Math.max(.55, Math.min(cw, ch) * .12);
+      c.beginPath();
+      const d = Math.min(cw, ch) * .22;
+      c.moveTo(cx - d, cy - d); c.lineTo(cx, cy + d);
+      c.lineTo(cx + d, cy - d);
+      c.stroke();
     }
   }
   c.globalAlpha = 1;
   for (let i = 0; i < state.guild.length; i++) {
     if (!state.guild[i]) continue;
     c.globalAlpha = focusedSpecies && state.config.rules?.species[state.ruleSpecies[i] - 1]?.id !== focusedSpecies ? .15 : 1;
-    const x = i % 50,
-      y = Math.floor(i / 50),
-      role = state.config.rules?.species[state.ruleSpecies[i] - 1]?.role,
-      pred = role === "hunter";
-    c.fillStyle = speciesColor(
-      state.config.rules?.species[state.ruleSpecies[i] - 1]?.id ?? "",
-    );
-    // Role silhouettes use the same species palette; interior marks distinguish
-    // trophic role without implying unrecorded physiology or behavior.
-    c.strokeStyle = "rgba(241,248,237,.9)";
-    c.lineWidth = Math.min(Math.min(cw, ch) * .18, Math.max(.8, Math.min(cw, ch) * .12));
+    const x = i % GRID_SIZE, y = Math.floor(i / GRID_SIZE), species = state.config.rules?.species[state.ruleSpecies[i] - 1];
+    const pitch = Math.min(cw, ch), color = speciesColor(species?.id ?? "");
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
-    const radius = Math.min(cw, ch) * .4;
-    c.beginPath();
-    if (pred) {
-      c.moveTo(cx + radius, cy);
-      c.lineTo(cx - radius, cy - radius * .82);
-      c.lineTo(cx - radius, cy + radius * .82);
-      c.closePath();
-    } else if (role === "omnivore") {
-      c.moveTo(cx, cy - radius); c.lineTo(cx + radius, cy);
-      c.lineTo(cx, cy + radius); c.lineTo(cx - radius, cy); c.closePath();
-    } else if (role === "producer") {
-      for (let side = 0; side < 6; side++) {
-        const angle = Math.PI / 3 * side - Math.PI / 6;
-        const px = cx + radius * Math.cos(angle), py = cy + radius * Math.sin(angle);
-        if (side === 0) c.moveTo(px, py);
-        else c.lineTo(px, py);
-      }
-      c.closePath();
-    } else if (role === "scavenger") {
-      c.rect(cx - radius * .8, cy - radius * .8, radius * 1.6, radius * 1.6);
-    } else {
-      c.arc(cx, cy, radius, 0, Math.PI * 2);
-    }
-    c.fill();
-    // A cell-bounded dark under-stroke separates each role shape from resource
-    // marks and busy neighboring cells; the fine pale edge retains visibility.
-    const previousJoin = c.lineJoin;
-    c.lineJoin = "round";
-    c.strokeStyle = "#07100f";
-    c.lineWidth = Math.min(cw, ch) * .18;
-    c.stroke();
-    c.strokeStyle = "rgba(241,248,237,.9)";
-    c.lineWidth = Math.min(Math.min(cw, ch) * .18, Math.max(.8, Math.min(cw, ch) * .12));
-    c.stroke();
-    c.lineJoin = previousJoin;
-    if (role === "hunter" && Math.min(cw, ch) >= 7) {
-      c.beginPath(); c.arc(cx - radius * .25, cy, Math.max(.65, radius * .16), 0, Math.PI * 2); c.fillStyle = "#17201b"; c.fill();
-    } else if (role === "producer" && Math.min(cw, ch) >= 7) {
-      c.beginPath(); c.arc(cx, cy, Math.max(.6, radius * .2), 0, Math.PI * 2); c.fillStyle = "#17201b"; c.fill();
+    const sprite = organismSprite(species?.role, color, pitch, dpr);
+    if (sprite) c.drawImage(sprite, cx - pitch / 2, cy - pitch / 2, pitch, pitch);
+    else {
+      c.fillStyle = color; traceOrganism(c, species?.role, cx, cy, pitch * .44); c.fill();
+      const previousJoin = c.lineJoin; c.lineJoin = "round";
+      c.strokeStyle = "#07100f"; c.lineWidth = pitch * .07; c.stroke();
+      c.strokeStyle = "rgba(241,248,237,.94)"; c.lineWidth = pitch * .035; c.stroke(); c.lineJoin = previousJoin;
     }
     if (i === selected || state.lineage[i] === followed) {
       const isSelected = i === selected;
       c.save();
-      c.strokeStyle = isSelected ? "#ffffff" : "#ffd36a";
-      c.lineWidth = Math.max(1.4, Math.min(cw, ch) * .16);
-      const focusRadius = Math.max(1.25, Math.min(cw, ch) * .34);
+      const focusRadius = pitch * .32;
+      // A dark contrast keyline keeps both the solid selection and dashed
+      // family trail legible over pale habitat marks and colorful organisms.
       c.setLineDash(isSelected ? [] : [Math.max(1.2, cw * .22), Math.max(1, cw * .13)]);
-      c.beginPath(); c.arc(cx, cy, focusRadius * 1.48, 0, Math.PI * 2); c.stroke(); c.restore();
+      c.strokeStyle = "#07100f";
+      c.lineWidth = Math.max(1, pitch * .3);
+      c.beginPath(); c.arc(cx, cy, focusRadius, 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = isSelected ? "#ffffff" : "#ffd36a";
+      c.lineWidth = Math.max(1.5, pitch * .17);
+      c.beginPath(); c.arc(cx, cy, focusRadius, 0, Math.PI * 2); c.stroke();
+      c.restore();
     }
     if (isSurvivingNewborn(state.generation, state.age[i], state.organismGeneration[i], state.guild[i])) {
-      c.strokeStyle = "#ffffff"; c.lineWidth = 1; c.beginPath();
-      c.arc(pad + (x + .5) * cw, pad + (y + .5) * ch, Math.min(cw, ch) * .62, 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = "#ffffff"; c.lineWidth = 1; c.beginPath(); c.arc(cx, cy, pitch * .62, 0, Math.PI * 2); c.stroke();
     }
   }
   for(const event of effects){
@@ -963,15 +940,11 @@ export function GameCanvas() {
         </details>
       </aside>
       <div className="legend">
-        <span>
-          <i className="resource-key" />
-          Resource
-        </span>
-        <span>⬡ Producer</span><span>○ Grazer</span><span>□ Scavenger</span>
-        <span>▷ Hunter</span><span>◇ Omnivore</span>
-        <span>Coral marks = local hazard intensity</span>
+        <span><i className="resource-key" />Resource field</span>
+        {(["producer", "grazer", "scavenger", "hunter", "omnivore"] as const).map(role => <span key={role}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><path d={organismPath(role)} fill="#a9d878" stroke="#f1f8ed" strokeWidth="2" strokeLinejoin="round" /></svg>{({ producer: "Producer rosette", grazer: "Grazer capsule", scavenger: "Scavenger segments", hunter: "Hunter spindle", omnivore: "Omnivore clover" })[role]}</span>) }
+        <span>Coral chevrons = local hazard intensity</span>
         <span>White ring = selected · dashed gold ring = followed family</span>
-        <span>White = birth · gold pulse = feeding · red cross = death</span>
+        <span>White = birth · gold = feeding · red = death</span>
         <span>Color = species in observatory</span>
       </div>
       <div className="ticker">

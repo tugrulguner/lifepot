@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createSimulation } from "./world";
 import { buildResultImageModel, drawResultImage } from "./result-image";
 import { defaultConfig } from "./setup";
+import { organismContours, type OrganismRole } from "./organism-glyphs";
+import { SPECIES_IDS, SPECIES_PAIRS, validateRuleGraph } from "./rules";
 
 describe("buildResultImageModel", () => {
   it("summarizes actual final board cells, living species and resources", () => {
@@ -55,5 +57,33 @@ describe("buildResultImageModel", () => {
     expect(model.totalBirths).toBe(12);
     expect(calls.some(call => call[0] === "fillText" && call[1] === "https://lifepot.modepot.io" && Number(call[3]) > 900)).toBe(true);
     expect(model.width).toBe(1600);
+  });
+
+  it("draws shared glyph contours for every role across valid two-to-four-species graphs", () => {
+    const roleCases: OrganismRole[][] = [["producer", "grazer", "scavenger", "hunter"], ["omnivore", "producer"]];
+    for (const [caseIndex, roles] of roleCases.entries()) {
+      const state = createSimulation({ seed: 7 + caseIndex, config: defaultConfig() });
+      state.config.rules!.species = roles.map((role, index) => ({ id: SPECIES_IDS[index], role, selfInteraction: "neutral" as const }));
+      const ids = SPECIES_IDS.slice(0, roles.length);
+      state.config.rules!.interactions = SPECIES_PAIRS.filter(pair => pair.split(":").every(id => ids.some(expected => expected === id))).map(pair => ({ pair, mode: "neutral" as const }));
+      validateRuleGraph(state.config.rules);
+      state.guild.fill(0); state.ruleSpecies.fill(0);
+      roles.forEach((_, index) => { state.guild[index] = 1; state.ruleSpecies[index] = index + 1; });
+      const model = buildResultImageModel(state, "", "ended");
+      const calls: Array<[string, ...unknown[]]> = [];
+      const ctx = new Proxy({ measureText: (text: string) => ({ width: text.length * 10 }) }, { get(target, key) { if (key in target) return target[key as keyof typeof target]; return (...args: unknown[]) => calls.push([String(key), ...args]); }, set(_target, key, value) { calls.push([`set:${String(key)}`, value]); return true; } }) as unknown as CanvasRenderingContext2D;
+      drawResultImage(ctx, model);
+
+      const pitch = 720 / 50, radius = pitch * .44;
+      const hasPoint = (method: string, x: number, y: number) => calls.some(call => call[0] === method && Math.abs(Number(call[1]) - x) < 1e-9 && Math.abs(Number(call[2]) - y) < 1e-9);
+      roles.forEach((role, index) => {
+        const cx = 72 + index * pitch + pitch / 2, cy = 160 + pitch / 2;
+        for (const contour of organismContours(role)) {
+          const first = contour[0];
+          expect(hasPoint("moveTo", cx + first[0] * radius, cy + first[1] * radius)).toBe(true);
+          for (const point of contour.slice(1)) expect(hasPoint("lineTo", cx + point[0] * radius, cy + point[1] * radius)).toBe(true);
+        }
+      });
+    }
   });
 });
