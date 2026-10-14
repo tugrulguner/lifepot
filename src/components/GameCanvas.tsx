@@ -55,7 +55,7 @@ import { GameplayObservation } from "./GameplayObservation";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
 import { setupFidelitySchema, setupFailureSchema, setupNamedIntentSchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity, type SetupFailure, type SetupNamedIntent } from "@/game/setup-review";
 import { speciesColor } from "@/game/species-colors";
-import { organismPath, traceOrganism } from "@/game/organism-glyphs";
+import { organismPath, organismSprite, traceOrganism } from "@/game/organism-glyphs";
 import { gameplayAnalytics } from "@/app/gameplay-analytics";
 import { isSurvivingNewborn, relationshipLabel, triggerLabel } from "@/game/visuals";
 export type LifePotViewModel = {
@@ -214,46 +214,34 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   for (let i = 0; i < state.guild.length; i++) {
     if (!state.guild[i]) continue;
     c.globalAlpha = focusedSpecies && state.config.rules?.species[state.ruleSpecies[i] - 1]?.id !== focusedSpecies ? .15 : 1;
-    const x = i % 50,
-      y = Math.floor(i / 50),
-      role = state.config.rules?.species[state.ruleSpecies[i] - 1]?.role;
-    c.fillStyle = speciesColor(
-      state.config.rules?.species[state.ruleSpecies[i] - 1]?.id ?? "",
-    );
-    // Role-specific bodies are deliberately full-cell silhouettes, not tiny
-    // interior marks. Their shapes are illustrative role icons, not anatomy.
-    c.strokeStyle = "rgba(241,248,237,.94)";
+    const x = i % GRID_SIZE, y = Math.floor(i / GRID_SIZE), species = state.config.rules?.species[state.ruleSpecies[i] - 1];
+    const pitch = Math.min(cw, ch), color = speciesColor(species?.id ?? "");
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
-    const radius = Math.min(cw, ch) * .44;
-    traceOrganism(c, role, cx, cy, radius);
-    c.fill();
-    const previousJoin = c.lineJoin;
-    c.lineJoin = "round";
-    c.strokeStyle = "#07100f";
-    c.lineWidth = Math.min(cw, ch) * .07;
-    c.stroke();
-    c.strokeStyle = "rgba(241,248,237,.94)";
-    c.lineWidth = Math.min(cw, ch) * .035;
-    c.stroke();
-    c.lineJoin = previousJoin;
+    const sprite = organismSprite(species?.role, color, pitch, dpr);
+    if (sprite) c.drawImage(sprite, cx - pitch / 2, cy - pitch / 2, pitch, pitch);
+    else {
+      c.fillStyle = color; traceOrganism(c, species?.role, cx, cy, pitch * .44); c.fill();
+      const previousJoin = c.lineJoin; c.lineJoin = "round";
+      c.strokeStyle = "#07100f"; c.lineWidth = pitch * .07; c.stroke();
+      c.strokeStyle = "rgba(241,248,237,.94)"; c.lineWidth = pitch * .035; c.stroke(); c.lineJoin = previousJoin;
+    }
     if (i === selected || state.lineage[i] === followed) {
       const isSelected = i === selected;
       c.save();
-      const focusRadius = Math.min(cw, ch) * .32;
+      const focusRadius = pitch * .32;
       // A dark contrast keyline keeps both the solid selection and dashed
       // family trail legible over pale habitat marks and colorful organisms.
       c.setLineDash(isSelected ? [] : [Math.max(1.2, cw * .22), Math.max(1, cw * .13)]);
       c.strokeStyle = "#07100f";
-      c.lineWidth = Math.max(1, Math.min(cw, ch) * .3);
+      c.lineWidth = Math.max(1, pitch * .3);
       c.beginPath(); c.arc(cx, cy, focusRadius, 0, Math.PI * 2); c.stroke();
       c.strokeStyle = isSelected ? "#ffffff" : "#ffd36a";
-      c.lineWidth = Math.max(1.5, Math.min(cw, ch) * .17);
+      c.lineWidth = Math.max(1.5, pitch * .17);
       c.beginPath(); c.arc(cx, cy, focusRadius, 0, Math.PI * 2); c.stroke();
       c.restore();
     }
     if (isSurvivingNewborn(state.generation, state.age[i], state.organismGeneration[i], state.guild[i])) {
-      c.strokeStyle = "#ffffff"; c.lineWidth = 1; c.beginPath();
-      c.arc(pad + (x + .5) * cw, pad + (y + .5) * ch, Math.min(cw, ch) * .62, 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = "#ffffff"; c.lineWidth = 1; c.beginPath(); c.arc(cx, cy, pitch * .62, 0, Math.PI * 2); c.stroke();
     }
   }
   for(const event of effects){

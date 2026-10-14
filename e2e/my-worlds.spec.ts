@@ -177,6 +177,10 @@ test("return visit exposes saved history and restores archived highlights, child
   const resultsShelf = page.getByRole("region", { name: "My Worlds — browser-local saves" });
   await resultsShelf.getByRole("listitem").filter({ hasText: "Follow-up to Pond notebook. Changed conditions:" }).getByRole("button", { name: "Reopen and replay" }).click();
   await expect(page.getByRole("region", { name: "Run status" })).toContainText("Experiment: Follow-up pond");
+  // The saved name updates before the asynchronous parent lookup starts replay.
+  // Do not mistake the preceding world's still-visible results for completion.
+  await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Run results" })).toBeHidden();
   await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole("region", { name: "Previous trial comparison" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Previous trial comparison" })).toContainText("Changed conditions");
