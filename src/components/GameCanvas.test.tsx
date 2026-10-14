@@ -44,6 +44,37 @@ function renderPresetForPlayback() {
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
 }
 
+test("camera zoom, follow and reset leave the paused engine unchanged", () => {
+  renderPresetForPlayback();
+  fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+  const engine = captured.at(-1)!;
+  const before = JSON.stringify(engine), next = JSON.stringify(stepSimulation(engine));
+  fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+  expect(document.querySelector(".life-canvas")).toHaveAttribute("data-camera-zoom", "1.5");
+  fireEvent.click(screen.getByRole("button", { name: "Inspect a living organism" }));
+  fireEvent.click(screen.getByRole("button", { name: "Follow organism with camera" }));
+  expect(document.querySelector(".life-canvas")).toHaveAttribute("data-camera-follow", "organism");
+  fireEvent.click(screen.getByRole("button", { name: "Full world" }));
+  expect(document.querySelector(".life-canvas")).toHaveAttribute("data-camera-zoom", "1");
+  expect(document.querySelector(".life-canvas")).toHaveAttribute("data-camera-follow", "none");
+  expect(JSON.stringify(engine)).toBe(before);
+  expect(JSON.stringify(stepSimulation(engine))).toBe(next);
+});
+
+test("camera releases a dead organism and allows a new manual view", () => {
+  renderPresetForPlayback();
+  fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+  fireEvent.click(screen.getByRole("button", { name: "Inspect a living organism" }));
+  fireEvent.click(screen.getByRole("button", { name: "Follow organism with camera" }));
+  const step = screen.getByRole("button", { name: "Step one generation" });
+  const board = document.querySelector(".life-canvas")!;
+  for (let i = 0; i < 180 && board.getAttribute("data-camera-follow") === "organism"; i++) fireEvent.click(step);
+  expect(screen.getByText(/Organism #\d+ is no longer living/)).toBeInTheDocument();
+  expect(board).toHaveAttribute("data-camera-zoom", "1");
+  fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+  expect(board).toHaveAttribute("data-camera-zoom", "1.5");
+});
+
 test("default playback leaves a full second to observe each generation", () => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   renderPresetForPlayback();
@@ -106,7 +137,7 @@ test("seeds gameplay when analytics capture throws", () => {
 test.each([false, true])("theme repaint preserves every engine field and continuation (sprites: %s)", async (sprites) => {
   vi.stubGlobal("scrollTo", vi.fn());
   if (sprites) vi.stubGlobal("Path2D", class { moveTo() {} lineTo() {} closePath() {} });
-  const context = { setTransform: vi.fn(), translate: vi.fn(), drawImage: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), quadraticCurveTo: vi.fn(), ellipse: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1 };
+  const context = { clip: vi.fn(), setTransform: vi.fn(), translate: vi.fn(), drawImage: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), quadraticCurveTo: vi.fn(), ellipse: vi.fn(), closePath: vi.fn(), rect: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1 };
   const contextCalls = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
   // jsdom has no layout; provide a drawable board for repaint assertions.
   vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
@@ -123,6 +154,19 @@ test.each([false, true])("theme repaint preserves every engine field and continu
   const fullState = (state: SimulationState) => JSON.stringify(state);
   const before = fullState(engine);
   const expectedNext = fullState(stepSimulation(engine));
+  const board = document.querySelector("canvas.life-canvas")!;
+  for (const action of [
+    () => fireEvent.click(screen.getByRole("button", { name: "Zoom in" })),
+    () => fireEvent.keyDown(board, { key: "ArrowRight", shiftKey: true }),
+    () => { fireEvent.click(screen.getByRole("button", { name: "Inspect a living organism" })); fireEvent.click(screen.getByRole("button", { name: "Follow organism with camera" })); },
+  ]) {
+    const draws = context.fillRect.mock.calls.length;
+    action();
+    expect(context.fillRect.mock.calls.length).toBeGreaterThan(draws);
+    expect(fullState(engine)).toBe(before);
+    expect(fullState(stepSimulation(engine))).toBe(expectedNext);
+  }
+  expect(context.clip).toHaveBeenCalled();
 
   const theme = screen.getByRole("combobox", { name: "Color theme" });
   for (const choice of ["light", "dark", "auto"]) {
@@ -149,7 +193,7 @@ test("reuses DPR-sized role sprites for populated organism cells", () => {
     moveTo() {} lineTo() {} closePath() {}
   }
   vi.stubGlobal("Path2D", TestPath2D);
-  const context = { setTransform: vi.fn(), translate: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), arc: vi.fn(), fill: vi.fn(), drawImage: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1, lineJoin: "miter" };
+  const context = { clip: vi.fn(), rect: vi.fn(), setTransform: vi.fn(), translate: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), arc: vi.fn(), fill: vi.fn(), drawImage: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1, lineJoin: "miter" };
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
   vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
@@ -164,6 +208,10 @@ test("reuses DPR-sized role sprites for populated organism cells", () => {
   expect(drawnSprites).toHaveLength(population);
   expect(new Set(drawnSprites).size).toBeLessThan(population);
   expect(drawnSprites.every(sprite => sprite instanceof HTMLCanvasElement)).toBe(true);
+  const originalSize = (drawnSprites[0] as HTMLCanvasElement).width;
+  context.drawImage.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+  expect((context.drawImage.mock.calls[0][0] as HTMLCanvasElement).width).toBeGreaterThan(originalSize);
 });
 
 test.each([180, 240, 318, 600])("organism marks stay cell-bounded on a %ipx board", (boardSize) => {

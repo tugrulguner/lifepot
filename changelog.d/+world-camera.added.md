@@ -1,0 +1,1 @@
+Add bounded 1×–3× camera zoom, mouse and opt-in touch panning, keyboard camera controls, and identity-based organism or pinned-family tracking. Preserve deterministic simulation and replay state, full-world result exports, and near-board inspection/extinction context.

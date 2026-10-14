@@ -42,6 +42,14 @@ The Creature Inspector sits directly below the board's species-focus controls. I
 
 The World Observatory summarizes population, prey/predator counts, births, deaths, kills, resources, species richness, lineages, and the recent ecological history. These are aggregate simulation counters, not estimates of real-world populations. The decision ledger records accepted evolution decisions and their evidence/source. A fallback entry is not Jev evidence.
 
+## Explore with the camera
+
+Camera controls sit below the inspector so species controls and extinction notes remain beside the board. Zoom from 1× to 3×, drag with a mouse while zoomed, or choose Full world to reset. On touch screens, enable Drag to pan before dragging the board; turn it off to scroll the page over the board. A tap without a drag still pauses and inspects the selected cell. With the board focused, +/− changes zoom, Shift+arrow keys pan, and 0 resets. Ordinary arrow-key inspection remains available.
+
+Inspect a living organism and choose Follow organism to track its identity as it moves. Pin a founder lineage in the inspector, then choose Follow pinned family to track that family's oldest living member. When that member dies, family tracking moves to the oldest survivor; it does not claim to frame the entire family. Crossing a wrapping edge moves the camera to the opposite side. The view stays within world bounds, so organisms near an edge need not be centered. If the organism dies, the family becomes extinct, or its pin changes, the full world returns with an explanation. Stop camera follow or manual panning releases camera tracking without removing the lineage pin.
+
+Camera changes do not alter rules, organisms, random state or replay outcomes. Pause and theme changes preserve the view; restarting or replaying starts at full-world view. Exported result images continue to show the full world rather than the camera crop.
+
 ## Read outcomes without overclaiming
 
 A simulation can finish as `extinct`, `surviving`, or `thriving`. Extinction means the simulated population reached zero; `thriving` is an engine-defined end state, not a biological judgment. Runs stop at generation 180 at the latest. The world may end earlier if it becomes extinct.

@@ -789,4 +789,16 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .my-worlds li { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .7rem 0; border-top: 1px solid var(--line, #cbd5d1); }
 .my-worlds-import input[type=file] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .my-worlds button { min-height: 2.5rem; }
+/* Camera tools live below the habitat, never over organisms or playback. */
+.simulation-shell { grid-template-areas: "stats stats" "controls controls" "board observation" "focus-controls observatory" "inspector observatory" "camera observatory" "focus observatory" "legend observatory" "status observatory" "event observatory" "decision observatory" "result result"; }
+.camera-tools { grid-area: camera; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); background: var(--panel); font-size: 12px; }
+.camera-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.camera-buttons + .camera-buttons { margin-top: 6px; }
+.camera-tools button { min-width: 44px; min-height: 44px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--ink); color: var(--text); cursor: pointer; }
+.camera-tools button:disabled { opacity: .45; cursor: default; }
+.camera-tools button[aria-pressed="true"] { outline: 2px solid var(--mint); }
+.camera-tools button:focus-visible, .camera-tools summary:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.camera-tools p { margin: 8px 0; overflow-wrap: anywhere; }
+.camera-tools summary { min-height: 44px; padding-block: 12px; cursor: pointer; }
+@media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "observation" "board" "focus-controls" "inspector" "camera" "focus" "status" "legend" "observatory" "decision" "event" "result"; } }
 @media(max-width:700px) { .overview-hero,.overview-mechanism,.overview-more { width:calc(100% - 40px); } .overview-hero { min-height:0; grid-template-columns:1fr; gap:18px; padding:54px 0 44px; } .overview-copy h1 { font-size:clamp(43px,12vw,64px); } .overview-copy>p:not(.overview-kicker,.overview-credit) { font-size:16px; } .overview-lockup { width:min(100%,480px); margin:0 auto; } .overview-actions { gap:17px; } .overview-mechanism { grid-template-columns:1fr; gap:25px; padding:38px 0 48px; } .my-worlds li { align-items:stretch; } }
