@@ -4,7 +4,7 @@ import type { SimulationState } from "@/game/world";
 import { ruleTimingLabel, selectedChangeLabel, conciseChangeLabel } from "@/game/council-display";
 import { speciesColor } from "@/game/species-colors";
 
-export function GameplayObservation({ state, evidence, followed, decision, names, worldName }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string }) {
+export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string }) {
   const rules = state.config.rules!;
   const counts = rules.species.map((species, index) => ({
     species,
@@ -35,6 +35,7 @@ export function GameplayObservation({ state, evidence, followed, decision, names
       {followed === null ? <span>No founder lineage followed</span> : <span>Following lineage #{followed} · {familyCount ? `${familyCount} living ${familyCount === 1 ? "member" : "members"}` : "No living members"}</span>}
     </div>
     {latest.length > 0 && <p role="status" aria-label="Latest retained extinction">{latest.map(item => `Generation ${item.generation}: ${item.text}`).join(" · ")}</p>}
+    {cameraUpdate && <p role="status" aria-label="Camera update">{cameraUpdate}</p>}
     <div className="intervention-status" aria-label="Intervention status">
       {decision ? <>
         <span>{conciseChangeLabel(decision, state.engineVersion)}</span>
