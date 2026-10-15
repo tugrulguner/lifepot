@@ -108,46 +108,68 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   expect(errors).toEqual([]);
 });
 
-for (const width of [1280, 390]) test(`camera releases a naturally lost target and resets for completed replay at ${width}px`, async ({ page }) => {
-  await page.setViewportSize({ width, height: 850 });
-  const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
-  let inference = 0; await page.route("**/api/judge", route => { inference++; return route.abort(); });
-  await page.goto("/play");
-  await page.getByRole("button", { name: "Explore deterministic preset" }).click();
-  await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
-  await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  await page.getByRole("button", { name: "Pause", exact: true }).click();
-  await page.getByRole("button", { name: "Inspect a living organism", exact: true }).click();
-  await page.getByRole("button", { name: "Follow organism with camera" }).click();
-  await page.getByLabel("Playback speed").selectOption("normal");
-  await page.getByRole("button", { name: "Resume", exact: true }).click();
-  const board = page.locator("canvas.life-canvas");
-  await expect(page.getByRole("status", { name: "Camera update" })).toContainText(/Organism #\d+ is no longer living/);
-  await expect(page.getByRole("status", { name: "Camera update" })).toBeVisible();
-  await expectWatchingView(page);
-  await expect(board).toHaveAttribute("data-camera-follow", "none");
-  await expect(board).toHaveAttribute("data-camera-zoom", "1");
-  await page.getByRole("button", { name: "Zoom in", exact: true }).click();
-  await expect(board).toHaveAttribute("data-camera-zoom", "1.5");
-  await page.getByRole("button", { name: "Pause", exact: true }).click();
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  // Completion checks replay/camera reset, not decorative-animation throughput.
-  await completeWithRealSteps(page);
-  await expect(page.getByRole("region", { name: "Run results", exact: true })).toBeVisible();
-  const result = page.getByRole("region", { name: "Run results", exact: true });
-  const endpoint = await result.getByText(/^Observed through generation/).textContent();
-  const totals = (await result.innerText()).match(/cumulative births: \d+; deaths: \d+; kills: \d+/)?.[0];
-  expect(totals).toBeTruthy();
-  await page.getByRole("button", { name: "Replay this run", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Run results", exact: true })).toHaveCount(0);
-  await expect(board).toHaveAttribute("data-camera-zoom", "1");
-  await expect(board).toHaveAttribute("data-camera-follow", "none");
-  await page.getByRole("button", { name: "Pause", exact: true }).click();
-  await completeWithRealSteps(page);
-  await expect(page.getByRole("region", { name: "Run results", exact: true })).toBeVisible();
-  await expect(result.getByText(/^Observed through generation/)).toHaveText(endpoint!);
-  expect(await result.innerText()).toContain(totals!);
-  expect(inference).toBe(0); expect(errors).toEqual([]);
+for (const width of [1280, 390]) test.describe.serial(`linked camera completion at ${width}px`, () => {
+  // These cases intentionally share the actual browser/world. Sharding keeps
+  // the serial group together; retries restart the group and its first run.
+  let page: Page;
+  let endpoint: string;
+  let totals: string;
+  let inference = 0;
+  const errors: string[] = [];
+  test.beforeAll(async ({ browser }, testInfo) => {
+    page = await browser.newPage({ baseURL: testInfo.project.use.baseURL, viewport: { width, height: 850 } });
+    page.on("pageerror", error => errors.push(error.message));
+    await page.route("**/api/judge", route => { inference++; return route.abort(); });
+  });
+  test.afterAll(async () => { await page?.close(); });
+
+  test("fresh run releases its lost target and starts replay from visible results", async () => {
+    await page.goto("/play");
+    await page.getByRole("button", { name: "Explore deterministic preset" }).click();
+    await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
+    await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+    await page.getByRole("button", { name: "Inspect a living organism", exact: true }).click();
+    await page.getByRole("button", { name: "Follow organism with camera" }).click();
+    await page.getByLabel("Playback speed").selectOption("normal");
+    await page.getByRole("button", { name: "Resume", exact: true }).click();
+    const board = page.locator("canvas.life-canvas");
+    await expect(page.getByRole("status", { name: "Camera update" })).toContainText(/Organism #\d+ is no longer living/);
+    await expect(page.getByRole("status", { name: "Camera update" })).toBeVisible();
+    await expectWatchingView(page);
+    await expect(board).toHaveAttribute("data-camera-follow", "none");
+    await expect(board).toHaveAttribute("data-camera-zoom", "1");
+    await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+    await expect(board).toHaveAttribute("data-camera-zoom", "1.5");
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await completeWithRealSteps(page);
+    const result = page.getByRole("region", { name: "Run results", exact: true });
+    await expect(result).toBeVisible();
+    endpoint = (await result.getByText(/^Observed through generation/).textContent())!;
+    totals = (await result.innerText()).match(/cumulative births: \d+; deaths: \d+; kills: \d+/)?.[0] ?? "";
+    expect(endpoint).toBeTruthy(); expect(totals).toBeTruthy();
+    await page.getByRole("button", { name: "Replay this run", exact: true }).click();
+    await expect(result).toHaveCount(0);
+    await expect(board).toHaveAttribute("data-camera-zoom", "1");
+    await expect(board).toHaveAttribute("data-camera-follow", "none");
+    await expectWatchingView(page);
+    await page.getByRole("button", { name: "Pause", exact: true }).click();
+    expect(inference).toBe(0); expect(errors).toEqual([]);
+  });
+
+  test("the same replay completes with identical outcomes and no inference", async () => {
+    // No navigation, reconstruction, fixture substitution or state injection.
+    await expect(page.getByRole("region", { name: "Run status", exact: true })).toContainText("Exact recorded replay");
+    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Run results", exact: true })).toHaveCount(0);
+    await completeWithRealSteps(page);
+    const result = page.getByRole("region", { name: "Run results", exact: true });
+    await expect(result).toBeVisible();
+    await expect(result.getByText(/^Observed through generation/)).toHaveText(endpoint);
+    expect(await result.innerText()).toContain(totals);
+    expect(inference).toBe(0); expect(errors).toEqual([]);
+  });
 });
 
 test("touch panning is opt-in and does not inspect a dragged cell", async ({ browser }) => {
