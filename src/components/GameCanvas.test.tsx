@@ -61,6 +61,36 @@ test("camera zoom, follow and reset leave the paused engine unchanged", () => {
   expect(JSON.stringify(stepSimulation(engine))).toBe(next);
 });
 
+test.each(["clear", "switch"])("family camera stays released after %s then re-pinning the old family", (mode) => {
+  renderPresetForPlayback();
+  fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+  fireEvent.click(screen.getByRole("button", { name: "Inspect a living organism" }));
+  const originalPin = screen.getByRole("button", { name: /Follow founder lineage/ }).textContent!;
+  const engine = captured.at(-1)!;
+  const before = JSON.stringify(engine), continuation = JSON.stringify(stepSimulation(engine));
+  fireEvent.click(screen.getByRole("button", { name: originalPin }));
+  fireEvent.click(screen.getByRole("button", { name: "Follow pinned family with camera" }));
+  const board = document.querySelector(".life-canvas")!;
+  expect(board).toHaveAttribute("data-camera-follow", "family");
+  if (mode === "clear") fireEvent.click(screen.getByRole("button", { name: "Stop following" }));
+  else {
+    const state = captured.at(-1)!;
+    const first = state.guild.findIndex(Boolean), family = state.lineage[first];
+    const second = state.guild.findIndex((alive, i) => !!alive && state.lineage[i] !== family);
+    fireEvent.keyDown(board, { key: "ArrowRight" });
+    // Select a different existing founder through the actual arrow handler.
+    for (let i = first + 1; i < second; i++) fireEvent.keyDown(board, { key: "ArrowRight" });
+    fireEvent.click(screen.getByRole("button", { name: /Follow founder lineage/ }));
+  }
+  expect(board).toHaveAttribute("data-camera-follow", "none");
+  fireEvent.click(screen.getByRole("button", { name: "Inspect a living organism" }));
+  fireEvent.click(screen.getByRole("button", { name: originalPin }));
+  expect(board).toHaveAttribute("data-camera-follow", "none");
+  expect(board).toHaveAttribute("data-camera-zoom", "1");
+  expect(JSON.stringify(engine)).toBe(before);
+  expect(JSON.stringify(stepSimulation(engine))).toBe(continuation);
+});
+
 test("camera releases a dead organism and allows a new manual view", () => {
   renderPresetForPlayback();
   fireEvent.click(screen.getByRole("button", { name: "Pause" }));
@@ -69,7 +99,7 @@ test("camera releases a dead organism and allows a new manual view", () => {
   const step = screen.getByRole("button", { name: "Step one generation" });
   const board = document.querySelector(".life-canvas")!;
   for (let i = 0; i < 180 && board.getAttribute("data-camera-follow") === "organism"; i++) fireEvent.click(step);
-  expect(screen.getByText(/Organism #\d+ is no longer living/)).toBeInTheDocument();
+  expect(screen.getByRole("status", { name: "Camera update" })).toHaveTextContent(/Organism #\d+ is no longer living/);
   expect(board).toHaveAttribute("data-camera-zoom", "1");
   fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
   expect(board).toHaveAttribute("data-camera-zoom", "1.5");

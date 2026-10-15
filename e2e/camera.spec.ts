@@ -1,4 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function expectWatchingView(page: Page) {
+  await expect.poll(() => page.evaluate(() => {
+    const board = document.querySelector('canvas.life-canvas')!.getBoundingClientRect();
+    const header = document.querySelector('.family-header')!.getBoundingClientRect();
+    return board.top >= header.bottom && board.bottom <= innerHeight - 12;
+  })).toBe(true);
+}
 import { mkdir } from "node:fs/promises";
 
 for (const width of [1280, 390]) test(`camera transforms inspection and follows identities at ${width}px`, async ({ page }, testInfo) => {
@@ -17,6 +25,7 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   const gen = await page.getByTestId("generation").textContent();
   await camera.getByRole("button", { name: "Zoom in", exact: true }).click();
   await expect(board).toHaveAttribute("data-camera-zoom", "1.5");
+  await expectWatchingView(page);
   await page.getByRole("button", { name: "Inspect a living organism", exact: true }).click();
   const inspector = page.getByRole("region", { name: "Creature inspector" });
   const identity = await inspector.getByText(/^Organism #\d+$/).textContent();
@@ -26,7 +35,7 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   // Click the rendered selected cell through the inverse camera transform.
   const position = (await inspector.innerText()).match(/\((\d+), (\d+)\)/);
   expect(position).not.toBeNull();
-  await board.scrollIntoViewIfNeeded();
+  await expectWatchingView(page);
   const bounds = (await board.boundingBox())!;
   const zoom = Number(await board.getAttribute("data-camera-zoom"));
   const x = Number(await board.getAttribute("data-camera-x")), y = Number(await board.getAttribute("data-camera-y"));
@@ -39,9 +48,22 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   await camera.getByRole("button", { name: "Follow pinned family with camera" }).click();
   await expect(board).toHaveAttribute("data-camera-follow", "family");
   await expect(camera.locator('p[role="status"]')).toContainText("oldest living member");
-  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await expectWatchingView(page);
+  const pinLabel = await inspector.getByRole("button", { name: /Follow founder lineage/ }).textContent();
+  await inspector.getByRole("button", { name: "Stop following", exact: true }).click();
+  await expect(board).toHaveAttribute("data-camera-follow", "none");
+  await inspector.getByRole("button", { name: pinLabel!, exact: true }).click();
+  await expect(board).toHaveAttribute("data-camera-follow", "none");
+  await expect(board).toHaveAttribute("data-camera-zoom", "1");
+  await camera.getByRole("button", { name: "Follow pinned family with camera" }).click();
+  await expectWatchingView(page);
+  // Deliberate scrolling after the action must not be undone by later paints.
+  await page.evaluate(() => window.scrollTo(0, 120));
+  const deliberateScroll = await page.evaluate(() => scrollY);
+  await page.getByRole("button", { name: "Resume", exact: true }).evaluate((button: HTMLButtonElement) => button.click());
   await expect.poll(() => page.getByTestId("generation").textContent()).not.toBe(gen);
   await expect(board).toHaveAttribute("data-camera-follow", "family");
+  expect(await page.evaluate(() => scrollY)).toBe(deliberateScroll);
   await board.scrollIntoViewIfNeeded();
   await mkdir(testInfo.outputDir, { recursive: true });
   await page.screenshot({ path: testInfo.outputPath(`camera-running-${width}.png`) });
@@ -70,7 +92,8 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   expect(errors).toEqual([]);
 });
 
-test("camera releases a naturally lost target and resets for completed replay", async ({ page }) => {
+for (const width of [1280, 390]) test(`camera releases a naturally lost target and resets for completed replay at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 850 });
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   let inference = 0; await page.route("**/api/judge", route => { inference++; return route.abort(); });
   await page.goto("/play");
@@ -83,7 +106,9 @@ test("camera releases a naturally lost target and resets for completed replay", 
   await page.getByLabel("Playback speed").selectOption("normal");
   await page.getByRole("button", { name: "Resume", exact: true }).click();
   const board = page.locator("canvas.life-canvas");
-  await expect(page.getByText(/Organism #\d+ is no longer living/)).toBeVisible();
+  await expect(page.getByRole("status", { name: "Camera update" })).toContainText(/Organism #\d+ is no longer living/);
+  await expect(page.getByRole("status", { name: "Camera update" })).toBeVisible();
+  await expectWatchingView(page);
   await expect(board).toHaveAttribute("data-camera-follow", "none");
   await expect(board).toHaveAttribute("data-camera-zoom", "1");
   await page.getByRole("button", { name: "Zoom in", exact: true }).click();

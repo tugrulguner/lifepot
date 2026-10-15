@@ -263,10 +263,18 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   }
   c.globalAlpha=1;
 }
-function World({ state, selected, followed, focusedSpecies, onInspect }: { state: SimulationState; selected: number | null; followed: number | null; focusedSpecies: SpeciesId | null; onInspect: (index: number) => void }) {
+function World({ state, selected, followed, focusedSpecies, onInspect, onCameraUpdate }: { state: SimulationState; selected: number | null; followed: number | null; focusedSpecies: SpeciesId | null; onInspect: (index: number) => void; onCameraUpdate: (message: string) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [camera, setCamera] = useState<Camera>(NEUTRAL_CAMERA);
   const [target, setTarget] = useState<FollowTarget | null>(null);
+  const [releasedNotice, setReleasedNotice] = useState("");
+  // A changed pin revokes camera authority, rather than temporarily masking it.
+  // Guarded local render adjustment prevents a re-pin from reviving the target.
+  if (target?.kind === "family" && target.id !== followed) {
+    setTarget(null);
+    setCamera(NEUTRAL_CAMERA);
+    setReleasedNotice("Family pin changed. Full world restored.");
+  }
   const [dragEnabled, setDragEnabled] = useState(false);
   const drag = useRef<{ id: number; x: number; y: number; start: Camera; moved: boolean } | null>(null);
   const suppressClick = useRef(false);
@@ -274,10 +282,15 @@ function World({ state, selected, followed, focusedSpecies, onInspect }: { state
   const tracked = validTarget ? followCamera(camera, state, validTarget) : null;
   const view = target ? tracked ?? NEUTRAL_CAMERA : camera;
   const lost = !!target && !tracked;
-  const zoom = (delta: number) => { if (lost) setTarget(null); setCamera(boundCamera({ ...view, zoom: view.zoom + delta })); };
-  const pan = (x: number, y: number) => { setTarget(null); setCamera(boundCamera({ ...view, x: view.x + x, y: view.y + y })); };
-  const reset = () => { setTarget(null); setCamera(NEUTRAL_CAMERA); setDragEnabled(false); };
-  const follow = (next: FollowTarget) => { setCamera({ ...view, zoom: Math.max(2, view.zoom) }); setTarget(next); };
+  const cameraUpdate = lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Full world restored.` : "Family pin changed. Full world restored." : releasedNotice;
+  useEffect(() => onCameraUpdate(cameraUpdate), [cameraUpdate, onCameraUpdate]);
+  // Only deliberate panel actions return to the watching view. Engine ticks,
+  // target loss, resize and theme changes must preserve later user scrolling.
+  const returnToWorld = () => { window.scrollTo(0, 0); ref.current?.focus({ preventScroll: true }); };
+  const zoom = (delta: number) => { setReleasedNotice(""); if (lost) setTarget(null); setCamera(boundCamera({ ...view, zoom: view.zoom + delta })); };
+  const pan = (x: number, y: number) => { setReleasedNotice(""); setTarget(null); setCamera(boundCamera({ ...view, x: view.x + x, y: view.y + y })); };
+  const reset = () => { setReleasedNotice(""); setTarget(null); setCamera(NEUTRAL_CAMERA); setDragEnabled(false); };
+  const follow = (next: FollowTarget) => { setReleasedNotice(""); setCamera({ ...view, zoom: Math.max(2, view.zoom) }); setTarget(next); };
   const effects=useRef<TimedOrganismEvent[]>([]),last=useRef<SimulationState|null>(null);
   useEffect(() => {
     const canvas = ref.current;
@@ -370,24 +383,25 @@ function World({ state, selected, followed, focusedSpecies, onInspect }: { state
     />
     <section className="camera-tools" aria-label="World camera">
       <div className="camera-buttons">
-        <button aria-label="Zoom out" disabled={view.zoom <= 1} onClick={() => zoom(-.5)}>−</button>
+        <button aria-label="Zoom out" disabled={view.zoom <= 1} onClick={() => { zoom(-.5); returnToWorld(); }}>−</button>
         <output aria-label="Camera zoom">{view.zoom}×</output>
-        <button aria-label="Zoom in" disabled={view.zoom >= 3} onClick={() => zoom(.5)}>+</button>
-        <button onClick={reset}>Full world</button>
-        <button aria-pressed={dragEnabled} disabled={view.zoom <= 1} onClick={() => setDragEnabled(!dragEnabled)}>Drag to pan</button>
+        <button aria-label="Zoom in" disabled={view.zoom >= 3} onClick={() => { zoom(.5); returnToWorld(); }}>+</button>
+        <button onClick={() => { reset(); returnToWorld(); }}>Full world</button>
+        <button aria-pressed={dragEnabled} disabled={view.zoom <= 1} onClick={() => { setDragEnabled(!dragEnabled); returnToWorld(); }}>Drag to pan</button>
       </div>
       <div className="camera-buttons">
-        <button aria-label="Follow organism with camera" disabled={selected === null || !state.guild[selected]} onClick={() => { if (selected !== null && state.guild[selected]) follow({ kind: "organism", id: state.organismId[selected] }); }}>Follow organism</button>
-        <button aria-label="Follow pinned family with camera" disabled={followed === null || !state.lineage.some((id, i) => id === followed && !!state.guild[i])} onClick={() => { if (followed !== null) follow({ kind: "family", id: followed }); }}>Follow pinned family</button>
-        {target && <button onClick={() => { setCamera(view); setTarget(null); }}>Stop camera follow</button>}
+        <button aria-label="Follow organism with camera" disabled={selected === null || !state.guild[selected]} onClick={() => { if (selected !== null && state.guild[selected]) { follow({ kind: "organism", id: state.organismId[selected] }); returnToWorld(); } }}>Follow organism</button>
+        <button aria-label="Follow pinned family with camera" disabled={followed === null || !state.lineage.some((id, i) => id === followed && !!state.guild[i])} onClick={() => { if (followed !== null) { follow({ kind: "family", id: followed }); returnToWorld(); } }}>Follow pinned family</button>
+        {target && <button onClick={() => { setReleasedNotice(""); setCamera(view); setTarget(null); returnToWorld(); }}>Stop camera follow</button>}
       </div>
-      <p role="status">{lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Full world restored.` : "Family pin changed. Full world restored." : tracked ? `Camera follows ${validTarget!.kind} #${validTarget!.id}${validTarget!.kind === "family" ? " through its oldest living member" : ""}.` : "Camera is free. Zoom and drag to explore; the simulation is unchanged."}</p>
+      <p role="status">{lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Full world restored.` : "Family pin changed. Full world restored." : tracked ? `Camera follows ${validTarget!.kind} #${validTarget!.id}${validTarget!.kind === "family" ? " through its oldest living member" : ""}.` : releasedNotice || "Camera is free. Zoom and drag to explore; the simulation is unchanged."}</p>
       <details><summary>Camera controls</summary><p>Mouse: drag while zoomed. Touch: enable Drag to pan; turn it off to scroll the page over the board. Tap without dragging to inspect. Keyboard on the board: +/− zoom, Shift+arrows pan, 0 restores the full world. Following tracks identity through movement. At a wrapping edge the camera moves to the other side; family following switches to the oldest surviving member.</p></details>
     </section>
     </>
   );
 }
 export function GameCanvas() {
+  const [cameraUpdate, setCameraUpdate] = useState("");
   const [question, setQuestion] = useState("");
   const [initialConfig, setInitialConfig] = useState<LifeConfig | null>(null);
   const [decisionReasons, setDecisionReasons] = useState<Record<number, FailureReason>>({});
@@ -497,6 +511,7 @@ export function GameCanvas() {
         if (acceptedFollowup.current) { gameplayAnalytics.followUpAccepted(analyticsRunId, "changed_conditions"); acceptedFollowup.current = false; }
       }
       setAnswers(a);
+      setCameraUpdate("");
       setConfig(c);
       setInitialConfig(structuredClone(c));
       setDecisionReasons({});
@@ -928,9 +943,9 @@ export function GameCanvas() {
       {notice && <p className="run-notice" role="status">{notice}</p>}
       {archivedEvidence && <section className="archived-highlights" aria-label="Recorded highlights"><h2>Recorded highlights</h2><p>Validated from this saved replay; these are archived observations, not newly observed replay events.</p>{archivedEvidence.lineageExtinction.length ? <ul>{archivedEvidence.lineageExtinction.map((item, index) => <li key={`${item.lineage}-${item.generation}-${index}`}>Founder family {item.lineage} disappeared at generation {item.generation} (recorded).</li>)}</ul> : <p>No followed-family extinction milestone was recorded in this save.</p>}</section>}
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
-      <World key={arrivalRevision} state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onInspect={index => { setSelected(index); setPaused(true); }} />
+      <World key={arrivalRevision} state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onCameraUpdate={setCameraUpdate} onInspect={index => { setSelected(index); setPaused(true); }} />
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
-      <GameplayObservation worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
+      <GameplayObservation cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
       <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={lineage => {
         setFollowed(lineage);
         if (evidenceRef.current) {
