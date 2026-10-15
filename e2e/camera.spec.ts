@@ -1,5 +1,21 @@
 import { expect, test, type Page } from "@playwright/test";
 
+async function completeWithRealSteps(page: Page) {
+  const start = Number.parseInt((await page.getByTestId("generation").textContent())!, 10);
+  const step = await page.getByRole("button", { name: "Step one generation" }).elementHandle();
+  expect(step).not.toBeNull();
+  // Keep every real click/render, without two protocol round trips per tick.
+  const steps = await step!.evaluate(async button => {
+    let count = 0;
+    while (button.isConnected && count < 180) {
+      (button as HTMLButtonElement).click(); count++;
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+    }
+    return count;
+  });
+  expect(steps).toBe(180 - start);
+}
+
 async function expectWatchingView(page: Page) {
   await expect.poll(() => page.evaluate(() => {
     const board = document.querySelector('canvas.life-canvas')!.getBoundingClientRect();
@@ -115,21 +131,22 @@ for (const width of [1280, 390]) test(`camera releases a naturally lost target a
   await expect(board).toHaveAttribute("data-camera-zoom", "1.5");
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.emulateMedia({ reducedMotion: "reduce" });
-  const step = await page.getByRole("button", { name: "Step one generation" }).elementHandle();
-  expect(step).not.toBeNull();
-  // Completion here checks replay/camera reset, not wall-clock throughput.
-  // Drive the real handler and retain every intermediate engine generation.
-  for (let i = 0; i < 180 && await step!.evaluate(button => button.isConnected); i++) await step!.evaluate(button => (button as HTMLButtonElement).click());
+  // Completion checks replay/camera reset, not decorative-animation throughput.
+  await completeWithRealSteps(page);
   await expect(page.getByRole("region", { name: "Run results", exact: true })).toBeVisible();
+  const result = page.getByRole("region", { name: "Run results", exact: true });
+  const endpoint = await result.getByText(/^Observed through generation/).textContent();
+  const totals = (await result.innerText()).match(/cumulative births: \d+; deaths: \d+; kills: \d+/)?.[0];
+  expect(totals).toBeTruthy();
   await page.getByRole("button", { name: "Replay this run", exact: true }).click();
   await expect(page.getByRole("region", { name: "Run results", exact: true })).toHaveCount(0);
   await expect(board).toHaveAttribute("data-camera-zoom", "1");
   await expect(board).toHaveAttribute("data-camera-follow", "none");
   await page.getByRole("button", { name: "Pause", exact: true }).click();
-  const replayStep = await page.getByRole("button", { name: "Step one generation" }).elementHandle();
-  expect(replayStep).not.toBeNull();
-  for (let i = 0; i < 180 && await replayStep!.evaluate(button => button.isConnected); i++) await replayStep!.evaluate(button => (button as HTMLButtonElement).click());
+  await completeWithRealSteps(page);
   await expect(page.getByRole("region", { name: "Run results", exact: true })).toBeVisible();
+  await expect(result.getByText(/^Observed through generation/)).toHaveText(endpoint!);
+  expect(await result.innerText()).toContain(totals!);
   expect(inference).toBe(0); expect(errors).toEqual([]);
 });
 
