@@ -8,6 +8,7 @@
     "dev": "next dev",
     "prebuild": "node scripts/embed-learn-guides.mjs",
     "build": "next build",
+    "render:wordmark": "node scripts/render-wordmark.mjs",
     "start": "next start",
     "lint": "eslint .",
     "pretypecheck": "node scripts/embed-learn-guides.mjs",
