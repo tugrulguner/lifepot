@@ -5,7 +5,7 @@ import { HomeOverview } from "./HomeOverview";
 function overview() { const root = document.createElement("div"); root.innerHTML = renderToStaticMarkup(<HomeOverview />); return root; }
 it("keeps canonical artwork in the family hero and creator/family attribution immediately after aligned actions", () => {
   const root = overview();
-  expect(root.querySelector('.overview-hero img[src="/lifepot-lockup.png"]')).not.toBeNull();
+  expect(root.querySelector('.overview-hero img[src="/lifepot-lockup.png?v=wordmark-accent-1"]')).not.toBeNull();
   const actions = root.querySelector(".overview-actions")!;
   expect(actions.querySelector('.overview-primary[href="/play"]')).not.toBeNull();
   expect(actions.querySelector('.overview-secondary[href="/learn"]')).not.toBeNull();
