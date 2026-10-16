@@ -25,7 +25,7 @@ test("overview has first-fold Play and preserves the keyless game entry across t
     for (const theme of ["light", "dark", "auto"]) {
       await page.goto("/");
       await page.getByLabel("Color theme").selectOption(theme);
-      const play = page.locator(".overview-actions").getByRole("link", { name: "Play the game" });
+      const play = page.locator(".overview-actions").getByRole("link", { name: "Create your own world" });
       await expect(play).toHaveAttribute("href", "/play");
       const box = await play.boundingBox();
       expect(box && box.y >= 0 && box.y + box.height < 850).toBe(true);

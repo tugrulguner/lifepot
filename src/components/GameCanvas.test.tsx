@@ -7,6 +7,7 @@ import { listWorlds } from "@/game/my-worlds";
 import { stepSimulation, type SimulationState } from "@/game/world";
 import { defaultConfig } from "@/game/setup";
 import { GameCanvas } from "./GameCanvas";
+import example from "../../public/example-world.json";
 
 const { captured, advanced } = vi.hoisted(() => ({ captured: [] as SimulationState[], advanced: [] as SimulationState[] }));
 vi.mock("@/game/runtime", async importOriginal => {
@@ -379,4 +380,33 @@ test("invalid HTTP 200 setup response emits one invalid_response failure", async
   }
   await screen.findByRole("heading", { name: "World conditions" });
   expect(analyticsCapture.mock.calls.filter(([event]) => event === "lifepot_setup_failed")).toEqual([["lifepot_setup_failed", { failure_category: "invalid_response", event_schema_version: 1 }]]);
+});
+
+test.each(["success", "failure"])("a stale example %s cannot replace or disturb a newer paused world, even if transport ignores abort", async result => {
+  history.replaceState(null, "", "/play#example");
+  let resolve!: (value: Response) => void;
+  let reject!: (error: Error) => void;
+  const response = new Promise<Response>((yes, no) => { resolve = yes; reject = no; });
+  // Deliberately ignore AbortSignal: the journey guard must protect already in-flight work too.
+  const fetch = vi.fn(() => response);
+  vi.stubGlobal("fetch", fetch);
+  try {
+    renderPresetForPlayback();
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    const before = JSON.stringify(captured.at(-1));
+    const count = captured.length;
+    const stats = document.querySelector(".stats-strip")!.textContent;
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledWith("/example-world.json", { signal: expect.objectContaining({ aborted: true }) });
+    await act(async () => {
+      if (result === "success") resolve(new Response(JSON.stringify(example), { status: 200 }));
+      else reject(new Error("Late failed example"));
+    });
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+    expect(captured).toHaveLength(count);
+    expect(JSON.stringify(captured.at(-1))).toBe(before);
+    expect(document.querySelector(".stats-strip")!.textContent).toBe(stats);
+    expect(screen.queryByText(/Recorded example · The little pond/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/The example could not be loaded/)).not.toBeInTheDocument();
+  } finally { history.replaceState(null, "", "/play"); }
 });
