@@ -402,6 +402,8 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
 }
 export function GameCanvas() {
   const [cameraUpdate, setCameraUpdate] = useState("");
+  const [isExample, setIsExample] = useState(false);
+  const [exampleTips, setExampleTips] = useState(true);
   const [question, setQuestion] = useState("");
   const [initialConfig, setInitialConfig] = useState<LifeConfig | null>(null);
   const [decisionReasons, setDecisionReasons] = useState<Record<number, FailureReason>>({});
@@ -503,7 +505,7 @@ export function GameCanvas() {
       initialConfigRef.current = structuredClone(c);
       replayRef.current = replay ?? null;
       setCurrentReplay(replay ?? null);
-      if (!replay) { setOriginWorldId(null); setArchivedEvidence(null); }
+      if (!replay) { setIsExample(false); setOriginWorldId(null); setArchivedEvidence(null); }
       const analyticsRunId = `run-${runId.current}`;
       if (replay) gameplayAnalytics.replayStarted(analyticsRunId, "local", replay.engineVersion);
       else {
@@ -544,6 +546,7 @@ export function GameCanvas() {
     [],
   );
   async function openSavedWorld(record: WorldRecord) {
+    setIsExample(false);
     setOriginWorldId(record.id); setParentWorldId(record.parentId);
     setLocalWorldName(record.name); setArchivedEvidence(record.evidence);
     setBaseline(null);
@@ -574,6 +577,19 @@ export function GameCanvas() {
     setStage("review"); window.scrollTo(0, 0);
   }
   useEffect(() => {
+    let cancelled = false;
+    if (location.hash === "#example") {
+      void fetch("/example-world.json").then(response => {
+        if (!response.ok) throw new Error("Example unavailable");
+        return response.json();
+      }).then(example => {
+        const r = decodeReplay(example.replay);
+        if (cancelled) return;
+        begin(r.answers, r.config, r.seed, r);
+        setIsExample(true); setSpeed("normal"); setExampleTips(true);
+      }).catch(() => { if (!cancelled) setNotice("The example could not be loaded. You can still create your own world."); });
+      return () => { cancelled = true; };
+    }
     const p = new URLSearchParams(location.hash.slice(1)).get("replay") ?? new URL(location.href).searchParams.get("replay");
     if (p)
       try {
@@ -939,7 +955,7 @@ export function GameCanvas() {
     resources = Math.round(simulation.stats.resources / 2500);
   return (
     <main className={`simulation-shell${originWorldId || parentWorldId ? " ph-no-capture" : ""}`} data-ph-no-capture={originWorldId || parentWorldId ? true : undefined}>
-      <section className="run-status" aria-label="Run status"><strong role="status">{complete ? simulation.stats.population === 0 ? "World empty" : "Observation complete" : deciding ? "Waiting for a bounded ecology decision — the world is held still" : paused ? "Paused — inspect life or step one generation" : "Running — watch, inspect, or pause"}</strong><span>{localWorldName ? `Experiment: ${localWorldName} · ` : ""}{replayMode ? "Exact recorded replay · no inference" : policy === "fixed" ? "Fixed world rules" : "Adaptive ecology"}{question ? ` · Your question: ${question}` : ""}</span></section>
+      <section className="run-status" aria-label="Run status"><strong role="status">{complete ? simulation.stats.population === 0 ? "World empty" : "Observation complete" : deciding ? "Waiting for a bounded ecology decision — the world is held still" : paused ? "Paused — inspect life or step one generation" : "Running — watch, inspect, or pause"}</strong><div className="run-context">{isExample ? "Recorded example · The little pond · " : ""}{localWorldName ? `Experiment: ${localWorldName} · ` : ""}{replayMode ? "Exact recorded replay · no inference" : policy === "fixed" ? "Fixed world rules" : "Adaptive ecology"}{question ? ` · Your question: ${question}` : ""}{isExample && <><a href="/play">Create your own world</a>{exampleTips && <><details className="example-tips"><summary>Three ways to explore</summary><ol><li>Pause to look closer.</li><li>Use “Inspect a living organism” to see its age and energy.</li><li>Choose “Follow founder lineage” to highlight its family.</li></ol></details><button type="button" className="example-dismiss" aria-label="Dismiss example tips" onClick={() => setExampleTips(false)}>Dismiss tips</button></>}</>}</div></section>
       {notice && <p className="run-notice" role="status">{notice}</p>}
       {archivedEvidence && <section className="archived-highlights" aria-label="Recorded highlights"><h2>Recorded highlights</h2><p>Validated from this saved replay; these are archived observations, not newly observed replay events.</p>{archivedEvidence.lineageExtinction.length ? <ul>{archivedEvidence.lineageExtinction.map((item, index) => <li key={`${item.lineage}-${item.generation}-${index}`}>Founder family {item.lineage} disappeared at generation {item.generation} (recorded).</li>)}</ul> : <p>No followed-family extinction milestone was recorded in this save.</p>}</section>}
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}

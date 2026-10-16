@@ -1,0 +1,1 @@
+Show a lightweight real-gameplay example preview on the landing page, with motion/data-saving controls, direct inference-free recorded-world entry and optional inspection/family tips. Preserve ordinary setup, replay semantics and existing branding/documentation.
