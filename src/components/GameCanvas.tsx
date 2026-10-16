@@ -403,6 +403,13 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
 export function GameCanvas() {
   const [cameraUpdate, setCameraUpdate] = useState("");
   const [isExample, setIsExample] = useState(false);
+  const exampleJourney = useRef(0);
+  const exampleRequest = useRef<AbortController | null>(null);
+  const cancelExample = useCallback(() => {
+    exampleJourney.current++;
+    exampleRequest.current?.abort();
+    exampleRequest.current = null;
+  }, []);
   const [exampleTips, setExampleTips] = useState(true);
   const [question, setQuestion] = useState("");
   const [initialConfig, setInitialConfig] = useState<LifeConfig | null>(null);
@@ -497,6 +504,7 @@ export function GameCanvas() {
   }, [stage, arrivalRevision]);
   const begin = useCallback(
     (a: SetupAnswers, c: LifeConfig, s: number, replay?: ReplayData) => {
+      cancelExample();
       const initial = createSimulation({ seed: s, config: c, engineVersion: replay?.engineVersion }),
         l = replay?.ledger ?? [];
       runId.current++;
@@ -543,9 +551,10 @@ export function GameCanvas() {
       setArrivalRevision(revision => revision + 1);
       setStage("simulation");
     },
-    [],
+    [cancelExample],
   );
   async function openSavedWorld(record: WorldRecord) {
+    cancelExample();
     setIsExample(false);
     setOriginWorldId(record.id); setParentWorldId(record.parentId);
     setLocalWorldName(record.name); setArchivedEvidence(record.evidence);
@@ -565,6 +574,7 @@ export function GameCanvas() {
     if (missingParent) setNotice("Saved follow-up parent is missing; its original comparison is unavailable.");
   }
   function reviewSavedWorld(record: WorldRecord) {
+    cancelExample();
     setLocalWorldName(record.name); setArchivedEvidence(null);
     const original = structuredClone(record.replay.config);
     setParentWorldId(record.id); setOriginWorldId(null);
@@ -579,16 +589,28 @@ export function GameCanvas() {
   useEffect(() => {
     let cancelled = false;
     if (location.hash === "#example") {
-      void fetch("/example-world.json").then(response => {
+      const journey = exampleJourney.current;
+      const controller = new AbortController();
+      exampleRequest.current = controller;
+      const current = () => !cancelled && !controller.signal.aborted && exampleJourney.current === journey && location.hash === "#example";
+      const navigate = () => { if (location.hash !== "#example") cancelExample(); };
+      window.addEventListener("hashchange", navigate);
+      void fetch("/example-world.json", { signal: controller.signal }).then(response => {
         if (!response.ok) throw new Error("Example unavailable");
         return response.json();
       }).then(example => {
+        if (!current()) return;
         const r = decodeReplay(example.replay);
-        if (cancelled) return;
+        if (!current()) return;
+        exampleRequest.current = null;
         begin(r.answers, r.config, r.seed, r);
         setIsExample(true); setSpeed("normal"); setExampleTips(true);
-      }).catch(() => { if (!cancelled) setNotice("The example could not be loaded. You can still create your own world."); });
-      return () => { cancelled = true; };
+      }).catch(() => { if (current()) setNotice("The example could not be loaded. You can still create your own world."); });
+      return () => {
+        cancelled = true; controller.abort();
+        if (exampleRequest.current === controller) exampleRequest.current = null;
+        window.removeEventListener("hashchange", navigate);
+      };
     }
     const p = new URLSearchParams(location.hash.slice(1)).get("replay") ?? new URL(location.href).searchParams.get("replay");
     if (p)
@@ -598,7 +620,7 @@ export function GameCanvas() {
       } catch {
         queueMicrotask(() => setNotice("Invalid or legacy replay rejected"));
       }
-  }, [begin]);
+  }, [begin, cancelExample]);
   useEffect(() => {
     if (
       !simulation ||
@@ -718,6 +740,7 @@ export function GameCanvas() {
     }
   }, [answers, replayMode, simulation]);
   async function interpret(a: SetupAnswers) {
+    cancelExample();
     if (interpreting) return;
     setInterpreting(true);
     const ca = canonicalAnswers(a),
@@ -778,6 +801,7 @@ export function GameCanvas() {
     setStage("review");
   }
   function loadDeterministicPreset() {
+    cancelExample();
     const preset = canonicalAnswers(RECORDED_PRESET), hash = hashSetupRequest(preset);
     setAnswers(preset);
     setConfig(deterministicSetup(preset));
@@ -802,7 +826,7 @@ export function GameCanvas() {
     return (
       <main className="setup-shell">
         <FamilyHeader><span className="header-detail">Co-evolution laboratory</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
-        <section className="question-panel">
+        <section className="question-panel" onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
           <div id="my-worlds-entry" />
           <div className="step-label">QUESTION {qi + 1} / 3</div>
           <div className="progress-track">
