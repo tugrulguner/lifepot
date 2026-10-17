@@ -1,0 +1,1 @@
+Added an on-demand explained product demo to the LifePot overview, with native playback controls, a populated poster, timed on-screen text and an expandable transcript. The existing recorded preview and game-entry actions remain unchanged; the full video is not preloaded or autoplayed.

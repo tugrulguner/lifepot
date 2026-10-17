@@ -17,10 +17,10 @@ test("reduced motion and data saver do not download video or game until requeste
  await page.addInitScript(()=>Object.defineProperty(navigator,"connection",{value:{saveData:true,addEventListener(){},removeEventListener(){}}}));
  const requests:string[]=[];page.on("request",r=>requests.push(r.url()));
  await page.goto("/");
- await expect(page.locator("video")).not.toHaveAttribute("src");
+ await expect(page.locator("video[data-example-video]")).not.toHaveAttribute("src");
  expect(requests.some(url=>url.includes("life-example.mp4")||url.includes("example-world.json"))).toBe(false);
  await page.getByRole("button",{name:"Play preview",exact:true}).click();
- await expect.poll(()=>page.locator("video").evaluate((v:HTMLVideoElement)=>!v.paused&&v.currentTime>0)).toBe(true);
+ await expect.poll(()=>page.locator("video[data-example-video]").evaluate((v:HTMLVideoElement)=>!v.paused&&v.currentTime>0)).toBe(true);
  await page.getByRole("link",{name:/Explore this example/}).click();
  await expect(page.locator("canvas.life-canvas")).toBeVisible();
 });
