@@ -841,3 +841,25 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .camera-tools summary { min-height: 44px; padding-block: 12px; cursor: pointer; }
 @media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "observation" "board" "focus-controls" "inspector" "camera" "focus" "status" "legend" "observatory" "decision" "event" "result"; } }
 @media(max-width:700px) { .my-worlds li { align-items:stretch; } }
+
+/* Paused inspection keeps a measured, magnified subject with the habitat. */
+/* Swapping compact evidence on resume must not let scroll anchoring move the page. */
+.simulation-shell { overflow-anchor: none; }
+.watching-organism { min-width: 0; }
+.watching-organism-subject { display: flex; gap: 10px; align-items: center; }
+.watching-organism-subject > svg { flex: 0 0 54px; width: 54px; height: 54px; padding: 3px; border: 1px solid var(--line); border-radius: 12px; background: #020a09; }
+.watching-organism-subject > div { display: grid; gap: 3px; min-width: 0; }
+.watching-organism-subject strong { color: var(--text); font: 600 13px/1.4 var(--mp-font); }
+.watching-organism-subject span { color: var(--muted); font: 11px/1.4 var(--mp-font); overflow-wrap: anywhere; }
+.watching-organism-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.watching-organism-actions button { min-height: 44px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--deep); color: var(--text); font: 12px/1.3 var(--mp-font); cursor: pointer; }
+.watching-organism-actions button[aria-pressed="true"] { border-color: var(--mint); color: var(--mint); }
+.paused-world-context > summary { min-height: 44px; padding-block: 12px; cursor: pointer; color: var(--muted); }
+.paused-world-context .configured-species-counts { margin-block: 8px; }
+@media(max-width: 1000px) {
+  /* Preserve all eight statistics at their existing type size, in fewer rows. */
+  .simulation-shell .stats-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .simulation-shell .stat { display: block; border-right: 1px solid var(--line); }
+  .simulation-shell .stat span { letter-spacing: 0; }
+  .simulation-shell .stat:nth-child(4n) { border-right: 0; }
+}

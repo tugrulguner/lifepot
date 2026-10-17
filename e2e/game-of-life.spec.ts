@@ -33,7 +33,7 @@ test("mobile simulation keeps every stat label and value inside the viewport", a
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     await expect(page.getByRole("img", { name: /ecosystem generation/i })).toBeVisible();
     await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
-    await expect(page.locator(".stat").filter({ visible: true })).toHaveCount(viewport.width <= 760 ? 6 : 8);
+    await expect(page.locator(".stat").filter({ visible: true })).toHaveCount(8);
     const measurements = await page.locator(".stats-strip").evaluate((strip) => {
       const bounds = (element: Element) => {
         const rect = element.getBoundingClientRect();

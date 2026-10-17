@@ -36,6 +36,7 @@ import {
   advanceUntilDecisionTrigger,
 } from "@/game/runtime";
 import { CreatureInspector } from "./CreatureInspector";
+import { WatchingOrganism } from "./WatchingOrganism";
 import { SpeciesFocus } from "./SpeciesFocus";
 import WorldPreview from "./WorldPreview";
 import { RunResults } from "./RunResults";
@@ -50,13 +51,14 @@ import type { SpeciesId } from "@/game/rules";
 import { FamilyHeader } from "./FamilyHeader";
 import { cellAtPoint } from "@/game/inspection";
 import { boundCamera, followCamera, NEUTRAL_CAMERA, screenToWorld, type Camera, type FollowTarget } from "@/game/camera";
-import { updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
+import { selectEventEffects, updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
 import { WorldObservatory } from "./WorldObservatory";
 import { GameplayObservation } from "./GameplayObservation";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
 import { setupFidelitySchema, setupFailureSchema, setupNamedIntentSchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity, type SetupFailure, type SetupNamedIntent } from "@/game/setup-review";
 import { speciesColor } from "@/game/species-colors";
-import { organismPath, organismSprite, traceOrganism } from "@/game/organism-glyphs";
+import { organismSprite, paintOrganism } from "@/game/organism-glyphs";
+import OrganismArtwork from "./OrganismArtwork";
 import { gameplayAnalytics } from "@/app/gameplay-analytics";
 import { isSurvivingNewborn, relationshipLabel, triggerLabel } from "@/game/visuals";
 export type LifePotViewModel = {
@@ -173,66 +175,64 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   }
   c.stroke();
   c.restore();
-  // A coarse resource field keeps habitat shading bounded to 100 gradients.
-  // Exact cell resources and hazards remain visible in the marks below.
+  // Quiet, measured 5×5 averages establish the habitat without thousands of
+  // repeated symbols competing with life. These are fields, not new terrain.
   for (let row = 0; row < GRID_SIZE; row += 5) {
     for (let col = 0; col < GRID_SIZE; col += 5) {
-      let total = 0;
-      for (let y = row; y < row + 5; y++) for (let x = col; x < col + 5; x++) total += state.resources[y * GRID_SIZE + x];
-      const resource = total / (25 * 255);
-      if (resource <= .08) continue;
+      let resources = 0, hazards = 0;
+      for (let y = row; y < row + 5; y++) for (let x = col; x < col + 5; x++) {
+        resources += state.resources[y * GRID_SIZE + x];
+        hazards += state.hazards[y * GRID_SIZE + x];
+      }
+      const resource = resources / (25 * 255), hazard = hazards / (25 * 255);
       const x = pad + (col + 2.5) * cw, y = pad + (row + 2.5) * ch;
-      const glow = c.createRadialGradient(x, y, 0, x, y, Math.max(cw, ch) * 4);
-      glow.addColorStop(0, `rgba(117, 210, 142, ${resource * .12})`);
-      glow.addColorStop(1, "rgba(117, 210, 142, 0)");
-      c.fillStyle = glow;
-      c.fillRect(x - cw * 4, y - ch * 4, cw * 8, ch * 8);
+      if (resource > .08) {
+        const glow = c.createRadialGradient(x, y, 0, x, y, Math.max(cw, ch) * 4);
+        glow.addColorStop(0, `rgba(117, 210, 142, ${resource * .16})`);
+        glow.addColorStop(1, "rgba(117, 210, 142, 0)");
+        c.fillStyle = glow;
+        c.fillRect(x - cw * 4, y - ch * 4, cw * 8, ch * 8);
+      }
+      if (hazard > .025) {
+        c.fillStyle = `rgba(255, 128, 109, ${hazard * .10})`;
+        c.fillRect(pad + col * cw, pad + row * ch, cw * 5, ch * 5);
+      }
     }
   }
-  for (let i = 0; i < state.resources.length; i++) {
-    const x = i % 50,
-      y = Math.floor(i / 50),
-      r = state.resources[i] / 255;
+  // Magnification reveals exact-cell cues on empty cells; organisms retain
+  // priority. Exact values remain available through cell inspection at any zoom.
+  if (camera.zoom >= 2) for (let i = 0; i < state.resources.length; i++) {
+    if (state.guild[i]) continue;
+    const x = i % GRID_SIZE, y = Math.floor(i / GRID_SIZE), r = state.resources[i] / 255;
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
-    if (r > 0.08) {
-      // Small, cell-centered resource beads read as a field, not as organisms.
-      // Their area and opacity encode the existing resource amount only.
-      c.globalAlpha = .12 + r * .32;
+    if (r > .08) {
+      c.globalAlpha = .06 + r * .14;
       c.fillStyle = "#83d99a";
-      c.beginPath();
-      c.arc(cx, cy, Math.max(.55, Math.min(cw, ch) * (.08 + r * .2)), 0, Math.PI * 2);
-      c.fill();
+      c.beginPath(); c.arc(cx, cy, Math.min(cw, ch) * (.08 + r * .12), 0, Math.PI * 2); c.fill();
     }
     const hazard = state.hazards[i] / 255;
     if (hazard > .025) {
-      // A compact coral chevron is distinct from circular resources and keeps
-      // the established semantic hazard palette at narrow mobile cell pitches.
-      c.globalAlpha = .14 + hazard * .3;
-      c.strokeStyle = "#ff806d";
-      c.lineWidth = Math.max(.55, Math.min(cw, ch) * .12);
-      c.beginPath();
-      const d = Math.min(cw, ch) * .22;
-      c.moveTo(cx - d, cy - d); c.lineTo(cx, cy + d);
-      c.lineTo(cx + d, cy - d);
-      c.stroke();
+      c.globalAlpha = .08 + hazard * .18;
+      c.strokeStyle = "#ff806d"; c.lineWidth = Math.min(cw, ch) * .08;
+      const d = Math.min(cw, ch) * .18;
+      c.beginPath(); c.moveTo(cx - d, cy - d); c.lineTo(cx, cy + d); c.lineTo(cx + d, cy - d); c.stroke();
     }
   }
   c.globalAlpha = 1;
+  const importantActors = new Set<number>();
   for (let i = 0; i < state.guild.length; i++) {
     if (!state.guild[i]) continue;
-    c.globalAlpha = focusedSpecies && state.config.rules?.species[state.ruleSpecies[i] - 1]?.id !== focusedSpecies ? .15 : 1;
+    // Explicit observation targets remain legible across a species filter.
+    // This changes paint only; the selected cell and lineage pin keep their authority.
+    c.globalAlpha = focusedSpecies && state.config.rules?.species[state.ruleSpecies[i] - 1]?.id !== focusedSpecies && i !== selected && state.lineage[i] !== followed ? .15 : 1;
     const x = i % GRID_SIZE, y = Math.floor(i / GRID_SIZE), species = state.config.rules?.species[state.ruleSpecies[i] - 1];
     const pitch = Math.min(cw, ch), color = speciesColor(species?.id ?? "");
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
     const sprite = organismSprite(species?.role, color, pitch, dpr * camera.zoom);
     if (sprite) c.drawImage(sprite, cx - pitch / 2, cy - pitch / 2, pitch, pitch);
-    else {
-      c.fillStyle = color; traceOrganism(c, species?.role, cx, cy, pitch * .44); c.fill();
-      const previousJoin = c.lineJoin; c.lineJoin = "round";
-      c.strokeStyle = "#07100f"; c.lineWidth = pitch * .07; c.stroke();
-      c.strokeStyle = "rgba(241,248,237,.94)"; c.lineWidth = pitch * .035; c.stroke(); c.lineJoin = previousJoin;
-    }
+    else paintOrganism(c, species?.role, color, cx, cy, pitch);
     if (i === selected || state.lineage[i] === followed) {
+      importantActors.add(state.organismId[i]);
       const isSelected = i === selected;
       c.save();
       const focusRadius = pitch * .32;
@@ -248,17 +248,29 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       c.restore();
     }
     if (isSurvivingNewborn(state.generation, state.age[i], state.organismGeneration[i], state.guild[i])) {
-      c.strokeStyle = "#ffffff"; c.lineWidth = 1; c.beginPath(); c.arc(cx, cy, pitch * .62, 0, Math.PI * 2); c.stroke();
+      // A static birth dot remains readable under reduced motion, distinct from selection.
+      c.fillStyle = "#ffffff"; c.beginPath(); c.arc(cx + pitch * .3, cy - pitch * .3, pitch * .08, 0, Math.PI * 2); c.fill();
     }
   }
-  for(const event of effects){
-    const remaining=Math.max(0,(event.expiresAt-now)/EVENT_LIFETIME);
-    if(!remaining)continue;
-    const x=pad+(event.at%GRID_SIZE+.5)*cw,y=pad+(Math.floor(event.at/GRID_SIZE)+.5)*ch;
-    c.globalAlpha=remaining;c.lineWidth=1.5;c.strokeStyle=event.kind==="birth"?"#ffffff":event.kind==="death"?"#ff8877":"#ffd65c";
+  for (const event of selectEventEffects(effects, importantActors)) {
+    const remaining = Math.max(0, (event.expiresAt - now) / EVENT_LIFETIME);
+    if (!remaining) continue;
+    const x = pad + (event.at % GRID_SIZE + .5) * cw, y = pad + (Math.floor(event.at / GRID_SIZE) + .5) * ch;
+    const pitch = Math.min(cw, ch), radius = pitch * (.24 + (1 - remaining) * .12);
+    c.globalAlpha = remaining * .85; c.lineWidth = Math.max(.6, pitch * .1);
+    c.strokeStyle = event.kind === "birth" ? "#ffffff" : event.kind === "death" ? "#ff8877" : "#ffd65c";
     c.beginPath();
-    if(event.kind==="death"){const r=Math.min(cw,ch)*.7;c.moveTo(x-r,y-r);c.lineTo(x+r,y+r);c.moveTo(x+r,y-r);c.lineTo(x-r,y+r);}
-    else c.arc(x,y,Math.min(cw,ch)*(event.source==="resource"?.2:(.5+(1-remaining))),0,Math.PI*2);
+    if (event.kind === "death") {
+      c.moveTo(x - radius, y - radius); c.lineTo(x + radius, y + radius);
+      c.moveTo(x + radius, y - radius); c.lineTo(x - radius, y + radius);
+    } else if (event.kind === "birth") {
+      // Four short rays differ from selection rings and gold feeding circles.
+      for (let n = 0; n < 4; n++) {
+        const a = n * Math.PI / 2, inner = pitch * .28, outer = pitch * .46;
+        c.moveTo(x + Math.cos(a) * inner, y + Math.sin(a) * inner);
+        c.lineTo(x + Math.cos(a) * outer, y + Math.sin(a) * outer);
+      }
+    } else c.arc(x, y, event.source === "resource" ? radius * .65 : radius, 0, Math.PI * 2);
     c.stroke();
   }
   c.globalAlpha=1;
@@ -298,8 +310,17 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
     // Fit the watching view from actual content height, including retained notices.
     // Document coordinates keep later deliberate scrolling from resizing the world.
     const fit = () => {
+      // A queued ResizeObserver callback can outlive the canvas on replay/review.
+      if (!canvas.isConnected || !canvas.parentElement) return;
       const top = canvas.getBoundingClientRect().top + window.scrollY;
-      canvas.style.setProperty("--board-available-height", `${Math.max(1, window.innerHeight - top - 12)}px`);
+      // Short windows cannot contain every surface above the fold. Preserve a
+      // drawable habitat and allow normal page scrolling instead of collapsing it.
+      const minimum = Math.min(300, canvas.parentElement.clientWidth);
+      const available = window.innerHeight - top - 12;
+      // Keep fitting legitimate smaller boards after notices grow. Fall back to
+      // vertical scrolling only when less than half a readable habitat fits.
+      const height = available >= minimum / 2 ? available : minimum;
+      canvas.style.setProperty("--board-available-height", `${height}px`);
     };
     const observer = new ResizeObserver(fit);
     observer.observe(canvas.parentElement);
@@ -975,6 +996,21 @@ export function GameCanvas() {
       </main>
     );
   if (!simulation || !config) return null;
+  const followLineage = (lineage: number | null) => {
+    setFollowed(lineage);
+    if (evidenceRef.current) {
+      evidenceRef.current = followRunLineage(evidenceRef.current, simulation, lineage);
+      setEvidence(evidenceRef.current);
+    }
+  };
+  const inspectLiving = () => {
+    const index = simulation.guild.findIndex(value => value > 0);
+    if (index < 0) return;
+    setSelected(index); setPaused(true);
+    window.scrollTo(0, 0);
+    document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus({ preventScroll: true });
+  };
+  const inspectDetails = () => document.getElementById("creature-inspector")?.scrollIntoView({ behavior: "smooth", block: "start" });
   const active = activeDecisionForGeneration(ledger, simulation.generation),
     resources = Math.round(simulation.stats.resources / 2500);
   return (
@@ -985,14 +1021,8 @@ export function GameCanvas() {
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
       <World key={arrivalRevision} state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onCameraUpdate={setCameraUpdate} onInspect={index => { setSelected(index); setPaused(true); }} />
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
-      <GameplayObservation cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
-      <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={lineage => {
-        setFollowed(lineage);
-        if (evidenceRef.current) {
-          evidenceRef.current = followRunLineage(evidenceRef.current, simulation, lineage);
-          setEvidence(evidenceRef.current);
-        }
-      }} onClear={() => setSelected(null)} onPick={() => { const index = simulation.guild.findIndex(value => value > 0); if (index >= 0) { setSelected(index); setPaused(true); } }} />
+      <GameplayObservation inspection={selected === null ? undefined : <WatchingOrganism state={simulation} index={selected} followed={followed} onFollow={followLineage} onDetails={inspectDetails} />} cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
+      <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={followLineage} onClear={() => setSelected(null)} onPick={inspectLiving} />
       <FamilyHeader><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
       <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} /></div>
       <section className="stats-strip" aria-label="Live ecosystem statistics">
@@ -1072,10 +1102,10 @@ export function GameCanvas() {
       </aside>
       <div className="legend">
         <span><i className="resource-key" />Resource field</span>
-        {(["producer", "grazer", "scavenger", "hunter", "omnivore"] as const).map(role => <span key={role}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><path d={organismPath(role)} fill="#a9d878" stroke="#f1f8ed" strokeWidth="2" strokeLinejoin="round" /></svg>{({ producer: "Producer rosette", grazer: "Grazer capsule", scavenger: "Scavenger segments", hunter: "Hunter spindle", omnivore: "Omnivore clover" })[role]}</span>) }
-        <span>Coral chevrons = local hazard intensity</span>
+        {(["producer", "grazer", "scavenger", "hunter", "omnivore"] as const).map(role => <span key={role}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={role} color="#a9d878" /></svg>{({ producer: "Producer rosette", grazer: "Grazer capsule", scavenger: "Scavenger segments", hunter: "Hunter spindle", omnivore: "Omnivore clover" })[role]}</span>) }
+        <span>Green field = resources · coral shading = hazards · cell detail at 2× zoom</span>
         <span>White ring = selected · dashed gold ring = followed family</span>
-        <span>White = birth · gold = feeding · red = death</span>
+        <span>White rays/dot = birth · gold circle = feeding · red cross = death · pulses are sampled</span>
         <span>Color = species in observatory</span>
       </div>
       <div className="ticker">
@@ -1096,7 +1126,7 @@ export function GameCanvas() {
         </label>
         <button onClick={() => begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined)}>{replayMode ? "Restart replay" : "Restart trial"}</button>
         {complete && <button onClick={() => { setShowResults(true); completionSeen.current = false; queueMicrotask(() => { document.getElementById("run-results")?.scrollIntoView({ block: "start" }); document.getElementById("run-results")?.focus(); }); }}>View results</button>}
-        <button onClick={() => { const index = simulation.guild.findIndex(value => value > 0); if (index >= 0) { setSelected(index); setPaused(true); document.getElementById("creature-inspector")?.scrollIntoView({ behavior: "smooth", block: "start" }); } }}>Inspect living organism</button>
+        <button onClick={inspectLiving}>Inspect living organism</button>
         <button onClick={() => document.getElementById("world-observatory")?.scrollIntoView({ behavior: "smooth", block: "start" })}>World observatory</button>
       </div>
       {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} question={question}
