@@ -3,7 +3,7 @@ import Link from "next/link";
 import ExamplePreview from "./ExamplePreview";
 export function HomeOverview() {
   return <main className="overview-shell">
-    <FamilyHeader />
+    <FamilyHeader feedbackPath="/" />
     <section className="overview-hero">
       <div className="overview-copy">
         <p className="overview-kicker">A replayable artificial-life playground</p>
