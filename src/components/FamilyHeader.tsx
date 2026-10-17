@@ -28,7 +28,7 @@ export function FamilyHeader({ children }: { children?: ReactNode }) {
 
   return <>
     <header className="family-header">
-      <Link className="family-product" href="/" aria-label="LifePot home">LifePot</Link>
+      <Link className="family-product" href="/" aria-label="LifePot home"><span>Life<span className="family-wordmark-pot">Pot</span></span></Link>
       <nav className="family-desktop-resources" aria-label="ModePot family">
         {resources.map(({ label, href }) => <a key={label} href={href}>{label}</a>)}
       </nav>

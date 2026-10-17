@@ -14,7 +14,7 @@ function localTargets(markdown: string): string[] {
   const markdownLinks = [...markdown.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)].map((match) => match[1]);
   const htmlSources = [...markdown.matchAll(/<(?:img|a)\b[^>]*(?:src|href)="([^"]+)"/g)].map((match) => match[1]);
   return [...markdownLinks, ...htmlSources]
-    .map((target) => target.split("#", 1)[0])
+    .map((target) => target.split(/[?#]/, 1)[0])
     .filter((target) => target && !/^(?:https?:|mailto:)/.test(target));
 }
 

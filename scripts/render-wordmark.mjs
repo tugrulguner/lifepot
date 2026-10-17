@@ -23,7 +23,7 @@ try {
     return count;
   };
   if (countColour([514, 320, 690, 480], [244, 242, 234]) < 1000) throw new Error("Off-white wordmark prefix missing from raster");
-  if (countColour([688, 320, 875, 480], [242, 184, 75]) < 1000) throw new Error("Amber wordmark suffix missing from raster");
+  if (countColour([688, 320, 875, 480], [119, 229, 189]) < 1000) throw new Error("Mint wordmark suffix missing from raster");
   const previousSvg = execFileSync("git", ["show", "HEAD:assets/lifepot.svg"], { encoding: "utf8" });
   const mark = (text) => text.match(/<g transform="translate\(98 270\) scale\(2\.75\)">[\s\S]*?<\/g>/)?.[0];
   if (!mark(previousSvg) || mark(previousSvg) !== mark(svg)) throw new Error("Compact mint mark geometry or colour changed");

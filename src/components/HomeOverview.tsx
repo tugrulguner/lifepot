@@ -20,7 +20,7 @@ export function HomeOverview() {
         </p>
       </div>
       <div className="overview-brand">
-        <img className="overview-lockup" src="/lifepot-lockup.png" width="1200" height="900" alt="LifePot — deterministic artificial life with replayable evolution" />
+        <img className="overview-lockup" src="/lifepot-lockup.png?v=wordmark-accent-1" width="1200" height="900" alt="LifePot — deterministic artificial life with replayable evolution" />
       </div>
     </section>
     <section className="overview-example" aria-labelledby="example-title">

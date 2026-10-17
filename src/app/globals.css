@@ -684,6 +684,8 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 @media(max-width: 600px) { .run-results { padding: 16px; } .world-preview-species { grid-template-columns: 1fr; } }
 
 /* Shared LifePot shell navigation; compact layout keeps the family group first. */
+.family-product .family-wordmark-pot { color: #16634b; }
+:root[data-theme="dark"] .family-product .family-wordmark-pot { color: #77e5bd; }
 .family-header { position: fixed; z-index: 20; inset: 0 0 auto; height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 max(16px, calc((100vw - 1200px) / 2)); border-bottom: 1px solid var(--mp-border); background: var(--mp-raised); color: var(--mp-ink); font: 14px/1.4 var(--mp-font); }
 .family-product { flex: 0 0 auto; color: var(--mp-ink); font-size: 16px; font-weight: 700; text-decoration: none; }
 .family-desktop-resources { display: flex; align-items: center; gap: 2px; margin-left: auto; }
