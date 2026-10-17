@@ -1,10 +1,11 @@
+import type { ReactNode } from "react";
 import type { RunEvidence } from "@/game/run-evidence";
 import type { EvolutionDecision } from "@/game/decisions";
 import type { SimulationState } from "@/game/world";
 import { ruleTimingLabel, selectedChangeLabel, conciseChangeLabel } from "@/game/council-display";
 import { speciesColor } from "@/game/species-colors";
 
-export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string }) {
+export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate, inspection }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string; inspection?: ReactNode }) {
   const rules = state.config.rules!;
   const counts = rules.species.map((species, index) => ({
     species,
@@ -19,7 +20,7 @@ export function GameplayObservation({ state, evidence, followed, decision, names
   const latest = [...latestFor("species"), ...latestFor("family")];
   const timing = decision ? ruleTimingLabel(decision, state) : "";
 
-  return <section className="gameplay-observation" aria-label="Near-board observations">
+  const activity = <>
     <section className="recorded-activity" aria-label="Recorded activity">
       <strong>Generation {state.generation}</strong>
       <div>{(["birth", "feeding", "death"] as const).map(kind => {
@@ -31,12 +32,8 @@ export function GameplayObservation({ state, evidence, followed, decision, names
       <strong className="saved-world-heading" title={worldName}>{worldName ? `Experiment: ${worldName}` : "Configured species"}</strong>
       {counts.map(({ species, count }) => <span key={species.id} aria-label={`Species ${species.id} count`}><i className="species-color" style={{ backgroundColor: speciesColor(species.id) }} />{names?.[species.id] ?? species.role} · {species.id} <b>{count}</b></span>)}
     </div>
-    <div className="followed-family-context" aria-live="polite">
-      {followed === null ? <span>No founder lineage followed</span> : <span>Following lineage #{followed} · {familyCount ? `${familyCount} living ${familyCount === 1 ? "member" : "members"}` : "No living members"}</span>}
-    </div>
-    {latest.length > 0 && <p role="status" aria-label="Latest retained extinction">{latest.map(item => `Generation ${item.generation}: ${item.text}`).join(" · ")}</p>}
-    {cameraUpdate && <p role="status" aria-label="Camera update">{cameraUpdate}</p>}
-    <div className="intervention-status" aria-label="Intervention status">
+    </>;
+  const intervention = <div className="intervention-status" aria-label="Intervention status">
       {decision ? <>
         <span>{conciseChangeLabel(decision, state.engineVersion)}</span>
         {timing && <span>{timing}</span>}
@@ -46,6 +43,15 @@ export function GameplayObservation({ state, evidence, followed, decision, names
         </details>
       </> : <span>No active decision · inherited rules continue</span>}
       {state.activeRuleChange && <span>Graph change active since generation {state.activeRuleChange.activatedAt}</span>}
-    </div>
+    </div>;
+  return <section className="gameplay-observation" aria-label="Near-board observations">
+    {inspection}
+    {inspection ? <details className="paused-world-context"><summary>World activity & species</summary>{activity}{intervention}</details> : activity}
+    {!inspection && <div className="followed-family-context" aria-live="polite">
+      {followed === null ? <span>No founder lineage followed</span> : <span>Following lineage #{followed} · {familyCount ? `${familyCount} living ${familyCount === 1 ? "member" : "members"}` : "No living members"}</span>}
+    </div>}
+    {latest.length > 0 && <p role="status" aria-label="Latest retained extinction">{latest.map(item => `Generation ${item.generation}: ${item.text}`).join(" · ")}</p>}
+    {cameraUpdate && <p role="status" aria-label="Camera update">{cameraUpdate}</p>}
+    {!inspection && intervention}
   </section>;
 }

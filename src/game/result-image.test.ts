@@ -51,8 +51,9 @@ describe("buildResultImageModel", () => {
     state.stats.births = 12; state.stats.deaths = 9; state.stats.kills = 3;
     const model = buildResultImageModel(state, "", "Observation horizon reached (180 generations)", { births: 12, deaths: 9, kills: 3 });
     const calls: Array<[string, ...unknown[]]> = [];
-    const ctx = new Proxy({ measureText: (text: string) => ({ width: text.length * 10 }) }, { get(target, key) { if (key in target) return target[key as keyof typeof target]; return (...args: unknown[]) => calls.push([String(key), ...args]); }, set(_target, key, value) { calls.push([`set:${String(key)}`, value]); return true; } }) as unknown as CanvasRenderingContext2D;
+    const ctx = new Proxy({ measureText: (text: string) => ({ width: text.length * 10 }) }, { get(target, key) { if (key in target) return target[key as keyof typeof target]; if (key === "createLinearGradient") return (...args: unknown[]) => { calls.push([String(key), ...args]); return { addColorStop() {} }; }; return (...args: unknown[]) => calls.push([String(key), ...args]); }, set(_target, key, value) { calls.push([`set:${String(key)}`, value]); return true; } }) as unknown as CanvasRenderingContext2D;
     drawResultImage(ctx, model);
+    expect(calls.some(call => call[0] === "createLinearGradient")).toBe(true);
     expect(model.cells[0]).toHaveProperty("role");
     expect(model.totalBirths).toBe(12);
     expect(calls.some(call => call[0] === "fillText" && call[1] === "https://lifepot.modepot.io" && Number(call[3]) > 900)).toBe(true);
@@ -71,7 +72,20 @@ describe("buildResultImageModel", () => {
       roles.forEach((_, index) => { state.guild[index] = 1; state.ruleSpecies[index] = index + 1; });
       const model = buildResultImageModel(state, "", "ended");
       const calls: Array<[string, ...unknown[]]> = [];
-      const ctx = new Proxy({ measureText: (text: string) => ({ width: text.length * 10 }) }, { get(target, key) { if (key in target) return target[key as keyof typeof target]; return (...args: unknown[]) => calls.push([String(key), ...args]); }, set(_target, key, value) { calls.push([`set:${String(key)}`, value]); return true; } }) as unknown as CanvasRenderingContext2D;
+      let tx = 0, ty = 0;
+      const transforms: Array<[number, number]> = [];
+      const ctx = new Proxy({ measureText: (text: string) => ({ width: text.length * 10 }) }, {
+        get(target, key) {
+          if (key in target) return target[key as keyof typeof target];
+          if (key === "save") return () => transforms.push([tx, ty]);
+          if (key === "restore") return () => { [tx, ty] = transforms.pop()!; };
+          if (key === "translate") return (x: number, y: number) => { tx += x; ty += y; };
+          if (key === "moveTo" || key === "lineTo") return (x: number, y: number) => calls.push([key, x + tx, y + ty]);
+          if (key === "createLinearGradient") return () => ({ addColorStop() {} });
+          return (...args: unknown[]) => calls.push([String(key), ...args]);
+        },
+        set(_target, key, value) { calls.push([`set:${String(key)}`, value]); return true; },
+      }) as unknown as CanvasRenderingContext2D;
       drawResultImage(ctx, model);
 
       const pitch = 720 / 50, radius = pitch * .44;
