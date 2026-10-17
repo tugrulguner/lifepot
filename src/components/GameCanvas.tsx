@@ -220,11 +220,16 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   }
   c.globalAlpha = 1;
   const importantActors = new Set<number>();
+  const focusedSlot = state.config.rules?.species.findIndex(species => species.id === focusedSpecies) ?? -1;
+  const focusHasLife = !focusedSpecies || state.guild.some((alive, index) => alive > 0 && state.ruleSpecies[index] === focusedSlot + 1);
+  // Keep a lost focus as the player’s choice, without making surviving life
+  // look absent. Explicit selected/pinned subjects still receive full contrast.
+  const contextAlpha = focusHasLife ? .15 : .45;
   for (let i = 0; i < state.guild.length; i++) {
     if (!state.guild[i]) continue;
     // Explicit observation targets remain legible across a species filter.
     // This changes paint only; the selected cell and lineage pin keep their authority.
-    c.globalAlpha = focusedSpecies && state.config.rules?.species[state.ruleSpecies[i] - 1]?.id !== focusedSpecies && i !== selected && state.lineage[i] !== followed ? .15 : 1;
+    c.globalAlpha = focusedSpecies && state.config.rules?.species[state.ruleSpecies[i] - 1]?.id !== focusedSpecies && i !== selected && state.lineage[i] !== followed ? contextAlpha : 1;
     const x = i % GRID_SIZE, y = Math.floor(i / GRID_SIZE), species = state.config.rules?.species[state.ruleSpecies[i] - 1];
     const pitch = Math.min(cw, ch), color = speciesColor(species?.id ?? "");
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
