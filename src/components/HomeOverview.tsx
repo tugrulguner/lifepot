@@ -41,11 +41,11 @@ export function HomeOverview() {
       <p id="demo-description">Create a food web, inspect a creature, follow a family, then change the conditions and compare what happens.</p>
       <p className="demo-meta" id="demo-format">Silent · on-screen explanations · 2 min 48 sec</p>
       <video aria-label="LifePot explained product demo" aria-describedby="demo-description demo-format" controls playsInline preload="none" width="1920" height="1080" poster="/media/lifepot-explained-demo-537cbbf6.jpg">
-        <source src="/media/lifepot-explained-demo-537cbbf6.mp4" type="video/mp4" />
+        <source src="/demo/lifepot-explained-demo-537cbbf6.mp4" type="video/mp4" />
         <track kind="captions" src="/media/lifepot-explained-demo-537cbbf6.vtt" srcLang="en" label="English on-screen text" />
-        <a href="/media/lifepot-explained-demo-537cbbf6.mp4">Open the LifePot demo video</a>
+        <a href="/demo/lifepot-explained-demo-537cbbf6.mp4">Open the LifePot demo video</a>
       </video>
-      <p className="demo-meta">Use fullscreen for the close-ups. <a href="/media/lifepot-explained-demo-537cbbf6.mp4">Open video separately</a></p>
+      <p className="demo-meta">Use fullscreen for the close-ups. <a href="/demo/lifepot-explained-demo-537cbbf6.mp4">Open video separately</a></p>
       <details className="demo-transcript">
         <summary>Read the demo transcript</summary>
         <ol>{productDemo.map((scene, index) => <li key={index}>
