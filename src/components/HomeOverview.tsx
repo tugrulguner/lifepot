@@ -1,3 +1,4 @@
+import { CreatorSocialLinks } from "./CreatorSocialLinks";
 import { FamilyHeader } from "@/components/FamilyHeader";
 import Link from "next/link";
 import ExamplePreview from "./ExamplePreview";
@@ -14,11 +15,11 @@ export function HomeOverview() {
           <Link className="overview-primary" href="/play" prefetch={false}>Create your own world <span aria-hidden="true">→</span></Link>
           <Link className="overview-secondary" href="/learn">Documentation</Link>
         </nav>
-        <p className="overview-credit">
+        <div className="creator-row"><p className="overview-credit">
           <a href="https://tugrul.modepot.io/">Created by Tugrul Guner</a>
           <span aria-hidden="true">·</span>
           <a href="https://modepot.io/">Part of ModePot</a>
-        </p>
+        </p><CreatorSocialLinks /></div>
       </div>
       <div className="overview-brand">
         <img className="overview-lockup" src="/lifepot-lockup.png?v=wordmark-accent-1" width="1200" height="900" alt="LifePot — deterministic artificial life with replayable evolution" />
