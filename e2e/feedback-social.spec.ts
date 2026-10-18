@@ -8,29 +8,19 @@ test("social destinations and deliberate issue route stay visible, touchable and
     for (const path of ["/", "/learn", "/play"]) {
       await page.goto(path);
       if (width <= 1100) await page.getByRole("button", { name: "Menu" }).click();
-      const links = page.getByRole("navigation", { name: width <= 1100 ? "Social links" : "Social media" }).getByRole("link", { name: /LinkedIn|GitHub|X \(opens in a new tab\)/ });
-      await expect(links).toHaveCount(3);
-      const targets = await links.evaluateAll(nodes => nodes.map(node => ({
-        href: (node as HTMLAnchorElement).href,
-        width: node.getBoundingClientRect().width,
-        height: node.getBoundingClientRect().height,
-        glyph: getComputedStyle(node.querySelector("span")!).fontSize,
-        noCapture: node.classList.contains("ph-no-autocapture") && node.getAttribute("data-ph-no-autocapture") === "true",
-      })));
-      expect(targets.map(item => new URL(item.href).origin)).toEqual([
-        "https://www.linkedin.com", "https://github.com", "https://x.com",
-      ]);
-      expect(targets.map(item => item.noCapture)).toEqual([true, true, true]);
-      for (const item of targets) {
-        expect(item.width).toBeGreaterThanOrEqual(44);
-        expect(item.height).toBeGreaterThanOrEqual(44);
-        expect(parseFloat(item.glyph)).toBeGreaterThanOrEqual(22);
+      await expect(page.locator('.family-header a[href*="linkedin.com"], .family-header a[href*="x.com/"], #family-menu a[href*="linkedin.com"], #family-menu a[href*="x.com/"]')).toHaveCount(0);
+      if (path === "/") {
+        if (width <= 1100) await page.getByRole("button", { name: "Menu" }).click();
+        const credit = page.locator(".overview-hero .creator-row");
+        await expect(credit).toContainText("Created by Tugrul Guner");
+        const links=credit.locator(".creator-social-links a");
+        await expect(links).toHaveText(["GitHub","LinkedIn","X"]);
+        const expected=["https://github.com/tugrulguner","https://www.linkedin.com/in/tugrulguner/","https://x.com/Tugrul_Guner"];
+        for(let i=0;i<3;i++){
+          const link=links.nth(i);await expect(link).toHaveAttribute("href",expected[i]);await expect(link).toHaveCSS("font-size","15px");await expect(link).toHaveCSS("font-weight","400");await expect(link).toHaveAttribute("target","_blank");await expect(link).toHaveAttribute("rel","noopener noreferrer");await expect(link).toHaveAttribute("data-ph-no-autocapture","true");await link.scrollIntoViewIfNeeded();await link.focus();await expect(link).toBeFocused();
+        }
+        if (width <= 1100) await page.getByRole("button", { name: "Menu" }).click();
       }
-      const hitTargets = await links.evaluateAll(nodes => nodes.map(node => {
-        const box = node.getBoundingClientRect();
-        return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest("a") === node;
-      }));
-      expect(hitTargets).toEqual([true, true, true]);
       const issue = page.getByRole("link", { name: /Feedback \/ report an issue/ }).last();
       const issueUrl = await issue.getAttribute("href");
       expect(await issue.getAttribute("data-ph-no-autocapture")).toBe("true");

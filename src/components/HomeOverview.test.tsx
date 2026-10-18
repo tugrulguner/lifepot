@@ -10,7 +10,10 @@ it("keeps canonical artwork in the family hero and creator/family attribution im
   expect(actions.querySelector('.overview-primary[href="/play"]')).not.toBeNull();
   expect(actions.querySelector('.overview-secondary[href="/learn"]')).not.toBeNull();
   const credit = actions.nextElementSibling!;
-  expect(credit.classList.contains("overview-credit")).toBe(true);
+  expect(credit.classList.contains("creator-row")).toBe(true);
+  expect(credit.querySelector(".overview-credit")).not.toBeNull();
+  expect(Array.from(credit.querySelectorAll(".creator-social-links a")).map(a=>a.textContent)).toEqual(["GitHub","LinkedIn","X"]);
+  expect(root.querySelector('.family-header a[href*="linkedin.com"], .family-header a[href*="x.com/"]')).toBeNull();
   expect(credit.querySelector('a[href="https://tugrul.modepot.io/"]')?.textContent).toContain("Tugrul Guner");
   expect(credit.querySelector('a[href="https://modepot.io/"]')?.textContent).toContain("ModePot");
 });
