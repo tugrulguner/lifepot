@@ -18,10 +18,38 @@ async function answerSetupWithKeyboard(page: Page) {
 }
 
 async function expectModePotLinkFitsViewport(page: Page) {
-  const link = page.getByRole("link", { name: "ModePot" });
+  const feedback = page.locator(".family-compact-home .family-feedback");
+  await expect(feedback).toBeVisible();
+  await expect(feedback).toHaveAttribute("target", "_blank");
+  await expect(feedback).toHaveAttribute("rel", "noopener noreferrer");
+  expect(new URL((await feedback.getAttribute("href"))!).pathname).toBe("/tugrulguner/lifepot/issues/new");
+  const menuButton = page.getByRole("button", { name: "Menu", exact: true });
+  await menuButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(menuButton).toHaveAttribute("aria-expanded", "true");
+  const menu = page.getByRole("region", { name: "Menu", exact: true });
+  const link = menu.getByRole("link", { name: "ModePot", exact: true });
   await expect(link).toBeVisible();
   await expect(link).toHaveAttribute("href", "https://modepot.io/");
+  for (const target of [feedback, link]) {
+    const bounds = await target.evaluate((node) => {
+      const r = node.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return { width: r.width, height: r.height, left: r.left, right: r.right, top: r.top, bottom: r.bottom, viewportWidth: innerWidth, viewportHeight: innerHeight, hit: hit === node || node.contains(hit) };
+    });
+    expect(bounds.width).toBeGreaterThanOrEqual(44);
+    expect(bounds.height).toBeGreaterThanOrEqual(44);
+    expect(bounds.left).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(bounds.viewportWidth);
+    expect(bounds.top).toBeGreaterThanOrEqual(0);
+    expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewportHeight);
+    expect(bounds.hit).toBe(true);
+  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(menuButton).toBeFocused();
+  await expect(feedback).toBeVisible();
 }
 
 test("mobile simulation keeps every stat label and value inside the viewport", async ({ page }) => {
