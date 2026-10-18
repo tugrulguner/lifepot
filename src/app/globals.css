@@ -897,3 +897,6 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .creator-social-links { display:inline-flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0;font:inherit; }
 .creator-social-links a { display:inline-flex;align-items:center;min-height:44px;padding:0;color:var(--mp-ink);font:inherit;font-size:15px;font-weight:400;background:none;border:0;letter-spacing:normal;text-transform:none;text-decoration:none;text-underline-offset:3px; }
 .creator-social-links a:focus-visible { outline:2px solid var(--mp-accent);outline-offset:3px; }
+
+.family-compact-home { align-items:center; }
+.family-compact-home .family-feedback { border:1px solid var(--mp-ink);font-size:14px; }

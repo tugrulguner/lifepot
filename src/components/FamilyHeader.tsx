@@ -15,7 +15,7 @@ export function FeedbackLink({ path }: { path: "/" | "/learn" | "/play" }) {
   const title = `LifePot feedback — ${path}`;
   const body = `LifePot page: ${path}\n\nPlease describe the issue or feedback. Avoid including private questions, replay data, saved-world names, or other personal information.`;
   const href = `https://github.com/tugrulguner/lifepot/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
-  return <a className="family-feedback ph-no-autocapture" href={href} target="_blank" rel="noopener noreferrer" aria-label={`Feedback / report an issue for ${path} (opens in a new tab)`} data-ph-no-autocapture="true">Feedback / issue</a>;
+  return <a className="family-feedback ph-no-autocapture" href={href} target="_blank" rel="noopener noreferrer" aria-label={`Feedback / report an issue for ${path} (opens in a new tab)`} data-ph-no-autocapture="true">Feedback</a>;
 }
 
 export function FamilyHeader({ children, feedbackPath = "/play" }: { children?: ReactNode; feedbackPath?: "/" | "/learn" | "/play" }) {
@@ -39,7 +39,7 @@ export function FamilyHeader({ children, feedbackPath = "/play" }: { children?: 
       <nav className="family-desktop-resources" aria-label="ModePot family">
         {resources.map(({ label, href }) => <a key={label} href={href}>{label}</a>)}
       </nav>
-      <a className="family-compact-home" href="https://modepot.io/">ModePot</a>
+      <div className="family-compact-home"><FeedbackLink path={feedbackPath} /></div>
       <div className="family-header-actions">
         <FeedbackLink path={feedbackPath} />
         <Link className="family-desktop-docs" href="/learn">Documentation</Link>
@@ -49,7 +49,7 @@ export function FamilyHeader({ children, feedbackPath = "/play" }: { children?: 
     </header>
     <section id="family-menu" className="family-menu" role="region" aria-label="Menu" hidden={!open}>
       <nav aria-label="ModePot family" className="family-menu-resources">
-        {resources.slice(1).map(({ label, href }) => <a key={label} href={href}>{label}</a>)}
+        {resources.map(({ label, href }) => <a key={label} href={href}>{label}</a>)}
       </nav>
       <FeedbackLink path={feedbackPath} />
       <nav aria-label="LifePot navigation" className="family-menu-product">
