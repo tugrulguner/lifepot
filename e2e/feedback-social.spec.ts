@@ -7,6 +7,11 @@ test("social destinations and deliberate issue route stay visible, touchable and
     await page.setViewportSize({ width, height: 850 });
     for (const path of ["/", "/learn", "/play"]) {
       await page.goto(path);
+      const directIssue=page.locator(width<=1100?".family-compact-home .family-feedback":".family-header-actions .family-feedback");
+      await expect(directIssue).toBeVisible();
+      const directHit=await directIssue.evaluate(e=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{width:r.width,height:r.height,top:r.top,hit:hit===e||e.contains(hit)}});
+      expect(directHit.width).toBeGreaterThanOrEqual(44);expect(directHit.height).toBeGreaterThanOrEqual(44);expect(directHit.top).toBeLessThan(64);expect(directHit.hit).toBe(true);
+      await directIssue.focus();await expect(directIssue).toBeFocused();
       if (width <= 1100) await page.getByRole("button", { name: "Menu" }).click();
       await expect(page.locator('.family-header a[href*="linkedin.com"], .family-header a[href*="x.com/"], #family-menu a[href*="linkedin.com"], #family-menu a[href*="x.com/"]')).toHaveCount(0);
       if (path === "/") {
