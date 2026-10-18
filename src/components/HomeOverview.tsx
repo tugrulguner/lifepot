@@ -4,7 +4,7 @@ import ExamplePreview from "./ExamplePreview";
 import productDemo from "@/data/product-demo.json";
 export function HomeOverview() {
   return <main className="overview-shell">
-    <FamilyHeader />
+    <FamilyHeader feedbackPath="/" />
     <section className="overview-hero">
       <div className="overview-copy">
         <p className="overview-kicker">A replayable artificial-life playground</p>
