@@ -1,0 +1,172 @@
+[
+  {
+    "title": "Can grazers persist in this pond?",
+    "caption": "Your question becomes an inspectable experiment.",
+    "notes": [
+      "Name organisms and who eats whom.",
+      "Roles and feeding links are separate settings."
+    ],
+    "hint": "Start with a simple food web.",
+    "time": "0:00"
+  },
+  {
+    "title": "Choose the conditions.",
+    "caption": "Choose the conditions you want to explore.",
+    "notes": [
+      "Resources supply energy for life.",
+      "Supported pressures shape the starting conditions."
+    ],
+    "hint": "Change one thing you can explain.",
+    "time": "0:10"
+  },
+  {
+    "title": "Give the experiment a direction.",
+    "caption": "What would you like to investigate?",
+    "notes": [
+      "A preference guides supported strategies.",
+      "It does not guarantee the outcome."
+    ],
+    "hint": "Keep your prediction observable.",
+    "time": "0:19"
+  },
+  {
+    "title": "Check the world before it begins.",
+    "caption": "Review the actual settings, then play.",
+    "notes": [
+      "Check roles, links and founder estimates.",
+      "You choose when to seed the world."
+    ],
+    "hint": "Edit the interpretation before starting.",
+    "time": "0:28"
+  },
+  {
+    "title": "Learn to read the habitat.",
+    "caption": "Birth, feeding and death cues mark recorded events.",
+    "notes": [
+      "Species colors distinguish populations.",
+      "Green marks show resources; warm marks show hazard."
+    ],
+    "hint": "Pause when a change catches your attention.",
+    "time": "0:38"
+  },
+  {
+    "title": "Turn one creature into a closer look.",
+    "caption": "Inspection pauses the world.",
+    "notes": [
+      "Read energy, age and living family.",
+      "Keep the selected subject beside the habitat."
+    ],
+    "hint": "Zoom for detail; overview for patterns.",
+    "time": "0:50"
+  },
+  {
+    "title": "Why inspect inherited traits?",
+    "caption": "Recorded example close-up: inherited engine values.",
+    "notes": [
+      "Fecundity shifts the energy needed to reproduce.",
+      "Parents transfer energy to their offspring."
+    ],
+    "hint": "Trait values run from 0 to 255.",
+    "time": "1:00"
+  },
+  {
+    "title": "Fecundity changes the reproduction threshold.",
+    "caption": "Recorded example close-up: inherited engine values.",
+    "notes": [
+      "Fecundity shifts the energy needed to reproduce.",
+      "Parents transfer energy to their offspring."
+    ],
+    "hint": "Trait values run from 0 to 255.",
+    "time": "1:06"
+  },
+  {
+    "title": "Will this hunter family survive?",
+    "caption": "Follow descendants across generations.",
+    "notes": [
+      "Gold marks identify the followed family.",
+      "Camera-follow tracks its living members."
+    ],
+    "hint": "A family can grow, shrink or disappear.",
+    "time": "1:12"
+  },
+  {
+    "title": "See what this policy actually changes.",
+    "caption": "Shown: policies for future offspring.",
+    "notes": [
+      "A offspring inherit a lower reproduction threshold.",
+      "B offspring inherit more efficient resource feeding."
+    ],
+    "hint": "These policies do not rewrite every living creature.",
+    "time": "1:24"
+  },
+  {
+    "title": "The food web reaches an ending.",
+    "caption": "Every ending leaves evidence to investigate.",
+    "notes": [
+      "Algae disappear at generation 43; grazers at 90.",
+      "Hunters and the followed family are lost at 113."
+    ],
+    "hint": "Follow the losses in the species timeline.",
+    "time": "1:36"
+  },
+  {
+    "title": "Turn the result into another question.",
+    "caption": "The engine supplies the measured evidence.",
+    "notes": [
+      "Jev selects facts from this run.",
+      "Review its proposed next experiment."
+    ],
+    "hint": "Use a turning point to choose the next question.",
+    "time": "1:46"
+  },
+  {
+    "title": "Try more starting resources.",
+    "caption": "The next choice remains yours.",
+    "notes": [
+      "Review the resource change before seeding.",
+      "Keep the original run as the comparison baseline."
+    ],
+    "hint": "Keep the previous run for comparison.",
+    "time": "1:56"
+  },
+  {
+    "title": "Play the changed experiment.",
+    "caption": "This is a new experiment, not replay.",
+    "notes": [
+      "Observe a new trial under changed conditions.",
+      "Fresh adaptive decisions can also differ."
+    ],
+    "hint": "Compare the shapes of the population curves.",
+    "time": "2:06"
+  },
+  {
+    "title": "Did the changed world last longer?",
+    "caption": "Same seed, fresh adaptive decisions.",
+    "notes": [
+      "Original world: empty at generation 113.",
+      "Changed world: empty at generation 158."
+    ],
+    "hint": "This observation does not isolate a resource effect.",
+    "time": "2:16"
+  },
+  {
+    "title": "Keep a world worth investigating.",
+    "caption": "Keep the experiment you want to revisit.",
+    "notes": [
+      "Save a recognizable world in this browser.",
+      "Export a portable backup of its recording."
+    ],
+    "hint": "Browser-local saves do not automatically sync.",
+    "time": "2:28"
+  },
+  {
+    "title": "Choose a world. See what happens.",
+    "caption": "Play at lifepot.modepot.io",
+    "notes": [
+      "Replay the recorded history without fresh inference.",
+      "Change conditions to explore another possibility."
+    ],
+    "hint": "What would you investigate next?",
+    "time": "2:38"
+  }
+]
