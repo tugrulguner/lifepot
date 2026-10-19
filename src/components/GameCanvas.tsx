@@ -490,6 +490,7 @@ export function GameCanvas() {
       fallbackReason?: FailureReason;
       failure?: SetupFailure;
       namedIntent?: SetupNamedIntent;
+      requestFailed?: boolean;
     } | null>(null),
     [seed, setSeed] = useState(0),
     [simulation, setSimulation] = useState<SimulationState | null>(null),
@@ -809,6 +810,7 @@ export function GameCanvas() {
       if (p.fidelity && p.fidelity.verdict !== "approve") gameplayAnalytics.setupFailed("setup_rejected");
       if (p.source === "fallback") {
         const reason = p.fallbackReason ?? p.failure?.code ?? p.fidelity?.failure?.code ?? p.provenance?.reason;
+        setProof(current => current ? { ...current, requestFailed: true, fallbackReason: reason ?? "unknown" } : current);
         if (reason) {
           const category = reason === "rate_limited" ? "rate_limited"
             : reason === "unavailable" || reason === "missing_credentials" ? "provider_unavailable"
@@ -819,7 +821,7 @@ export function GameCanvas() {
     } catch {
       gameplayAnalytics.setupFailed(failureCategory);
       setConfig(deterministicSetup(ca));
-      setProof({ source: "fallback" });
+      setProof({ source: "fallback", requestFailed: true, fallbackReason: failureCategory === "provider_unavailable" ? "unavailable" : failureCategory === "rate_limited" ? "rate_limited" : failureCategory === "invalid_response" ? "invalid_response" : "unknown" });
     }
     setAnswers(ca);
     setSeed(seedFromHash(hash));
@@ -966,7 +968,7 @@ export function GameCanvas() {
             <button disabled={interpreting} onClick={() => interpret(answers)}>Ask Jev to reinterpret</button>
             <button disabled={interpreting} onClick={loadDeterministicPreset}>Explore deterministic preset instead</button>
           </section>}
-          {proof?.fallbackReason && <p role="status">Setup interpretation unavailable: {failureLabels[proof.fallbackReason]}. This preview is a fallback, not a Jev-approved interpretation.</p>}
+          {proof?.requestFailed && <section className="setup-error" role="alert"><p>Jev could not interpret this setup ({failureLabels[proof.fallbackReason ?? "unknown"]}). Your answers are preserved, but this preview is not approved to seed.</p><div><button disabled={interpreting} onClick={() => interpret(answers)}>Retry interpretation</button><a className="setup-report" href="https://github.com/tugrulguner/lifepot/issues/new?title=LifePot%20setup%20interpretation%20issue&body=Page%3A%20%2Fplay%0A%0APlease%20describe%20what%20happened.%20Avoid%20including%20private%20answers%2C%20replay%20data%2C%20saved-world%20names%2C%20or%20personal%20information.">Report setup issue ↗</a></div></section>}
           {(proof?.failure ?? proof?.fidelity?.failure) && <p role="status">Setup failure stage: {(proof?.failure ?? proof?.fidelity?.failure)!.stage.replaceAll("_", " ")}.</p>}
           {proof?.fidelity?.mismatches?.length ? <section aria-label="Food-web contract conflicts"><p>The corrected proposal conflicts with the established food web:</p><ul>{proof.fidelity.mismatches.map((message, index) => <li key={index}>{message}</li>)}</ul></section> : null}
           {proof?.namedIntent && <p>Established organism intent: {proof.namedIntent.species.map(species => `${species.id} — ${species.name} (${species.role})`).join("; ")}.</p>}
@@ -993,8 +995,8 @@ export function GameCanvas() {
           <p className="review-note">These are the validated mechanics, not unrestricted interpretations of your prose. Roles do not imply feeding links: consumption follows the relationship graph. Extinct species are not automatically restored.</p>
           <button
             className="primary-button seed-button"
-            disabled={!!proof?.fidelity && proof.fidelity.verdict !== "approve"}
-            onClick={() => { if (proof?.fidelity && proof.fidelity.verdict !== "approve") { gameplayAnalytics.setupFailed("setup_rejected"); return; } acceptedFollowup.current = Boolean(baseline); begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined); }}
+            disabled={!!proof?.requestFailed || (!!proof?.fidelity && proof.fidelity.verdict !== "approve")}
+            onClick={() => { if (proof?.requestFailed || (proof?.fidelity && proof.fidelity.verdict !== "approve")) { gameplayAnalytics.setupFailed("setup_rejected"); return; } acceptedFollowup.current = Boolean(baseline); begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined); }}
           >
             Seed ecosystem <span>→</span>
           </button>
@@ -1108,11 +1110,10 @@ export function GameCanvas() {
       </aside>
       <div className="legend">
         <span><i className="resource-key" />Resource field</span>
-        {(["producer", "grazer", "scavenger", "hunter", "omnivore"] as const).map(role => <span key={role}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={role} color="#a9d878" /></svg>{({ producer: "Producer rosette", grazer: "Grazer capsule", scavenger: "Scavenger segments", hunter: "Hunter spindle", omnivore: "Omnivore clover" })[role]}</span>) }
+        {simulation.config.rules!.species.map(species => <span key={species.id}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={speciesColor(species.id)} /></svg><i style={{ backgroundColor: speciesColor(species.id) }} />Species {species.id} · {title(species.role)}</span>)}
         <span>Green field = resources · coral shading = hazards · cell detail at 2× zoom</span>
         <span>White ring = selected · dashed gold ring = followed family</span>
         <span>White rays/dot = birth · gold circle = feeding · red cross = death · pulses are sampled</span>
-        <span>Color = species in observatory</span>
       </div>
       <div className="ticker">
         <span>EVENT</span>

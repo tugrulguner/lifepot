@@ -3,7 +3,7 @@ import { FamilyHeader } from "@/components/FamilyHeader";
 import { guideGroups, guides } from "./content";
 import { publicDocuments } from "../project-docs/content";
 
-export const metadata = { title: "Documentation · LifePot", description: "Quick start, practical player guides, developer reference and deterministic engine internals." };
+export const metadata = { title: "Documentation · LifePot", description: "Quick start, practical player guides, developer reference and deterministic engine internals.", alternates: { canonical: "/learn" } };
 export default function LearnIndex() {
   return <main className="learn-shell"><FamilyHeader feedbackPath="/learn" />
     <div className="learn-toolbar"><Link href="/">← LifePot overview</Link></div>

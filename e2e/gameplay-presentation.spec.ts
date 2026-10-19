@@ -70,7 +70,7 @@ test("ordinary three-question setup arrives at gameplay without retained review 
     const request = route.request().postDataJSON() as { answers?: Parameters<typeof deterministicSetup>[0]; kind?: string };
     if (!request.answers) return route.abort();
     fixtureCalls++;
-    await route.fulfill({ json: { config: deterministicSetup(request.answers), source: "fallback", requestHash: hashSetupRequest(request.answers) } });
+    await route.fulfill({ json: { config: deterministicSetup(request.answers), source: "jev", requestHash: hashSetupRequest(request.answers), model: "declared-browser-fixture", fidelity: { verdict: "approve", model: "declared-browser-fixture", usage: { input_tokens: 1, output_tokens: 1 } } } });
   });
   await page.setViewportSize({ width: 390, height: 850 });
   await page.goto("/play");
@@ -111,7 +111,10 @@ test("near-board observation loop stays readable beside the desktop board and ab
     await expect(canvas).toBeVisible();
     await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
     const observation = page.getByRole("region", { name: "Near-board observations" });
-    await expect(observation).toContainText("Configured species");
+    await expect(observation).toBeVisible();
+    const worldLegend = observation.getByLabel("Configured species counts");
+    await expect(worldLegend).toContainText("World legend");
+    await expect(worldLegend.locator("svg.species-legend-glyph").first()).toBeVisible();
     const geometry = await page.evaluate(() => {
       const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
       const observationRect = rect(".gameplay-observation");

@@ -53,7 +53,17 @@ for (const viewport of [{ width: 1280, height: 850 }, { width: 1280, height: 633
       const board = document.querySelector("canvas.life-canvas")!.getBoundingClientRect();
       const header = document.querySelector(".family-header")!.getBoundingClientRect();
       return board.width >= minimum && board.top >= header.bottom && board.bottom <= innerHeight - 12;
-    }, viewport.width === 390 ? 330 : 300)).toBe(true);
+    }, viewport.width === 390 ? 330 : 300)).toBe(true).catch(async error => {
+      console.log("HABITAT_FIT_DIAGNOSTIC", await page.evaluate(() => ({
+        viewport: { width: innerWidth, height: innerHeight },
+        scroll: scrollY,
+        elements: Object.fromEntries(["canvas.life-canvas", ".family-header", ".gameplay-observation", ".configured-species-counts", ".near-board-inspection"].map(selector => {
+          const element = document.querySelector(selector);
+          return [selector, element ? { rect: element.getBoundingClientRect().toJSON(), height: getComputedStyle(element).height } : null];
+        })),
+      })));
+      throw error;
+    });
     await expect(page.getByTestId("generation")).toHaveText(generation!);
     await page.screenshot({ path: testInfo.outputPath("habitat-and-subject.png") });
     // Detailed measurements are still available after a deliberate navigation action.

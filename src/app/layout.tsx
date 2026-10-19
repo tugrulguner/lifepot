@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description,
   applicationName: "LifePot",
   category: "science education",
-  alternates: { canonical: "/", types: { "text/plain": "/llms.txt", "text/markdown": "/learn/developer-reference/markdown" } },
+  alternates: { canonical: "/", types: { "text/plain": "/llms.txt" } },
   openGraph: {
     type: "website",
     url: siteUrl,
