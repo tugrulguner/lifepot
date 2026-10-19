@@ -387,6 +387,25 @@ test("maps HTTP 200 fallback reasons to one exact setup failure event", async ()
   }
 });
 
+test("gates failed setup review with retry/report while preserving answers", async () => {
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal("scrollTo", vi.fn());
+  vi.stubGlobal("fetch", vi.fn(async () => new Response("unavailable", { status: 503 })));
+  render(<GameCanvas />);
+  const answers = ["A pond with plants and grazers", "A dry season", "Observe population changes"];
+  for (const [label, value] of [["What exists in this world?", answers[0]], ["What threatens life here?", answers[1]], ["What should evolution favor?", answers[2]]] as const) {
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.click(screen.getByRole("button", { name: /Continue|Review ecosystem/ }));
+  }
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("not approved to seed");
+  expect(screen.getByRole("button", { name: "Retry interpretation" })).toBeEnabled();
+  expect(screen.getByRole("link", { name: "Report setup issue ↗" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Seed ecosystem/ })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Edit setup answers" }));
+  expect(screen.getByLabelText("What exists in this world?")).toHaveValue(answers[0]);
+});
 test("offers a no-model preset through the existing guided setup", () => {
   render(<GameCanvas />);
   fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
