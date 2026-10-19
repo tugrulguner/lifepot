@@ -810,7 +810,7 @@ export function GameCanvas() {
       if (p.fidelity && p.fidelity.verdict !== "approve") gameplayAnalytics.setupFailed("setup_rejected");
       if (p.source === "fallback") {
         const reason = p.fallbackReason ?? p.failure?.code ?? p.fidelity?.failure?.code ?? p.provenance?.reason;
-        if (p.provenance?.outcome === "abstained" || reason) setProof(current => current ? { ...current, requestFailed: true, fallbackReason: reason } : current);
+        setProof(current => current ? { ...current, requestFailed: true, fallbackReason: reason ?? "unknown" } : current);
         if (reason) {
           const category = reason === "rate_limited" ? "rate_limited"
             : reason === "unavailable" || reason === "missing_credentials" ? "provider_unavailable"
@@ -996,7 +996,7 @@ export function GameCanvas() {
           <button
             className="primary-button seed-button"
             disabled={!!proof?.requestFailed || (!!proof?.fidelity && proof.fidelity.verdict !== "approve")}
-            onClick={() => { if (proof?.fidelity && proof.fidelity.verdict !== "approve") { gameplayAnalytics.setupFailed("setup_rejected"); return; } acceptedFollowup.current = Boolean(baseline); begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined); }}
+            onClick={() => { if (proof?.requestFailed || (proof?.fidelity && proof.fidelity.verdict !== "approve")) { gameplayAnalytics.setupFailed("setup_rejected"); return; } acceptedFollowup.current = Boolean(baseline); begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined); }}
           >
             Seed ecosystem <span>→</span>
           </button>

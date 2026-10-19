@@ -17,6 +17,18 @@ async function answerSetupWithKeyboard(page: Page) {
   await page.keyboard.press("Enter");
 }
 
+async function acceptSetupFixture(page: Page) {
+  let calls = 0;
+  await page.route("**/api/judge", async route => {
+    calls++;
+    await route.fulfill({ json: {
+      config: deterministicSetup(answers), source: "jev", requestHash: hashSetupRequest(answers), model: "declared-browser-fixture",
+      fidelity: { verdict: "approve", model: "declared-browser-fixture", usage: { input_tokens: 1, output_tokens: 1 } },
+    } });
+  });
+  return () => calls;
+}
+
 async function expectModePotLinkFitsViewport(page: Page) {
   const feedback = page.locator(".family-compact-home .family-feedback");
   await expect(feedback).toBeVisible();
@@ -147,7 +159,7 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
 
 test("links every game stage back to ModePot on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.route("**/api/judge", (route) => route.abort());
+  await acceptSetupFixture(page);
   await page.goto("/play");
   await expectModePotLinkFitsViewport(page);
   await answerSetupWithKeyboard(page);
@@ -165,8 +177,10 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
       contentType: "application/json",
       body: JSON.stringify({
         config: deterministicSetup(answers),
-        source: "fallback",
+        source: "jev",
         requestHash: hashSetupRequest(answers),
+        model: "declared-browser-fixture",
+        fidelity: { verdict: "approve", model: "declared-browser-fixture", usage: { input_tokens: 1, output_tokens: 1 } },
       }),
     });
   });
@@ -201,7 +215,7 @@ test("copied replay opens at generation zero and never calls the judge", async (
   // Serialization/replay contract: retain the full real-engine trajectory without
   // decorative event-animation work. Normal-motion playback has separate coverage.
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.route("**/api/judge", route => route.abort());
+  await acceptSetupFixture(page);
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/play");
   await answerSetupWithKeyboard(page);
@@ -228,7 +242,7 @@ test("copied replay opens at generation zero and never calls the judge", async (
 for (const viewport of [{ width: 1280, height: 633 }, { width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
   test(`observatory never covers the board at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
-    await page.route("**/api/judge", (route) => route.abort());
+    await acceptSetupFixture(page);
     await page.clock.install();
     await page.goto("/play");
     await answerSetupWithKeyboard(page);

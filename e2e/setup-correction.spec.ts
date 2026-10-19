@@ -39,11 +39,31 @@ test("shows the source-grounded organism names in setup review", async ({ page }
  await setup(page);
  await expect(page.getByText("Established organism intent: A — algae (producer); B — grazers (grazer); C — hunters (hunter).")).toBeVisible();
 });
-test("safe setup failure stage reaches the browser without being replaced by generic fallback", async ({ page }) => {
- await page.route("**/api/judge", async route => { const input = route.request().postDataJSON(); await route.fulfill({ json: { config: defaultConfig(), source: "fallback", requestHash: input.requestHash, fallbackReason: "invalid_response", failure: { stage: "initial_council", code: "invalid_response" } } }); });
+test("legacy API fallback response is a failed interpretation, not the manual preset", async ({ page }) => {
+ await page.route("**/api/judge", async route => { const input = route.request().postDataJSON(); await route.fulfill({ json: { config: defaultConfig(), source: "fallback", requestHash: input.requestHash, fallbackReason: "invalid_response" } }); });
+ await setup(page);
+ await expect(page.locator(".setup-error[role=alert]")).toContainText("not approved to seed");
+ await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeDisabled();
+ await expect(page.getByRole("button", { name: "Retry interpretation" })).toBeVisible();
+ await page.getByRole("button", { name: "Edit setup answers" }).click();
+ await expect(page.locator(".question-panel input")).toHaveValue(answers[0]);
+ await page.getByRole("button", { name: "Explore deterministic preset", exact: true }).click();
+ await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeEnabled();
+ await expect(page.locator(".setup-error")).toHaveCount(0);
+});
+
+test("failed setup stays blocked, reports the issue, retries, and preserves answers", async ({ page }) => {
+ let requests = 0;
+ await page.route("**/api/judge", async route => { requests++; const input = route.request().postDataJSON(); await route.fulfill({ json: { config: defaultConfig(), source: "fallback", requestHash: input.requestHash, fallbackReason: "invalid_response", failure: { stage: "initial_council", code: "invalid_response" } } }); });
  await setup(page);
  await expect(page.getByText("Setup failure stage: initial council.")).toBeVisible();
- await expect(page.getByText(/This preview is a fallback/)).toBeVisible();
+ await expect(page.locator(".setup-error[role=alert]")).toContainText("Your answers are preserved, but this preview is not approved to seed.");
+ await expect(page.getByRole("link", { name: "Report setup issue ↗" })).toBeVisible();
+ await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeDisabled();
+ await page.getByRole("button", { name: "Retry interpretation" }).click();
+ await expect.poll(() => requests).toBe(2);
+ await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeDisabled();
+ await expect(page.getByText(/This preview is a fallback/)).not.toBeVisible();
  await page.getByRole("button", { name: "Edit setup answers" }).click();
  await expect(page.locator(".question-panel input")).toHaveValue(answers[0]);
 });

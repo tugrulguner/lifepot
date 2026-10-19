@@ -166,11 +166,11 @@ button:disabled { cursor: not-allowed; opacity: .42; }
 .decision-usage { margin: 9px 0 0; color: var(--dim); font: 7px/1.55 var(--mono); letter-spacing: .04em; text-transform: uppercase; }
 .fitness-overlay { position: absolute; z-index: 3; right: clamp(16px, 2.4vw, 36px); top: 363px; width: 190px; padding: 12px 14px; border: 1px solid var(--line); background: rgba(3,16,14,.76); backdrop-filter: blur(10px); }
 .fitness-overlay > p { margin: 0 0 9px; color: var(--dim); font: 8px var(--mono); letter-spacing: .13em; }
-.legend { grid-area: board; align-self: start; justify-self: end; z-index: 3; position: relative; display: grid; grid-template-columns: 1fr; gap: 6px; width: min(220px, 42%); margin: 14px 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: rgba(3,16,14,.88); color: var(--muted); font: 11px/1.35 var(--mono); text-transform: none; }
-.legend .role-glyph { width: 22px; height: 22px; flex: 0 0 22px; display: inline-block; }
+.legend { position: absolute; z-index: 3; left: clamp(16px, 2.4vw, 36px); bottom: 64px; display: flex; gap: 17px; padding: 8px 10px; background: rgba(3,16,14,.7); color: var(--muted); font: 8px var(--mono); text-transform: uppercase; }
+.legend .role-glyph { width: 18px; height: 18px; flex: 0 0 18px; display: inline-block; }
 .legend .resource-key { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: #83d99a; }
 .legend span { display: flex; align-items: center; gap: 6px; }
-.legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.legend i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 .resource-key { background: #75bc89; }.birth-key { border: 1px solid var(--mint); box-shadow: 0 0 6px var(--mint); }.hazard-key { background: var(--coral); }
 .ticker { position: absolute; z-index: 3; left: clamp(16px, 2.4vw, 36px); right: clamp(16px, 2.4vw, 36px); bottom: 16px; min-height: 37px; display: flex; align-items: center; padding: 0 13px; border: 1px solid var(--line); background: rgba(3,16,14,.82); backdrop-filter: blur(10px); }
 .ticker span { padding-right: 12px; color: var(--mint); font: 8px var(--mono); letter-spacing: .13em; }
@@ -861,7 +861,13 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .camera-tools button:focus-visible, .camera-tools summary:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
 .camera-tools p { margin: 8px 0; overflow-wrap: anywhere; }
 .camera-tools summary { min-height: 44px; padding-block: 12px; cursor: pointer; }
-@media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "observation" "board" "focus-controls" "inspector" "camera" "focus" "status" "legend" "observatory" "decision" "event" "result"; }.simulation-shell .legend { grid-area: legend; width: auto; justify-self: stretch; margin: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media(max-width: 1000px) { .simulation-shell { grid-template-areas: "stats" "controls" "observation" "board" "focus-controls" "inspector" "camera" "focus" "status" "legend" "observatory" "decision" "event" "result"; } }
+.configured-species-counts .species-legend-glyph { width: 18px; height: 18px; flex: 0 0 18px; }
+.world-legend-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; min-width: 0; }
+.world-legend-row > .configured-species-counts { flex: 1 1 180px; min-width: 0; }
+.world-legend-row > .paused-world-context { flex: 0 0 auto; }
+.world-legend-row > .paused-world-context[open] { flex: 1 0 100%; }
+.world-legend-row .world-legend-heading { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 @media(max-width:700px) { .my-worlds li { align-items:stretch; } }
 
 /* Paused inspection keeps a measured, magnified subject with the habitat. */

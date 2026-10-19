@@ -1,12 +1,10 @@
 import { expect, test } from "@playwright/test";
 for (const width of [1280, 390]) test(`inspect and follow real lineage at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 844 });
-  await page.route("**/api/judge", route => route.abort());
   await page.goto("/play");
-  for (const answer of ["Rich mineral pools with abundant prey", "Toxic waves sweep across the world", "Diversify while prey and predators coexist"]) {
-    await page.getByRole("textbox").fill(answer);
-    await page.keyboard.press("Enter");
-  }
+  // Presentation/inspection is exercised on the explicit deterministic preset,
+  // not by expecting an unavailable API to silently seed a fallback world.
+  await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   const board = page.getByRole("img", { name: /ecosystem generation/i });
