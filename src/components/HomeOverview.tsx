@@ -5,9 +5,8 @@ import ExamplePreview from "./ExamplePreview";
 import { ProductWalkthrough } from "./ProductWalkthrough";
 export function HomeOverview() {
   return <main id="main-content" tabIndex={-1} className="overview-shell">
-    <a className="skip-to-main" href="#main-content">Skip to main content</a>
-    <FamilyHeader feedbackPath="/" />
-    <section className="overview-hero">
+    <FamilyHeader feedbackPath="/" skipTarget="overview-content" />
+    <section id="overview-content" tabIndex={-1} className="overview-hero">
       <div className="overview-copy">
         <p className="overview-kicker">A replayable artificial-life playground</p>
         <h1>Shape a world.<br />Watch life unfold.</h1>

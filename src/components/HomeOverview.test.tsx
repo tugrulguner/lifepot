@@ -19,8 +19,11 @@ it("keeps canonical artwork in the family hero and creator/family attribution im
 });
 it("offers keyboard skip navigation and defers the explicitly sized architecture artwork", () => {
   const root = overview();
-  expect(root.querySelector('a[href="#main-content"]')?.textContent).toContain("Skip to main content");
-  expect(root.querySelector("main#main-content[tabindex='-1']")).not.toBeNull();
+  expect(root.querySelector('a[href="#overview-content"]')?.textContent).toContain("Skip to main content");
+  const target = root.querySelector("#overview-content[tabindex='-1']")!;
+  expect(target).not.toBeNull();
+  expect(target.querySelector(".family-header")).toBeNull();
+  expect(target.querySelector('.overview-primary[href="/play"]')).not.toBeNull();
   const image = root.querySelector(".overview-mechanism img")!;
   expect(image.getAttribute("loading")).toBe("lazy");
   expect(image.getAttribute("width")).toBe("1600");

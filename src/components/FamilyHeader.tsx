@@ -18,7 +18,7 @@ export function FeedbackLink({ path }: { path: "/" | "/learn" | "/play" }) {
   return <a className="family-feedback ph-no-autocapture" href={href} target="_blank" rel="noopener noreferrer" aria-label={`Feedback / report an issue for ${path} (opens in a new tab)`} data-ph-no-autocapture="true">Feedback</a>;
 }
 
-export function FamilyHeader({ children, feedbackPath = "/play" }: { children?: ReactNode; feedbackPath?: "/" | "/learn" | "/play" }) {
+export function FamilyHeader({ children, feedbackPath = "/play", skipTarget }: { children?: ReactNode; feedbackPath?: "/" | "/learn" | "/play"; skipTarget: string }) {
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -33,7 +33,9 @@ export function FamilyHeader({ children, feedbackPath = "/play" }: { children?: 
     return () => document.removeEventListener("keydown", close);
   }, [open]);
 
+
   return <>
+    <a className="skip-to-main" href={`#${skipTarget}`}>Skip to main content</a>
     <header className="family-header">
       <Link className="family-product" href="/" aria-label="LifePot home"><span>Life<span className="family-wordmark-pot">Pot</span></span></Link>
       <nav className="family-desktop-resources" aria-label="ModePot family">

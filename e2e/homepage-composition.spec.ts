@@ -6,7 +6,8 @@ for (const width of [320, 375, 390, 768, 800, 801, 1024, 1280, 1920, 2560]) {
     await page.emulateMedia({ colorScheme: theme === "dark" ? "light" : "dark", reducedMotion: "reduce" });
     const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
     await page.goto("/");
-    await page.getByLabel("Color theme").selectOption(theme);
+    // Explicit selection is required for each matrix case; Auto alone is not coverage.
+    await page.getByRole("combobox", { name: "Color theme" }).selectOption(theme);
     const artwork = page.locator(".overview-hero .overview-lockup");
     await expect.poll(() => artwork.evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth === 1200)).toBe(true);
     await artwork.evaluate((i: HTMLImageElement) => i.decode());
