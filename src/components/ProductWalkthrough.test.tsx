@@ -18,6 +18,23 @@ it("does not let a superseded play rejection obscure a later chapter", async () 
   expect(screen.queryByRole("button", { name: "Watch the walkthrough" })).not.toBeInTheDocument();
 });
 
+it("keeps the native player available when pausing cancels pending playback", async () => {
+  let rejectPlay!: (error: DOMException) => void;
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockReturnValue(new Promise<void>((_, reject) => { rejectPlay = reject; }));
+  render(<ProductWalkthrough />);
+  const video = screen.getByLabelText("LifePot explained product demo") as HTMLVideoElement;
+  fireEvent.click(screen.getByRole("button", { name: "Watch the walkthrough" }));
+  Object.defineProperty(video, "paused", { configurable: true, value: false });
+  fireEvent.play(video);
+  Object.defineProperty(video, "paused", { configurable: true, value: true });
+  fireEvent.pause(video);
+  await act(async () => { rejectPlay(new DOMException("The play() request was interrupted by a call to pause().", "AbortError")); });
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Watch the walkthrough" })).not.toBeInTheDocument();
+  expect(video.tabIndex).toBe(0);
+  expect(video.controls).toBe(true);
+});
+
 it("offers an accessible recovery when the active playback request fails", async () => {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockRejectedValue(new Error("Unavailable"));
   render(<ProductWalkthrough />);

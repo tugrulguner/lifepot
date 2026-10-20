@@ -1,5 +1,51 @@
 import { expect, test } from "@playwright/test";
 
+for (const width of [390, 1280]) test(`native pause during walkthrough buffering stays resumable: ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addInitScript(() => {
+    const nativePlay = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      const pending = nativePlay.call(this);
+      // Observe the genuine native promise without replacing its behavior.
+      void pending.catch((failure: DOMException) => { this.dataset.playRejection = failure.name; });
+      return pending;
+    };
+  });
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/demo/lifepot-explained-demo-537cbbf6.mp4", async route => {
+    await pending;
+    await route.continue();
+  });
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  try {
+    await page.goto("/");
+    const section = page.getByRole("region", { name: "Watch how it works", exact: true });
+    const video = page.getByLabel("LifePot explained product demo", { exact: true });
+    await section.getByRole("button", { name: "Observe and inspect, 0:38", exact: true }).click();
+    await expect(section.locator(".demo-cover")).toHaveCount(0);
+    expect(await video.evaluate((v: HTMLVideoElement) => !v.paused && v.readyState === 0 && v.error === null)).toBe(true);
+    await video.press("Space");
+    await expect(video).toHaveAttribute("data-play-rejection", "AbortError");
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+    await expect(video).toBeFocused();
+    await expect(section.getByRole("alert")).toHaveCount(0);
+    await expect(section.locator(".demo-cover")).toHaveCount(0);
+    release();
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState > 0 && !v.seeking && v.currentTime >= 38)).toBe(true);
+    await video.press("Space");
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused && v.videoWidth === 1920 && v.currentTime > 38)).toBe(true);
+    await expect(section.getByRole("alert")).toHaveCount(0);
+    expect(errors).toEqual([]);
+  } finally {
+    release();
+    await page.unrouteAll({ behavior: "wait" });
+  }
+});
+
 for (const width of [320, 390, 1280]) for (const theme of ["light", "dark"]) {
   test(`walkthrough presentation and chapter controls: ${width}px ${theme}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });

@@ -32,8 +32,12 @@ export function ProductWalkthrough() {
     if (player.error) player.load();
     if (player.readyState > 0) { pendingSeek.current = null; player.currentTime = seconds; }
     else pendingSeek.current = seconds;
-    void player.play().catch(() => {
-      if (attempt === playAttempt.current) { setError(true); setStarted(false); }
+    void player.play().catch((failure: unknown) => {
+      if (attempt !== playAttempt.current) return;
+      // Native pause cancels pending play without making the media unusable.
+      if (failure instanceof DOMException && failure.name === "AbortError" && player.paused && !player.error) return;
+      setError(true);
+      setStarted(false);
     });
     player.scrollIntoView?.({ block: "nearest", behavior: "instant" });
   }
