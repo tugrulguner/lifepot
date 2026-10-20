@@ -29,7 +29,7 @@ export function ProductWalkthrough() {
     if (!player) return;
     const attempt = ++playAttempt.current;
     setError(false);
-    if (player.error) player.load();
+    if (player.error || player.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) player.load();
     if (player.readyState > 0) { pendingSeek.current = null; player.currentTime = seconds; }
     else pendingSeek.current = seconds;
     void player.play().catch((failure: unknown) => {

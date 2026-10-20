@@ -35,6 +35,20 @@ it("keeps the native player available when pausing cancels pending playback", as
   expect(video.controls).toBe(true);
 });
 
+it("reloads an exhausted source before retrying a chapter", () => {
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+  const load = vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => {});
+  render(<ProductWalkthrough />);
+  const video = screen.getByLabelText("LifePot explained product demo") as HTMLVideoElement;
+  Object.defineProperty(video, "networkState", { value: HTMLMediaElement.NETWORK_NO_SOURCE });
+  Object.defineProperty(video, "error", { value: null });
+  expect(video.error).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Try another experiment, 1:46" }));
+  expect(load).toHaveBeenCalledOnce();
+  fireEvent.loadedMetadata(video);
+  expect(video.currentTime).toBe(106);
+});
+
 it("offers an accessible recovery when the active playback request fails", async () => {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockRejectedValue(new Error("Unavailable"));
   render(<ProductWalkthrough />);

@@ -1,5 +1,24 @@
 import { expect, test } from "@playwright/test";
 
+for (const width of [390, 1280]) test(`walkthrough retries an exhausted source at the requested chapter: ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  let fail = true;
+  await page.route("**/demo/lifepot-explained-demo-537cbbf6.mp4", route => fail ? route.abort("failed") : route.continue());
+  await page.goto("/");
+  const section = page.getByRole("region", { name: "Watch how it works", exact: true });
+  const video = page.getByLabel("LifePot explained product demo", { exact: true });
+  await section.getByRole("button", { name: "Watch the walkthrough", exact: true }).click();
+  await expect(section.getByRole("alert")).toBeVisible();
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.networkState)).toBe(3);
+  expect(await video.evaluate((v: HTMLVideoElement) => v.error)).toBeNull();
+  fail = false;
+  await section.getByRole("button", { name: "Try another experiment, 1:46", exact: true }).click();
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused && !v.seeking && v.currentTime >= 106 && v.currentTime < 116 && v.videoWidth === 1920)).toBe(true);
+  await expect(section.getByRole("alert")).toHaveCount(0);
+  await expect(section.locator(".demo-cover")).toHaveCount(0);
+});
+
 for (const width of [390, 1280]) test(`native pause during walkthrough buffering stays resumable: ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
