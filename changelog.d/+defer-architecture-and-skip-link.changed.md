@@ -1,0 +1,1 @@
+Defer the below-fold architecture diagram without changing its artwork or aspect ratio, and add a keyboard-visible skip link to the overview's main content.

@@ -17,6 +17,15 @@ it("keeps canonical artwork in the family hero and creator/family attribution im
   expect(credit.querySelector('a[href="https://tugrul.modepot.io/"]')?.textContent).toContain("Tugrul Guner");
   expect(credit.querySelector('a[href="https://modepot.io/"]')?.textContent).toContain("ModePot");
 });
+it("offers keyboard skip navigation and defers the explicitly sized architecture artwork", () => {
+  const root = overview();
+  expect(root.querySelector('a[href="#main-content"]')?.textContent).toContain("Skip to main content");
+  expect(root.querySelector("main#main-content[tabindex='-1']")).not.toBeNull();
+  const image = root.querySelector(".overview-mechanism img")!;
+  expect(image.getAttribute("loading")).toBe("lazy");
+  expect(image.getAttribute("width")).toBe("1600");
+  expect(image.getAttribute("height")).toBe("900");
+});
 it("separates the recorded preview from the hero without a competing filled primary action", () => {
   const root = overview(), card = root.querySelector(".example-card")!;
   expect(card.closest(".overview-hero")).toBeNull();

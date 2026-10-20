@@ -24,7 +24,14 @@ test("overview has first-fold Play and preserves the keyless game entry across t
     await page.setViewportSize({ width, height: 850 });
     for (const theme of ["light", "dark", "auto"]) {
       await page.goto("/");
-      await page.getByLabel("Color theme").selectOption(theme);
+      await expect(page.getByRole("link", { name: "Skip to main content" })).toBeAttached();
+      await page.keyboard.press("Tab");
+      const skip = page.getByRole("link", { name: "Skip to main content" });
+      await expect(skip).toBeFocused();
+      await expect(skip).toBeInViewport();
+      await skip.press("Enter");
+      await expect(page.locator("main#main-content")).toBeFocused();
+      await page.goto("/");
       const play = page.locator(".overview-actions").getByRole("link", { name: "Create your own world" });
       await expect(play).toHaveAttribute("href", "/play");
       const box = await play.boundingBox();
