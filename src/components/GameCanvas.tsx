@@ -854,8 +854,8 @@ export function GameCanvas() {
     const q = QUESTIONS[qi];
     return (
       <main className="setup-shell">
-        <FamilyHeader feedbackPath="/play"><span className="header-detail">Co-evolution laboratory</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
-        <section className="question-panel" onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
+        <FamilyHeader feedbackPath="/play" skipTarget="play-content"><span className="header-detail">Co-evolution laboratory</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
+        <section id="play-content" tabIndex={-1} className="question-panel" onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
           <div id="my-worlds-entry" />
           <div className="step-label">QUESTION {qi + 1} / 3</div>
           <div className="progress-track">
@@ -942,8 +942,8 @@ export function GameCanvas() {
   if (stage === "review" && config)
     return (
       <main className={`review-shell${parentWorldId ? " ph-no-capture" : ""}`} data-ph-no-capture={parentWorldId ? true : undefined}>
-        <FamilyHeader feedbackPath="/play"><span className="header-detail">Interpretation complete</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
-        <section className="review-card">
+        <FamilyHeader feedbackPath="/play" skipTarget="play-content"><span className="header-detail">Interpretation complete</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
+        <section id="play-content" tabIndex={-1} className="review-card">
           <p className="eyebrow">Founder ecology</p>
           {localWorldName && <p className="world-identity">Experiment: <strong>{localWorldName}</strong></p>}
           <h1>World conditions</h1>
@@ -1023,7 +1023,7 @@ export function GameCanvas() {
     resources = Math.round(simulation.stats.resources / 2500);
   return (
     <main className={`simulation-shell${originWorldId || parentWorldId ? " ph-no-capture" : ""}`} data-ph-no-capture={originWorldId || parentWorldId ? true : undefined}>
-      <section className="run-status" aria-label="Run status"><strong role="status">{complete ? simulation.stats.population === 0 ? "World empty" : "Observation complete" : deciding ? "Waiting for a bounded ecology decision — the world is held still" : paused ? "Paused — inspect life or step one generation" : "Running — watch, inspect, or pause"}</strong><div className="run-context">{isExample ? "Recorded example · The little pond · " : ""}{localWorldName ? `Experiment: ${localWorldName} · ` : ""}{replayMode ? "Exact recorded replay · no inference" : policy === "fixed" ? "Fixed world rules" : "Adaptive ecology"}{question ? ` · Your question: ${question}` : ""}{isExample && <><a href="/play">Create your own world</a>{exampleTips && <><details className="example-tips"><summary>Three ways to explore</summary><ol><li>Pause to look closer.</li><li>Use “Inspect a living organism” to see its age and energy.</li><li>Choose “Follow founder lineage” to highlight its family.</li></ol></details><button type="button" className="example-dismiss" aria-label="Dismiss example tips" onClick={() => setExampleTips(false)}>Dismiss tips</button></>}</>}</div></section>
+      <section id="play-content" tabIndex={-1} className="run-status" aria-label="Run status"><strong role="status">{complete ? simulation.stats.population === 0 ? "World empty" : "Observation complete" : deciding ? "Waiting for a bounded ecology decision — the world is held still" : paused ? "Paused — inspect life or step one generation" : "Running — watch, inspect, or pause"}</strong><div className="run-context">{isExample ? "Recorded example · The little pond · " : ""}{localWorldName ? `Experiment: ${localWorldName} · ` : ""}{replayMode ? "Exact recorded replay · no inference" : policy === "fixed" ? "Fixed world rules" : "Adaptive ecology"}{question ? ` · Your question: ${question}` : ""}{isExample && <><a href="/play">Create your own world</a>{exampleTips && <><details className="example-tips"><summary>Three ways to explore</summary><ol><li>Pause to look closer.</li><li>Use “Inspect a living organism” to see its age and energy.</li><li>Choose “Follow founder lineage” to highlight its family.</li></ol></details><button type="button" className="example-dismiss" aria-label="Dismiss example tips" onClick={() => setExampleTips(false)}>Dismiss tips</button></>}</>}</div></section>
       {notice && <p className="run-notice" role="status">{notice}</p>}
       {archivedEvidence && <section className="archived-highlights" aria-label="Recorded highlights"><h2>Recorded highlights</h2><p>Validated from this saved replay; these are archived observations, not newly observed replay events.</p>{archivedEvidence.lineageExtinction.length ? <ul>{archivedEvidence.lineageExtinction.map((item, index) => <li key={`${item.lineage}-${item.generation}-${index}`}>Founder family {item.lineage} disappeared at generation {item.generation} (recorded).</li>)}</ul> : <p>No followed-family extinction milestone was recorded in this save.</p>}</section>}
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
@@ -1031,7 +1031,7 @@ export function GameCanvas() {
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
       <GameplayObservation inspection={selected === null ? undefined : <WatchingOrganism state={simulation} index={selected} followed={followed} onFollow={followLineage} onDetails={inspectDetails} />} cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
       <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={followLineage} onClear={() => setSelected(null)} onPick={inspectLiving} />
-      <FamilyHeader feedbackPath="/play"><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
+      <FamilyHeader feedbackPath="/play" skipTarget="play-content"><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
       <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} /></div>
       <section className="stats-strip" aria-label="Live ecosystem statistics">
         <Stat
