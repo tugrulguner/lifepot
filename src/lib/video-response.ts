@@ -1,6 +1,5 @@
-/** Single-file, single-range HTTP semantics for the pinned public product demo. */
-export function videoResponse(bytes: Uint8Array, request: Request, etag: string): Response {
-  const size = bytes.byteLength;
+/** Resolve metadata before opening the pinned video asset. */
+export function videoResponsePlan(size: number, request: Request, etag: string): Response | { start: number; end: number; status: number; headers: Headers } {
   const headers = new Headers({
     "Content-Type": "video/mp4",
     "Accept-Ranges": "bytes",
@@ -35,8 +34,15 @@ export function videoResponse(bytes: Uint8Array, request: Request, etag: string)
     end = Math.min(end, size - 1);
     headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
     headers.set("Content-Length", String(end - start + 1));
-    return new Response(Uint8Array.from(bytes.subarray(start, end + 1)), { status: 206, headers });
+    return { start, end, status: 206, headers };
   }
   headers.set("Content-Length", String(size));
-  return new Response(Uint8Array.from(bytes), { headers });
+  return { start: 0, end: size - 1, status: 200, headers };
+}
+
+/** In-memory development fallback; the Worker uses the streaming asset path. */
+export function videoResponse(bytes: Uint8Array, request: Request, etag: string): Response {
+  const plan = videoResponsePlan(bytes.byteLength, request, etag);
+  if (plan instanceof Response) return plan;
+  return new Response(Uint8Array.from(bytes.subarray(plan.start, plan.end + 1)), { status: plan.status, headers: plan.headers });
 }
