@@ -1136,7 +1136,7 @@ export function GameCanvas() {
         <button onClick={inspectLiving}>Inspect living organism</button>
         <button onClick={() => document.getElementById("world-observatory")?.scrollIntoView({ behavior: "smooth", block: "start" })}>World observatory</button>
       </div>
-      {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} question={question}
+      {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} question={question} speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])}
         onInspect={() => { setShowResults(false); document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus(); }}
         onReplay={() => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); }}
         onEdit={() => { setParentWorldId(originWorldId ?? parentWorldId); setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); }}
@@ -1148,7 +1148,7 @@ export function GameCanvas() {
           setSeed(simulation.seed); setPolicy("fixed"); setReplayMode(false);
           setFixedBaselineReview(true); setStage("review"); window.scrollTo(0, 0);
         }}>Review fixed-rule baseline</button>
-        {baseline && <RunComparison before={baseline} after={{ evidence, config: initialConfig ?? config, seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }} />}
+        {baseline && <RunComparison speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} before={baseline} after={{ evidence, config: initialConfig ?? config, seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }} />}
         <RunReflectionPanel key={`reflection-${simulation.seed}-${simulation.generation}`} evidence={evidence} config={initialConfig ?? config} onExperiment={experiment => {
           setParentWorldId(originWorldId ?? parentWorldId);
           const next = structuredClone(initialConfigRef.current ?? config);

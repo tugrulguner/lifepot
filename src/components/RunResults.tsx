@@ -3,6 +3,7 @@ import type { SimulationState } from "@/game/world";
 import { GRID_CELLS } from "@/game/world";
 import type { RunEvidence } from "@/game/run-evidence";
 import { speciesColor } from "@/game/species-colors";
+import type { SpeciesId } from "@/game/rules";
 
 export type RunResultsProps = {
   state: SimulationState;
@@ -13,13 +14,19 @@ export type RunResultsProps = {
   onReplay: () => void;
   onInspect: () => void;
   children?: ReactNode;
+  speciesNames?: Partial<Record<SpeciesId, string>>;
 };
 
 const WIDTH = 640;
 const HEIGHT = 220;
 const PAD = 32;
 
-export function RunResults({ state, evidence, question, onEdit, onNew, onReplay, onInspect, children }: RunResultsProps) {
+export function RunResults({ state, evidence, question, onEdit, onNew, onReplay, onInspect, children, speciesNames = {} }: RunResultsProps) {
+  const displayName = (id: string) => { const value = speciesNames[id as SpeciesId]; return typeof value === "string" && value.trim() ? value.trim() : undefined; };
+  const named = (id: string) => displayName(id) ? `${displayName(id)} (Species ${id})` : `Species ${id}`;
+  const namedSpecies = state.config.rules!.species.filter(rule => displayName(rule.id)).map(rule => named(rule.id)).join(", ");
+  const unnamedCount = state.config.rules!.species.filter(rule => !displayName(rule.id)).length;
+  const chartIdentity = namedSpecies ? `${namedSpecies}${unnamedCount ? ", plus unnamed configured species" : ""}` : "";
   const history = evidence.samples;
   const last = history[history.length - 1];
   const empty = state.stats.population === 0;
@@ -40,9 +47,9 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
     <nav aria-label="Run actions"><button type="button" onClick={onInspect}>Inspect final world</button><button type="button" onClick={onReplay}>Replay this run</button><button type="button" onClick={onEdit}>Edit this world</button><button type="button" onClick={onNew}>New world</button></nav>
     {last && <ul aria-label="Observed outcomes">
       <li>Peak population: {evidence.peakPopulation}</li>
-      {configured.map(rule => <li key={rule.id}>{rule.role} species {rule.id}: {last.species.find(item => item.speciesId === rule.id)?.population ?? 0} at final observation</li>)}
+      {configured.map(rule => <li key={rule.id}>{rule.role} {displayName(rule.id) ? <><strong>{displayName(rule.id)}</strong> · </> : ""}species {rule.id}: {last.species.find(item => item.speciesId === rule.id)?.population ?? 0} at final observation</li>)}
       <li>{last.resources / GRID_CELLS} mean resources per cell; cumulative births: {last.births}; deaths: {last.deaths}; kills: {last.kills}</li>
-      {evidence.firstExtinction.map(item => <li key={item.speciesId}>Species {item.speciesId} first observed extinct at generation {item.generation}</li>)}
+      {evidence.firstExtinction.map(item => <li key={item.speciesId}>{named(item.speciesId)} first observed extinct at generation {item.generation}</li>)}
       {configured.filter(rule => !foundedSpecies.has(rule.id)).map(rule => <li key={`not-seeded-${rule.id}`}>Species {rule.id} ({rule.role}) was not seeded</li>)}
     </ul>}
     <figure className="run-results__trajectory"><figcaption>Whole-run population history</figcaption>
@@ -56,14 +63,14 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
       </svg>
       <ul className="run-results__legend"><li>Population: organisms</li><li>Resources: mean per cell</li></ul>
     </figure>
-    <figure className="run-results__trajectory"><figcaption>Whole-run species population history</figcaption>
-      <svg className="run-results__graph" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Whole-run species population history">
+    <figure className="run-results__trajectory"><figcaption>Whole-run species population history{chartIdentity ? ` — ${chartIdentity}` : ""}</figcaption>
+      <svg className="run-results__graph" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`Whole-run species population history${chartIdentity ? ` — ${chartIdentity}` : ""}`}>
         <line className="run-results__axis" x1={PAD} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} />
         <text x={PAD - 6} y={PAD} textAnchor="end">{max.toFixed(0)}</text><text x={PAD - 6} y={HEIGHT - PAD} textAnchor="end">0</text>
-        {configured.map(rule => <polyline key={rule.id} aria-label={`Species ${rule.id}: ${rule.role}`} stroke={speciesColor(rule.id)} strokeWidth={2.5} points={history.map((item, index) => point(item.species.find(entry => entry.speciesId === rule.id)?.population ?? 0, index)).join(" ")} fill="none" />)}
+        {configured.map(rule => <polyline key={rule.id} aria-label={`${displayName(rule.id) ? `${displayName(rule.id)} (Species ${rule.id})` : `Species ${rule.id}`}: ${rule.role}`} stroke={speciesColor(rule.id)} strokeWidth={2.5} points={history.map((item, index) => point(item.species.find(entry => entry.speciesId === rule.id)?.population ?? 0, index)).join(" ")} fill="none" />)}
         <text x={PAD} y={HEIGHT - 8}>Gen {history[0]?.generation ?? 0}</text><text x={WIDTH - PAD} y={HEIGHT - 8} textAnchor="end">Gen {last?.generation ?? 0}</text>
       </svg>
-      <ul className="run-results__legend">{configured.map(rule => <li key={rule.id}><span style={{ color: speciesColor(rule.id) }}>●</span> Species {rule.id}: {rule.role}</li>)}</ul>
+      <ul className="run-results__legend">{configured.map(rule => <li key={rule.id}><span style={{ color: speciesColor(rule.id) }}>●</span> {displayName(rule.id) ? <><strong>{displayName(rule.id)}</strong> · </> : ""}Species {rule.id}: {rule.role}</li>)}</ul>
     </figure>
     <details className="run-results__measurements"><summary>Generation measurements</summary>
       <table><thead><tr><th scope="col">Generation</th><th scope="col">Population</th>{configured.map(rule => <th scope="col" key={rule.id}>{rule.role} {rule.id}</th>)}<th scope="col">Mean resources/cell</th></tr></thead>

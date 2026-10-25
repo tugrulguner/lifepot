@@ -940,6 +940,22 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
   .simulation-shell .stat span { letter-spacing: 0; }
   .simulation-shell .stat:nth-child(4n) { border-right: 0; }
 }
+/* Keep camera tools adjacent to the habitat rather than below the full dashboard. */
+.simulation-shell { grid-template-areas: "stats stats" "controls controls" "board observation" "camera observatory" "focus-controls observatory" "inspector observatory" "focus observatory" "legend observatory" "status observatory" "event observatory" "decision observatory" "result result"; }
+.camera-tools { align-self: start; }
+@media(max-width: 1000px) {
+  .simulation-shell { grid-template-areas: "stats" "controls" "observation" "board" "camera" "focus-controls" "inspector" "focus" "status" "legend" "observatory" "decision" "event" "result"; }
+  .simulation-shell .gameplay-observation { gap: 4px; padding: 8px 10px; font-size: 11px; line-height: 1.3; }
+  .simulation-shell .gameplay-observation > p[role="status"] { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; }
+  .simulation-shell .camera-tools { padding: 6px 8px; }
+  .simulation-shell .camera-tools p { margin: 2px 0; }
+}
+@media(max-width: 395px) {
+  .simulation-shell .camera-tools { padding: 4px 6px; }
+  .simulation-shell .camera-buttons { gap: 4px; }
+  .simulation-shell .camera-buttons + .camera-buttons { margin-top: 4px; }
+}
+
 /* Personal social links stay with the creator credit, never in project navigation. */
 .creator-row { display:flex;flex-wrap:wrap;align-items:center;column-gap:12px;row-gap:0;margin-top:12px;font-size:15px;line-height:1.5; }
 .creator-row .overview-credit,.creator-row .creator-attribution { margin:0;padding:0;font:inherit; }
