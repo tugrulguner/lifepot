@@ -4,7 +4,7 @@ for (const width of [390, 1280]) test(`walkthrough retries an exhausted source a
   await page.setViewportSize({ width, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   let fail = true;
-  await page.route("**/demo/lifepot-explained-demo-537cbbf6.mp4", route => fail ? route.abort("failed") : route.continue());
+  await page.route("**/demo/lifepot-explained-demo-8e6e10b2.mp4", route => fail ? route.abort("failed") : route.continue());
   await page.goto("/");
   const section = page.getByRole("region", { name: "Watch how it works", exact: true });
   const video = page.getByLabel("LifePot explained product demo", { exact: true });
@@ -33,7 +33,7 @@ for (const width of [390, 1280]) test(`native pause during walkthrough buffering
   });
   let release!: () => void;
   const pending = new Promise<void>(resolve => { release = resolve; });
-  await page.route("**/demo/lifepot-explained-demo-537cbbf6.mp4", async route => {
+  await page.route("**/demo/lifepot-explained-demo-8e6e10b2.mp4", async route => {
     await pending;
     await route.continue();
   });

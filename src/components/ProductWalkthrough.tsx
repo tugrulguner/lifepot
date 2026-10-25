@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import productDemo from "@/data/product-demo.json";
 
-const videoSource = "/demo/lifepot-explained-demo-537cbbf6.mp4";
+const videoSource = "/demo/lifepot-explained-demo-8e6e10b2.mp4";
 const chapters = [
   { seconds: 0, time: "0:00", title: "Create a world", detail: "Set its organisms and conditions." },
   { seconds: 38, time: "0:38", title: "Observe and inspect", detail: "Read traits and follow a family." },
