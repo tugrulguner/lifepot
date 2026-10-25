@@ -1,11 +1,21 @@
 import { videoResponsePlan } from "./video-response";
 
-export const demoVideo = {
+export const legacyDemoVideo = {
   route: "/demo/lifepot-explained-demo-537cbbf6.mp4",
   asset: "/media/lifepot-explained-demo-537cbbf6.mp4",
   size: 5_202_349,
   etag: '"537cbbf6a4bfbf5ee775fe4b3f693488ffcca6d2b075d319f7580f9db57782f9"',
 } as const;
+export const demoVideo = {
+  route: "/demo/lifepot-explained-demo-8e6e10b2.mp4",
+  asset: "/media/lifepot-explained-demo-8e6e10b2.mp4",
+  size: 2_125_192,
+  etag: '"8e6e10b2f5b67ed38e7512af167168aa4a190f242468962eb2135ff926342a35"',
+} as const;
+
+export function demoVideoForRequest(request: Request) {
+  return new URL(request.url).pathname === legacyDemoVideo.route ? legacyDemoVideo : demoVideo;
+}
 export type AssetBinding = { fetch(request: Request): Promise<Response> };
 export function unavailableVideo() {
   return new Response("Demo video temporarily unavailable.", { status: 503, headers: { "Cache-Control": "no-store" } });
@@ -43,13 +53,14 @@ function rangeStream(body: ReadableStream<Uint8Array>, start: number, end: numbe
 
 /** This path also runs ahead of Next.js in the production Worker. */
 export async function serveDemoVideo(request: Request, assets: AssetBinding) {
-  const plan = videoResponsePlan(demoVideo.size, request, demoVideo.etag);
+  const video = demoVideoForRequest(request);
+  const plan = videoResponsePlan(video.size, request, video.etag);
   if (plan instanceof Response) return plan;
   try {
     // Deliberately do not forward visitor cookies, authorization or ranges.
-    const asset = await assets.fetch(new Request(new URL(demoVideo.asset, request.url)));
+    const asset = await assets.fetch(new Request(new URL(video.asset, request.url)));
     const length = asset.headers.get("Content-Length");
-    if (asset.status !== 200 || (length !== null && Number(length) !== demoVideo.size) || !asset.body) {
+    if (asset.status !== 200 || (length !== null && Number(length) !== video.size) || !asset.body) {
       await asset.body?.cancel();
       return unavailableVideo();
     }

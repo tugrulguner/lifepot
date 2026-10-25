@@ -41,7 +41,7 @@ for (const width of [390, 1280]) test(`explained demo is on demand and playable 
   const range = await request.get((await video.locator("source").getAttribute("src"))!, { headers: { Range: "bytes=0-1023" } });
   expect(range.status()).toBe(206);
   expect(range.headers()["content-type"]).toContain("video/mp4");
-  expect(range.headers()["content-range"]).toBe("bytes 0-1023/5202349");
+  expect(range.headers()["content-range"]).toBe("bytes 0-1023/2125192");
   expect((await range.body()).length).toBe(1024);
   await expect(page.locator("[data-example-video]")).toBeAttached();
   await expect(page.getByRole("link", { name: /Create your own world/ })).toBeVisible();

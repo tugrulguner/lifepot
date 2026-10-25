@@ -53,6 +53,8 @@ The fixed walkthrough endpoint runs ahead of Next and streams the requested rang
 
 After building, `npm run test:cloudflare` launches an isolated keyless local Worker, verifies the exact prepared homepage and runs delivery plus native-video acceptance without retries. Use `npm run test:cloudflare -- --all` for the complete browser suite. The runner stops its own Worker on completion. CI runs the focused Worker checks as well as the existing development-server browser suite. These local checks do not establish production CPU consumption; deployed revision and resource outcomes must still be verified after an approved rollout.
 
+The default walkthrough is a 2,125,192-byte, 1920×1080 H.264 export at 15 fps, retaining the full 168-second timeline, chapters, poster and captions. It was recompressed from the original 5,202,349-byte video with the shared ModePot video kit using CRF 28 and the slow preset. The new content-addressed URL ends in `8e6e10b2.mp4`; the original `537cbbf6.mp4` URL keeps its original bytes and ETag for existing links and immutable caches. This reduces transferred bytes by 59.15%; production CPU savings must be measured after deployment rather than inferred from file size alone.
+
 ## Verification before deployment
 
 ```bash

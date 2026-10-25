@@ -15,7 +15,7 @@ describe("homepage recorded example", () => {
     expect(demo!.loop).toBe(false);
     expect(demo!.playsInline).toBe(true);
     expect(demo!.getAttribute("poster")).toBe("/media/lifepot-explained-demo-537cbbf6.jpg");
-    expect(demo!.querySelector("source")?.getAttribute("src")).toBe("/demo/lifepot-explained-demo-537cbbf6.mp4");
+    expect(demo!.querySelector("source")?.getAttribute("src")).toBe("/demo/lifepot-explained-demo-8e6e10b2.mp4");
     expect(demo!.querySelector('track[kind="captions"]')).not.toBeNull();
     expect(root.textContent).toContain("Watch how it works");
     expect(root.textContent).toContain("Silent · on-screen explanations · 2 min 48 sec");
