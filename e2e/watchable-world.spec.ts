@@ -38,11 +38,9 @@ test("mobile watch view keeps the habitat and camera controls useful as real ext
   const tools = page.getByRole("region", { name: "World camera", exact: true });
   await page.screenshot({ path: testInfo.outputPath(`watching-growing-notices-${matchedGeneration?.replaceAll(" / ", "-")}.png`), fullPage: true });
   await testInfo.attach("watching geometry", { body: JSON.stringify(await page.evaluate(() => ({ board: document.querySelector("canvas.life-canvas")!.getBoundingClientRect().toJSON(), camera: document.querySelector(".camera-tools")!.getBoundingClientRect().toJSON() }))), contentType: "application/json" });
-  await expect.poll(() => page.evaluate(() => {
-    const board = document.querySelector("canvas.life-canvas")!.getBoundingClientRect();
-    const camera = document.querySelector(".camera-tools")!.getBoundingClientRect();
-    return board.width >= 280 && camera.top >= board.bottom && camera.top - board.bottom < 24;
-  })).toBe(true);
+  await expect.poll(() => canvas.evaluate(board => board.getBoundingClientRect().width)).toBeGreaterThanOrEqual(280);
+  await expect.poll(() => page.evaluate(() => document.querySelector("canvas.life-canvas")!.getBoundingClientRect().top - document.querySelector(".camera-primary")!.getBoundingClientRect().bottom)).toBeGreaterThanOrEqual(0);
+  await expect.poll(() => page.evaluate(() => document.querySelector("canvas.life-canvas")!.getBoundingClientRect().top - document.querySelector(".camera-primary")!.getBoundingClientRect().bottom)).toBeLessThan(24);
   await expect(tools.getByRole("button", { name: "Zoom in", exact: true })).toBeVisible();
   await expect(tools.getByRole("button", { name: "Full world", exact: true })).toBeVisible();
   await expect(tools.getByRole("button", { name: "Follow pinned family with camera", exact: true })).toBeVisible();
