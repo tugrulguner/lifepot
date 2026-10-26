@@ -933,6 +933,7 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .watching-organism-actions button[aria-pressed="true"] { border-color: var(--mint); color: var(--mint); }
 .paused-world-context > summary { min-height: 44px; padding-block: 12px; cursor: pointer; color: var(--muted); }
 .paused-world-context .configured-species-counts { margin-block: 8px; }
+.watching-organism-actions > .paused-world-context[open] { flex-basis: 100%; }
 @media(max-width: 1000px) {
   /* Preserve all eight statistics at their existing type size, in fewer rows. */
   .simulation-shell .stats-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -944,7 +945,7 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
    the board, species controls and inspector. */
 .simulation-shell { grid-template-areas: "stats stats" "controls controls" "camera-primary observation" "board observation" "focus-controls observatory" "inspector observatory" "camera observatory" "focus observatory" "legend observatory" "status observatory" "event observatory" "decision observatory" "result result"; }
 .camera-tools { align-self: start; }
-.camera-primary-host { grid-area: camera-primary; min-width: 0; }
+.camera-primary { grid-area: camera-primary; min-width: 0; }
 .simulation-shell .camera-tools.camera-primary { padding: 0; border: 0; background: transparent; }
 .camera-primary .camera-buttons { flex-wrap: nowrap; gap: 4px; }
 .camera-primary button { padding-inline: 6px; font-size: 11px; }
