@@ -6,6 +6,7 @@ import { IDBFactory } from "fake-indexeddb";
 import { listWorlds } from "@/game/my-worlds";
 import { stepSimulation, type SimulationState } from "@/game/world";
 import { defaultConfig } from "@/game/setup";
+import * as eventEffects from "@/game/event-effects";
 import { GameCanvas } from "./GameCanvas";
 import example from "../../public/example-world.json";
 
@@ -44,6 +45,31 @@ function renderPresetForPlayback() {
   fireEvent.change(screen.getByLabelText("World policy"), { target: { value: "fixed" } });
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
 }
+
+test("visual event metadata retains the previous generation's actual family identities", () => {
+  const updates = vi.spyOn(eventEffects, "updateEventEffects");
+  renderPresetForPlayback();
+  fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+  const initial = captured.at(-1)!;
+  const original = JSON.stringify(initial);
+  const marks = vi.spyOn(eventEffects, "traceEventMark");
+  const context = new Proxy({ createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }) }, {
+    get(target, key) { return Reflect.get(target, key) ?? (() => {}); },
+    set(target, key, value) { return Reflect.set(target, key, value); },
+  });
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
+  fireEvent.click(screen.getByRole("button", { name: "Step one generation" }));
+  expect(marks).toHaveBeenCalled();
+  const incoming = updates.mock.calls.find(call => call[1].length > 0);
+  expect(incoming, "an actual engine step must produce events").toBeDefined();
+  const identities = incoming![4];
+  expect(identities).toBeInstanceOf(Map);
+  for (let i = 0; i < initial.guild.length; i++) if (initial.guild[i]) {
+    expect(identities!.get(initial.organismId[i])).toBe(initial.lineage[i]);
+  }
+  expect(JSON.stringify(initial)).toBe(original);
+});
 
 test("camera zoom, follow and reset leave the paused engine unchanged", () => {
   renderPresetForPlayback();

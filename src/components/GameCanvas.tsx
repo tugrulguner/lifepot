@@ -52,7 +52,7 @@ import type { SpeciesId } from "@/game/rules";
 import { FamilyHeader } from "./FamilyHeader";
 import { cellAtPoint } from "@/game/inspection";
 import { boundCamera, followCamera, NEUTRAL_CAMERA, screenToWorld, type Camera, type FollowTarget } from "@/game/camera";
-import { selectEventEffects, updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
+import { selectEventEffects, traceEventMark, updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
 import { WorldObservatory } from "./WorldObservatory";
 import { GameplayObservation } from "./GameplayObservation";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
@@ -234,9 +234,9 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     const x = i % GRID_SIZE, y = Math.floor(i / GRID_SIZE), species = state.config.rules?.species[state.ruleSpecies[i] - 1];
     const pitch = Math.min(cw, ch), color = speciesColor(species?.id ?? "");
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
-    const sprite = organismSprite(species?.role, color, pitch, dpr * camera.zoom);
+    const sprite = organismSprite(species?.role, color, pitch, dpr * camera.zoom, camera.zoom);
     if (sprite) c.drawImage(sprite, cx - pitch / 2, cy - pitch / 2, pitch, pitch);
-    else paintOrganism(c, species?.role, color, cx, cy, pitch);
+    else paintOrganism(c, species?.role, color, cx, cy, pitch, camera.zoom);
     if (i === selected || state.lineage[i] === followed) {
       importantActors.add(state.organismId[i]);
       const isSelected = i === selected;
@@ -258,26 +258,18 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       c.fillStyle = "#ffffff"; c.beginPath(); c.arc(cx + pitch * .3, cy - pitch * .3, pitch * .08, 0, Math.PI * 2); c.fill();
     }
   }
-  for (const event of selectEventEffects(effects, importantActors)) {
+  for (const event of selectEventEffects(effects, importantActors, followed)) {
     const remaining = Math.max(0, (event.expiresAt - now) / EVENT_LIFETIME);
     if (!remaining) continue;
     const x = pad + (event.at % GRID_SIZE + .5) * cw, y = pad + (Math.floor(event.at / GRID_SIZE) + .5) * ch;
-    const pitch = Math.min(cw, ch), radius = pitch * (.24 + (1 - remaining) * .12);
-    c.globalAlpha = remaining * .85; c.lineWidth = Math.max(.6, pitch * .1);
+    const pitch = Math.min(cw, ch);
+    c.globalAlpha = remaining * .85;
+    c.lineCap = "round"; c.lineJoin = "round";
+    traceEventMark(c, event, x, y, pitch, 1 - remaining);
+    // A cell-bounded dark keyline separates the recorded event from the body.
+    c.strokeStyle = "#07100f"; c.lineWidth = pitch * .16; c.stroke();
     c.strokeStyle = event.kind === "birth" ? "#ffffff" : event.kind === "death" ? "#ff8877" : "#ffd65c";
-    c.beginPath();
-    if (event.kind === "death") {
-      c.moveTo(x - radius, y - radius); c.lineTo(x + radius, y + radius);
-      c.moveTo(x + radius, y - radius); c.lineTo(x - radius, y + radius);
-    } else if (event.kind === "birth") {
-      // Four short rays differ from selection rings and gold feeding circles.
-      for (let n = 0; n < 4; n++) {
-        const a = n * Math.PI / 2, inner = pitch * .28, outer = pitch * .46;
-        c.moveTo(x + Math.cos(a) * inner, y + Math.sin(a) * inner);
-        c.lineTo(x + Math.cos(a) * outer, y + Math.sin(a) * outer);
-      }
-    } else c.arc(x, y, event.source === "resource" ? radius * .65 : radius, 0, Math.PI * 2);
-    c.stroke();
+    c.lineWidth = pitch * .08; c.stroke();
   }
   c.globalAlpha=1;
 }
@@ -342,7 +334,15 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
     const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(last.current!==state){
       if(!last.current||state.generation<=last.current.generation)effects.current=[];
-      effects.current=updateEventEffects(effects.current,state.recentEvents.filter(e=>e.generation>(last.current?.generation??-1)),performance.now(),reduced);
+      // Event-only identity metadata survives an observed family member's death.
+      // It never enters simulation state or the replay ledger.
+      const lineages = new Map<number, number>();
+      for (const snapshot of [last.current, state]) if (snapshot) {
+        for (let i = 0; i < snapshot.guild.length; i++) if (snapshot.guild[i]) {
+          lineages.set(snapshot.organismId[i], snapshot.lineage[i]);
+        }
+      }
+      effects.current=updateEventEffects(effects.current,state.recentEvents.filter(e=>e.generation>(last.current?.generation??-1)),performance.now(),reduced,lineages);
       last.current=state;
     }
     let frame=0;
@@ -1116,7 +1116,7 @@ export function GameCanvas() {
         {simulation.config.rules!.species.map(species => <span key={species.id}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={speciesColor(species.id)} /></svg><i style={{ backgroundColor: speciesColor(species.id) }} />Species {species.id} · {title(species.role)}</span>)}
         <span>Green field = resources · coral shading = hazards · cell detail at 2× zoom</span>
         <span>White ring = selected · dashed gold ring = followed family</span>
-        <span>White rays/dot = birth · gold circle = feeding · red cross = death · pulses are sampled</span>
+        <span>White rays/dot = birth · gold circle = feeding · gold diamond = prey capture · red cross = death · marks show event locations; pulses are sampled</span>
       </div>
       <div className="ticker">
         <span>EVENT</span>
