@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { SimulationState } from "@/game/world";
 import { inspectCell, lineageCells } from "@/game/inspection";
 import OrganismArtwork from "./OrganismArtwork";
@@ -9,10 +10,11 @@ type Props = {
   followed: number | null;
   onFollow: (lineage: number) => void;
   onDetails: () => void;
+  context?: ReactNode;
 };
 
 // This is the paused cell's actual evidence, not a second simulation or a pet model.
-export function WatchingOrganism({ state, index, followed, onFollow, onDetails }: Props) {
+export function WatchingOrganism({ state, index, followed, onFollow, onDetails, context }: Props) {
   const cell = inspectCell(state, index);
   const family = cell.occupied ? lineageCells(state, cell.lineage).length : 0;
   return <section className="watching-organism" aria-label="Watching organism">
@@ -30,7 +32,8 @@ export function WatchingOrganism({ state, index, followed, onFollow, onDetails }
     </div>
     <div className="watching-organism-actions">
       {cell.occupied && <button aria-pressed={followed === cell.lineage} onClick={() => onFollow(cell.lineage)}>Pin this family</button>}
-      <button onClick={onDetails}>More organism details</button>
+      <button aria-label="More organism details" onClick={onDetails}>Details</button>
+      {context}
     </div>
   </section>;
 }

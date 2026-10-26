@@ -66,3 +66,9 @@ it("shows exact changed conditions and separate aligned species histories",()=>{
  expect(screen.getAllByRole("img",{name:/Compared population history for species/})).toHaveLength(config.rules!.species.length);
  expect(screen.getByText(/does not establish/)).toBeInTheDocument();
 });
+it("shows supplied species names alongside canonical IDs in comparison plots",()=>{
+ const config=defaultConfig(),evidence=createRunEvidence(createSimulation({seed:7,config}));
+ render(<RunComparison before={{config,evidence,seed:7,policy:"fixed"}} after={{config,evidence,seed:7,policy:"fixed"}} speciesNames={{A:"Algae & friends"}}/>);
+ expect(screen.getByRole("img",{name:/Compared population history for Algae & friends \(species A\)/i})).toBeInTheDocument();
+ expect(screen.getByText(/Algae & friends.*Species A.*population by generation/i)).toBeInTheDocument();
+});

@@ -45,7 +45,9 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   await page.getByRole("button", { name: "Inspect a living organism", exact: true }).click();
   const inspector = page.getByRole("region", { name: "Creature inspector" });
   const identity = await inspector.getByText(/^Organism #\d+$/).textContent();
-  await camera.getByRole("button", { name: "Follow organism with camera" }).click();
+  await page.getByRole("button", { name: "More camera options" }).click();
+  await expect(page.getByRole("region", { name: "Camera options", exact: true })).toBeFocused();
+  await page.getByRole("region", { name: "Camera options", exact: true }).getByRole("button", { name: "Follow organism with camera" }).click();
   await expect(board).toHaveAttribute("data-camera-follow", "organism");
   await expect(board).toHaveAttribute("data-camera-zoom", "2");
   // Click the rendered selected cell through the inverse camera transform.
@@ -63,7 +65,7 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   await inspector.getByRole("button", { name: /Follow founder lineage/ }).click();
   await camera.getByRole("button", { name: "Follow pinned family with camera" }).click();
   await expect(board).toHaveAttribute("data-camera-follow", "family");
-  await expect(camera.locator('p[role="status"]')).toContainText("oldest living member");
+  await expect(page.getByRole("region", { name: "Camera options", exact: true }).locator('p[role="status"]')).toContainText("oldest living member");
   await expectWatchingView(page);
   const pinLabel = await inspector.getByRole("button", { name: /Follow founder lineage/ }).textContent();
   await inspector.getByRole("button", { name: "Stop following", exact: true }).click();
@@ -84,7 +86,7 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   await mkdir(testInfo.outputDir, { recursive: true });
   await page.screenshot({ path: testInfo.outputPath(`camera-running-${width}.png`) });
   await page.getByRole("button", { name: "Pause", exact: true }).click();
-  await camera.getByRole("button", { name: "Stop camera follow" }).click();
+  await page.getByRole("region", { name: "Camera options", exact: true }).getByRole("button", { name: "Stop camera follow" }).click();
   await expect(board).toHaveAttribute("data-camera-follow", "none");
   await board.focus();
   await page.keyboard.press("Shift+ArrowRight");
