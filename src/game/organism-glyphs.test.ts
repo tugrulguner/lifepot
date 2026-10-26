@@ -20,6 +20,43 @@ describe("shared organism silhouettes", () => {
     const middle = organismContours("scavenger")[1].map(([, y]) => y);
     expect(Math.max(...middle) - Math.min(...middle)).toBeGreaterThan(1);
   });
+  it("gives producer a broad six-lobed rosette and omnivore a distinct four-lobed cell", () => {
+    const lobeCount = (role: OrganismRole) => {
+      const points = organismContours(role)[0];
+      const radii = points.map(([x, y]) => Math.hypot(x, y));
+      return radii.filter((r, i) => r > radii[(i + radii.length - 1) % radii.length] && r > radii[(i + 1) % radii.length]).length;
+    };
+    expect(lobeCount("producer")).toBe(6);
+    expect(lobeCount("omnivore")).toBe(4);
+    expect(organismContours("omnivore")[0]).not.toEqual(organismContours("producer")[0]);
+  });
+  it("makes the grazer a broad asymmetric kidney with a substantial inward notch", () => {
+    const points = organismContours("grazer")[0];
+    const radii = points.map(([x, y]) => Math.hypot(x, y));
+    expect(Math.max(...radii) - Math.min(...radii)).toBeGreaterThan(.28);
+    const cx = points.reduce((sum, [x]) => sum + x, 0) / points.length;
+    expect(Math.abs(cx)).toBeGreaterThan(.08);
+    expect(Math.max(...points.map(([x]) => x)) - Math.min(...points.map(([x]) => x))).toBeGreaterThan(1.6);
+  });
+  it("gives the segmented scavenger a coherent sloping three-lobed body", () => {
+    const centers = organismContours("scavenger").map(points => points.reduce((sum, [, y]) => sum + y, 0) / points.length);
+    expect(centers[0]).toBeLessThan(-.05);
+    expect(centers[2]).toBeGreaterThan(.05);
+  });
+  it("deliberate zoom reveals detail without confusing device DPR with magnification", () => {
+    class FakePath2D { moveTo() {} lineTo() {} closePath() {} }
+    vi.stubGlobal("Path2D", FakePath2D);
+    const fillRect = vi.fn();
+    const context = new Proxy({ fillRect, createLinearGradient: () => ({ addColorStop() {} }) }, { get(target, key) { return Reflect.get(target, key) ?? (() => {}); }, set(target, key, value) { return Reflect.set(target, key, value); } });
+    vi.stubGlobal("document", { createElement: () => ({ width: 0, height: 0, getContext: () => context }) });
+    try {
+      const ordinary = organismSprite("hunter", "#123fed", 6, 4);
+      expect(fillRect).not.toHaveBeenCalled();
+      const zoomed = organismSprite("hunter", "#123fed", 6, 4, 2);
+      expect(zoomed).not.toBe(ordinary);
+      expect(fillRect).toHaveBeenCalled();
+    } finally { vi.unstubAllGlobals(); }
+  });
   it("derives Canvas and SVG internal accents from one normalized command source", () => {
     expect(artwork.organismAccentPath).toBeTypeOf("function");
     expect(artwork.traceOrganismAccents).toBeTypeOf("function");
@@ -122,7 +159,8 @@ describe("shared organism silhouettes", () => {
       expect(organismSprite("hunter", "#abcdef", 7, 2)).toBe(sprite);
       expect(sprite!.width).toBe(14);
       expect(calls).toContainEqual(["set:fillStyle", "#abcdef"]);
-      expect(calls.filter(([name]) => name === "stroke")).toHaveLength(3);
+      expect(calls.filter(([name]) => name === "stroke")).toHaveLength(2);
+      expect(calls).not.toContainEqual(["fillRect"]);
       expect(calls).toContainEqual(["set:lineWidth", 7 * .07]);
       expect(organismSprite("hunter", "#abcdef", 7, 1)).not.toBe(sprite);
       const first = organismSprite("producer", "#fedcba", 1, 1);
