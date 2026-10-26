@@ -25,7 +25,6 @@ import {
   type SimulationState,
 } from "@/game/world";
 import {
-  detectEvolutionTrigger,
   deterministicEvolutionDecision,
   summarizeEcology,
   validateSpeciesDirectives,
@@ -35,7 +34,12 @@ import {
 import {
   activeDecisionForGeneration,
   advanceUntilDecisionTrigger,
+  detectDecisionTriggerForRun,createPlayerProposalBinding,acceptPlayerProposal,playerProposalAvailability,
+  type PlayerProposalBinding,type AcceptedPlayerEvent,
 } from "@/game/runtime";
+import type {PlayerProposal} from '@/game/player-proposal';
+import {PlayerChangeDialog} from './PlayerChangeDialog';
+import {PlayerChangeHistory,PlayerChangeStatus} from './PlayerChangeStatus';
 import { CreatureInspector } from "./CreatureInspector";
 import { WatchingOrganism } from "./WatchingOrganism";
 import { SpeciesFocus } from "./SpeciesFocus";
@@ -432,6 +436,9 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
 }
 export function GameCanvas() {
   const [cameraUpdate, setCameraUpdate] = useState("");
+  const [playerEvents,setPlayerEvents]=useState<AcceptedPlayerEvent[]>([]);
+  const playerEventsRef=useRef<AcceptedPlayerEvent[]>([]);
+  const [playerBinding,setPlayerBinding]=useState<PlayerProposalBinding|null>(null);
   const [isExample, setIsExample] = useState(false);
   const exampleJourney = useRef(0);
   const exampleRequest = useRef<AbortController | null>(null);
@@ -539,6 +546,8 @@ export function GameCanvas() {
       const initial = createSimulation({ seed: s, config: c, engineVersion: replay?.engineVersion }),
         l = replay?.ledger ?? [];
       runId.current++;
+      playerEventsRef.current=replay?.playerEvents??[];
+      setPlayerEvents(playerEventsRef.current);setPlayerBinding(null);
       ledgerRef.current = l;
       simRef.current = initial;
       initialConfigRef.current = structuredClone(c);
@@ -575,7 +584,7 @@ export function GameCanvas() {
       pending.current = null;
       setEvent(
         replay
-          ? "Replay v3 loaded — zero live Jev calls"
+          ? `Replay v${replay.version} loaded — zero live Jev calls`
           : `${initial.stats.population} founders seeded across ${initial.config.rules!.species.length} configured species`,
       );
       pendingArrival.current = true;
@@ -659,7 +668,8 @@ export function GameCanvas() {
       simulation.outcome !== "running"
     )
       return;
-    const trigger = detectEvolutionTrigger(simulation, ledgerRef.current);
+    if(playerBinding)return;
+    const trigger = detectDecisionTriggerForRun(simulation, ledgerRef.current,playerEventsRef.current);
     if (
       !trigger ||
       ledgerRef.current.some((d) => d.generation === simulation.generation)
@@ -721,9 +731,9 @@ export function GameCanvas() {
         setDeciding(false);
       }
     });
-  }, [answers, replayMode, simulation, stage, policy]);
+  }, [answers, replayMode, simulation, stage, policy,playerBinding,playerEvents]);
   useEffect(() => {
-    if (!simulation || paused || deciding || simulation.outcome !== "running")
+    if (!simulation || paused || playerBinding || deciding || simulation.outcome !== "running")
       return;
     const timer = setTimeout(
       () => {
@@ -732,7 +742,8 @@ export function GameCanvas() {
             simulation,
             ledgerRef.current,
             speed === "fast" ? 3 : 1,
-            step => { if (evidenceRef.current) evidenceRef.current = observeRun(evidenceRef.current, step); },
+            step => { if (evidenceRef.current) evidenceRef.current = observeRun(evidenceRef.current, step,playerEventsRef.current); },
+            playerEventsRef.current,
           );
           if (next === simulation) return;
           simRef.current = next;
@@ -750,7 +761,7 @@ export function GameCanvas() {
       speed === "slow" ? 1000 : simulation.generation === 0 ? 450 : speed === "fast" ? 35 : 220,
     );
     return () => clearTimeout(timer);
-  }, [deciding, ledger, paused, simulation, speed]);
+  }, [deciding, ledger, paused, simulation, speed,playerBinding,playerEvents]);
   useEffect(() => {
     if (replayMode || !simulation || simulation.outcome === "running") return;
     try {
@@ -761,6 +772,7 @@ export function GameCanvas() {
         requestHash: hashSetupRequest(answers),
         ledger: ledgerRef.current,
         engineVersion: simulation.engineVersion,
+        playerEvents:playerEventsRef.current,
       });
       const completed = replayRef.current;
       queueMicrotask(() => setCurrentReplay(completed));
@@ -844,14 +856,26 @@ export function GameCanvas() {
     setStage("review");
   }
   function stepOnce() {
-    if (!simulation || !paused || deciding || complete) return;
+    if (!simulation || !paused || playerBinding || deciding || complete) return;
     setPaused(true);
     setSelected(null);
-    const next = advanceUntilDecisionTrigger(simulation, ledgerRef.current, 1, step => { if (evidenceRef.current) evidenceRef.current = observeRun(evidenceRef.current, step); });
+    const next = advanceUntilDecisionTrigger(simulation, ledgerRef.current, 1, step => { if (evidenceRef.current) evidenceRef.current = observeRun(evidenceRef.current, step,playerEventsRef.current); },playerEventsRef.current);
     simRef.current = next;
     setSimulation(next);
     setEvidence(evidenceRef.current);
     setEvent(`Generation ${next.generation}: ${next.stats.births - simulation.stats.births} births · ${next.stats.deaths - simulation.stats.deaths} deaths. Select an organism to inspect recorded feeding.`);
+  }
+  function openPlayerChange(){
+    const state=simRef.current;if(!state||replayMode||deciding||pending.current!==null||state.outcome!=='running'||policy!=='adaptive')return;
+    const reason=playerProposalAvailability({state,ledger:ledgerRef.current,playerEvents:playerEventsRef.current});
+    if(reason){setNotice(reason);return}
+    setPaused(true);setPlayerBinding(createPlayerProposalBinding({runId:runId.current,state,intent:answers,ledger:ledgerRef.current,playerEvents:playerEventsRef.current}));
+  }
+  function acceptPlayerChange(proposal:PlayerProposal){
+    const state=simRef.current;if(!state||!paused||!playerBinding||replayMode||deciding||pending.current!==null)throw new Error('Player proposal is no longer current');
+    const accepted=acceptPlayerProposal({binding:playerBinding,runId:runId.current,state,intent:answers,ledger:ledgerRef.current,playerEvents:playerEventsRef.current,proposal});
+    playerEventsRef.current=[...playerEventsRef.current,accepted];setPlayerEvents(playerEventsRef.current);setPlayerBinding(null);
+    setEvent(`Player accepted ${title(proposal.pressure)}; starts at generation ${accepted.generation}. The world remains paused.`);
   }
   if (stage === "questions") {
     const q = QUESTIONS[qi];
@@ -1032,7 +1056,7 @@ export function GameCanvas() {
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
       <World key={arrivalRevision} state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onCameraUpdate={setCameraUpdate} onInspect={index => { setSelected(index); setPaused(true); }} />
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
-      <GameplayObservation inspection={selected === null ? undefined : context => <WatchingOrganism state={simulation} index={selected} followed={followed} onFollow={followLineage} onDetails={inspectDetails} context={context} />} cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
+      <GameplayObservation playerChange={playerEvents.some(e=>e.acceptedGeneration<=simulation.generation&&(!active||active.generation<e.generation+6))?<PlayerChangeStatus events={playerEvents} generation={simulation.generation}/>:undefined} inspection={selected === null ? undefined : context => <WatchingOrganism state={simulation} index={selected} followed={followed} onFollow={followLineage} onDetails={inspectDetails} context={context} />} cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
       <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={followLineage} onClear={() => setSelected(null)} onPick={inspectLiving} />
       <FamilyHeader feedbackPath="/play" skipTarget="play-content"><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
       <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} /></div>
@@ -1067,7 +1091,7 @@ export function GameCanvas() {
             {deciding
               ? "Jev deciding…"
               : replayMode
-                ? "Replay v3"
+                ? `Replay v${currentReplay?.version??3}`
                 : active
                   ? active.source === "fallback" ? "Offline · no intervention" : "Jev policies"
                   : "Observing ecology"}
@@ -1105,7 +1129,7 @@ export function GameCanvas() {
         <RuntimeCouncil decision={active} state={simulation} ledger={ledger} replay={replayMode}/>
         {active?.usage && <p className="decision-usage">Latest decision: {active.usage.input_tokens} input / {active.usage.output_tokens} output tokens</p>}
         <p className="decision-usage">
-          {ledger.length} / 8 decisions · ≥12 generation cooldown
+          {ledger.length+playerEvents.filter(e=>e.acceptedGeneration<=simulation.generation).length} / 8 shared decisions · ecological decisions have ≥12 generation cooldown
           <br />
           {replayMode ? "zero live API calls" : "event-driven observations"}
         </p>
@@ -1138,12 +1162,14 @@ export function GameCanvas() {
         {complete && <button onClick={() => { setShowResults(true); completionSeen.current = false; queueMicrotask(() => { document.getElementById("run-results")?.scrollIntoView({ block: "start" }); document.getElementById("run-results")?.focus(); }); }}>View results</button>}
         <button onClick={inspectLiving}>Inspect living organism</button>
         <button onClick={() => document.getElementById("world-observatory")?.scrollIntoView({ behavior: "smooth", block: "start" })}>World observatory</button>
+        {!complete&&!replayMode&&policy==='adaptive'&&<button type="button" aria-label="Ask Jev to change this world" disabled={deciding} onClick={openPlayerChange}>Ask Jev</button>}
       </div>
       {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} question={question} speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])}
         onInspect={() => { setShowResults(false); document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus(); }}
         onReplay={() => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); }}
         onEdit={() => { setParentWorldId(originWorldId ?? parentWorldId); setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); }}
         onNew={() => { setLocalWorldName(""); setArchivedEvidence(null); setOriginWorldId(null); setParentWorldId(null); setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setStage("questions"); window.scrollTo(0, 0); }}>
+        <PlayerChangeHistory events={playerEvents} generation={simulation.generation}/>
         <button type="button" onClick={() => {
           setParentWorldId(originWorldId ?? parentWorldId);
           setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy });
@@ -1170,6 +1196,7 @@ export function GameCanvas() {
         <button className="back-button" onClick={async () => { try { if (!replayRef.current) return setNotice("Replay not ready"); const url = new URL(location.origin + location.pathname); url.hash = new URLSearchParams({ replay: encodeReplay(replayRef.current) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
       </RunResults>}
       {complete && simulation.outcome !== "running" && showResults && evidence && completedReplay && <MyWorldsPanel current={{ replay: completedReplay, evidence, outcome: simulation.outcome, stopReason: simulation.stats.population === 0 ? "World empty" : "Observation horizon reached", parentId: parentWorldId, policy: replayMode ? recordedPolicy : policy, setup: proof ? { source: proof.source, model: proof.model, namedIntent: proof.namedIntent } : undefined }} onOpen={openSavedWorld} onReview={reviewSavedWorld} onSaved={record => { setOriginWorldId(record.id); setLocalWorldName(record.name); }} />}
+      {playerBinding&&<PlayerChangeDialog bindingKey={playerBinding.token} enabled={paused&&!deciding&&!replayMode} config={simulation.config} generation={simulation.generation} onClose={()=>setPlayerBinding(null)} onAccept={acceptPlayerChange}/>}
     </main>
   );
 }
