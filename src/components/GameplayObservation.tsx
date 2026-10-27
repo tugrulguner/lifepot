@@ -6,7 +6,7 @@ import { ruleTimingLabel, selectedChangeLabel, conciseChangeLabel } from "@/game
 import { speciesColor } from "@/game/species-colors";
 import OrganismArtwork from "./OrganismArtwork";
 
-export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate, inspection }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string; inspection?: ReactNode }) {
+export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate, inspection,playerChange }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string; inspection?: ReactNode | ((context: ReactNode) => ReactNode);playerChange?:ReactNode }) {
   const rules = state.config.rules!;
   const counts = rules.species.map((species, index) => ({
     species,
@@ -46,15 +46,19 @@ export function GameplayObservation({ state, evidence, followed, decision, names
       </> : <span>No active decision · inherited rules continue</span>}
       {state.activeRuleChange && <span>Graph change active since generation {state.activeRuleChange.activatedAt}</span>}
     </div>;
+  const context = <details className="paused-world-context"><summary aria-label="World activity & species">Activity</summary>{activity}{intervention}</details>;
+  const composed = typeof inspection === "function";
+  const subject = composed ? inspection(context) : inspection;
   return <section className="gameplay-observation" aria-label="Near-board observations">
-    {inspection ? <div className="world-legend-row">{speciesKey}<details className="paused-world-context"><summary aria-label="World activity & species">Activity</summary>{activity}{intervention}</details></div> : speciesKey}
-    {inspection}
+    {inspection ? <div className="world-legend-row">{speciesKey}{!composed && context}</div> : speciesKey}
+    {subject}
     {!inspection && activity}
     {!inspection && <div className="followed-family-context" aria-live="polite">
       {followed === null ? <span>No founder lineage followed</span> : <span>Following lineage #{followed} · {familyCount ? `${familyCount} living ${familyCount === 1 ? "member" : "members"}` : "No living members"}</span>}
     </div>}
     {latest.length > 0 && <p role="status" aria-label="Latest retained extinction">{latest.map(item => `Generation ${item.generation}: ${item.text}`).join(" · ")}</p>}
     {cameraUpdate && <p role="status" aria-label="Camera update">{cameraUpdate}</p>}
-    {!inspection && intervention}
+    {inspection&&playerChange}
+    {!inspection && (playerChange??intervention)}
   </section>;
 }

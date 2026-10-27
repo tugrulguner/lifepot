@@ -116,7 +116,11 @@ The seeded engine owns every cell step. It uses typed arrays for world state and
 
 ### 4. Co-evolve at bounded triggers
 
-After generation 12, LifePot can pause on a canonical ecological trigger. Decisions have a 12-generation cooldown and the ledger is capped at eight entries. A candidate decision must match the frozen observation hash, generation, trigger, and current rule-graph version before it can affect the run.
+After generation 12, LifePot can pause on a canonical ecological trigger. Decisions have a 12-generation cooldown. Automatic decisions and accepted player changes share a maximum of eight records. A candidate automatic decision must match the frozen observation hash, generation, trigger, and current rule-graph version before it can affect the run.
+
+During a new adaptive run, **Ask Jev to change this world** pauses observation and lets you request a supported temporary environmental pressure. Jev can decline unsupported requests; review its named choice before explicitly accepting it. An accepted change starts on the next generation, lasts six generations, then restores the previous pressure if the run continues. These are externally imposed player-authorized changes—not spontaneous biology or automatic council decisions. Overlapping changes, unchanged-pressure proposals, stale results and changes to recorded replays are rejected. Cancelling leaves the world paused and unchanged.
+
+Player changes are retained separately in version 4 replays and browser-local world exports, with factual activation/restoration timing. The request text and optional private question are not included in those recordings. Supported version 3 recordings remain unchanged and replay without inference.
 
 ### 5. Replay without inference
 

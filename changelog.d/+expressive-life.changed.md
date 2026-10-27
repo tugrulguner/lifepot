@@ -1,0 +1,1 @@
+Redesign all five organism-role silhouettes across shared artwork, preserve species color at small cell sizes and reveal detail on zoom. Distinguish prey-capture marks from resource feeding, keep recent pinned-family death cues prioritized within the existing visual budget, and preserve mechanics, replay and playback speed.

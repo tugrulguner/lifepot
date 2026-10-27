@@ -933,13 +933,37 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .watching-organism-actions button[aria-pressed="true"] { border-color: var(--mint); color: var(--mint); }
 .paused-world-context > summary { min-height: 44px; padding-block: 12px; cursor: pointer; color: var(--muted); }
 .paused-world-context .configured-species-counts { margin-block: 8px; }
+.watching-organism-actions > .paused-world-context[open] { flex-basis: 100%; }
 @media(max-width: 1000px) {
   /* Preserve all eight statistics at their existing type size, in fewer rows. */
   .simulation-shell .stats-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .simulation-shell .stat { display: block; border-right: 1px solid var(--line); }
+  .simulation-shell .stat { display: block; padding: 3px 4px; border-right: 1px solid var(--line); }
   .simulation-shell .stat span { letter-spacing: 0; }
   .simulation-shell .stat:nth-child(4n) { border-right: 0; }
 }
+/* Primary camera actions sit above the habitat; advanced options never split
+   the board, species controls and inspector. */
+.simulation-shell { grid-template-areas: "stats stats" "controls controls" "camera-primary observation" "board observation" "focus-controls observatory" "inspector observatory" "camera observatory" "focus observatory" "legend observatory" "status observatory" "event observatory" "decision observatory" "result result"; }
+.camera-tools { align-self: start; }
+.camera-primary { grid-area: camera-primary; min-width: 0; }
+.simulation-shell .camera-tools.camera-primary { padding: 0; border: 0; background: transparent; }
+.camera-primary .camera-buttons { flex-wrap: nowrap; gap: 4px; }
+.camera-primary button { padding-inline: 6px; font-size: 11px; }
+.camera-primary output { min-width: 24px; text-align: center; }
+.camera-options { scroll-margin-top: 80px; }
+@media(max-width: 1000px) {
+  .simulation-shell { grid-template-areas: "stats" "controls" "observation" "camera-primary" "board" "focus-controls" "inspector" "camera" "focus" "status" "legend" "observatory" "decision" "event" "result"; row-gap: 8px; }
+  .simulation-shell .gameplay-observation { gap: 2px; padding: 6px 10px; font-size: 11px; line-height: 1.3; }
+  .simulation-shell .gameplay-observation > p[role="status"] { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; }
+  .simulation-shell .camera-tools { padding: 6px 8px; }
+  .simulation-shell .camera-tools p { margin: 2px 0; }
+}
+@media(max-width: 395px) {
+  .simulation-shell .camera-tools { padding: 4px 6px; }
+  .simulation-shell .camera-buttons { gap: 4px; }
+  .simulation-shell .camera-buttons + .camera-buttons { margin-top: 4px; }
+}
+
 /* Personal social links stay with the creator credit, never in project navigation. */
 .creator-row { display:flex;flex-wrap:wrap;align-items:center;column-gap:12px;row-gap:0;margin-top:12px;font-size:15px;line-height:1.5; }
 .creator-row .overview-credit,.creator-row .creator-attribution { margin:0;padding:0;font:inherit; }
@@ -955,3 +979,15 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 
 .family-compact-home { align-items:center; }
 .family-compact-home .family-feedback { border:1px solid var(--mp-ink);font-size:14px; }
+
+.player-change-dialog { position:fixed; width:min(620px,calc(100vw - 24px)); max-height:calc(100dvh - 32px); overflow:auto; padding:20px; border:1px solid var(--mp-control-boundary); border-radius:8px; background:var(--mp-surface); color:var(--mp-ink); font:15px/1.5 var(--mp-font); }
+.player-change-dialog::backdrop { background:rgb(0 0 0 / .65); }
+.player-change-dialog button { min-width:44px; min-height:44px; padding:8px 12px; border:1px solid var(--mp-control-boundary); border-radius:5px; background:var(--mp-raised); color:var(--mp-ink); cursor:pointer; }
+.player-change-dialog button:disabled { opacity:.5; cursor:default; }
+.player-change-dialog :focus-visible { outline:3px solid var(--mp-accent); outline-offset:2px; }
+.player-change-dialog h3 { margin-top:12px; }
+.player-change label { display:grid; gap:8px; }
+.player-change input { width:100%; min-height:44px; padding:10px; border:1px solid var(--mp-control-boundary); border-radius:5px; background:var(--mp-raised); color:var(--mp-ink); font:inherit; }
+.player-change-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.player-change [aria-label="Review Jev proposal"] { border-left:3px solid var(--mp-accent); padding-left:12px; }
+.player-change-status { margin:0; color:var(--mint); overflow-wrap:anywhere; }
