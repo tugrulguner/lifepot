@@ -19,7 +19,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --test scripts/prepare-playwright-mirrors.test.mjs
+      - run: node --test scripts/prepare-playwright-mirrors.test.mjs scripts/dependency-compat.test.mjs
       - run: npm test
       - run: npm run lint
       - run: npm run typecheck
