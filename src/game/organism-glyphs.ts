@@ -47,11 +47,13 @@ function roundedHull(vertices: readonly GlyphPoint[]): GlyphPoint[] {
 }
 
 const contours: Record<OrganismRole, GlyphPoint[][]> = {
-  producer: [flower(5, .58, .16)],
-  grazer: [sample(72, angle => .82 + .10 * Math.sin(angle * 2 + .55) + .055 * Math.cos(angle * 3 - .7))],
-  scavenger: [oval(-.52, 0, .30, .44), oval(0, 0, .34, .60), oval(.52, 0, .30, .44)],
-  hunter: [roundedHull([[.97, 0], [.62, -.44], [.02, -.55], [-.46, -.22], [-.97, -.60], [-.70, 0], [-.97, .60], [-.46, .22], [.02, .55], [.62, .44]])],
-  omnivore: [flower(3, .54, .12)],
+  producer: [flower(6, .48, .16)],
+  // A broad cytoplasm with a deep inward bite on its right flank creates a
+  // kidney profile rather than a rotated near-circular oval.
+  grazer: [sample(96, angle => .87 + .035 * Math.cos(angle + .55) - .38 * Math.exp(-Math.pow(Math.atan2(Math.sin(angle - .62), Math.cos(angle - .62)), 2) / .24)).map(([x, y]) => [x + .12, y])],
+  scavenger: [oval(-.51, -.13, .35, .43), oval(0, .01, .37, .64), oval(.51, .15, .31, .46)],
+  hunter: [roundedHull([[.99, 0], [.68, -.53], [.08, -.66], [-.43, -.25], [-.99, -.62], [-.72, 0], [-.99, .62], [-.43, .25], [.08, .66], [.68, .53]])],
+  omnivore: [sample(120, angle => .55 + .31 * Math.pow((1 + Math.cos(4 * (angle + Math.PI / 2) + .30)) / 2, 1.1) + .055 * Math.sin(angle - .4))],
 };
 
 // Decorative cores and surface glints give the enlarged role portraits a
@@ -153,7 +155,7 @@ export function organismPath2D(role: string | undefined, radius: number): Path2D
   return path;
 }
 
-export function paintOrganism(context: CanvasRenderingContext2D, role: string | undefined, color: string, cx: number, cy: number, pitch: number): void {
+export function paintOrganism(context: CanvasRenderingContext2D, role: string | undefined, color: string, cx: number, cy: number, pitch: number, magnification = 1): void {
   const radius = pitch * ORGANISM_STYLE.radius, path = organismPath2D(role, radius);
   context.save();
   context.translate(cx, cy);
@@ -161,26 +163,28 @@ export function paintOrganism(context: CanvasRenderingContext2D, role: string | 
   if (path) context.fill(path);
   else { traceOrganism(context, role, 0, 0, radius); context.fill(); }
 
-  context.save();
-  if (path) context.clip(path);
-  else { traceOrganism(context, role, 0, 0, radius); context.clip(); }
-  const shade = context.createLinearGradient(-radius, -radius, radius, radius);
-  shade.addColorStop(0, ORGANISM_STYLE.surfaceStart);
-  shade.addColorStop(1, ORGANISM_STYLE.surfaceEnd);
-  context.fillStyle = shade;
-  context.fillRect(-radius, -radius, radius * 2, radius * 2);
-  traceOrganismAccents(context, role, 0, 0, radius);
-  context.fillStyle = ORGANISM_STYLE.accent;
-  context.fill();
-  context.strokeStyle = ORGANISM_STYLE.accent;
-  context.lineWidth = Math.max(.35, radius * ORGANISM_STYLE.accentWidth);
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  context.stroke();
-  traceDetail(context, highlights[role as OrganismRole] ?? highlights.grazer, 0, 0, radius);
-  context.fillStyle = ORGANISM_STYLE.highlight;
-  context.fill();
-  context.restore();
+  if (pitch * magnification >= 8) {
+    context.save();
+    if (path) context.clip(path);
+    else { traceOrganism(context, role, 0, 0, radius); context.clip(); }
+    const shade = context.createLinearGradient(-radius, -radius, radius, radius);
+    shade.addColorStop(0, ORGANISM_STYLE.surfaceStart);
+    shade.addColorStop(1, ORGANISM_STYLE.surfaceEnd);
+    context.fillStyle = shade;
+    context.fillRect(-radius, -radius, radius * 2, radius * 2);
+    traceOrganismAccents(context, role, 0, 0, radius);
+    context.fillStyle = ORGANISM_STYLE.accent;
+    context.fill();
+    context.strokeStyle = ORGANISM_STYLE.accent;
+    context.lineWidth = Math.max(.35, radius * ORGANISM_STYLE.accentWidth);
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.stroke();
+    traceDetail(context, highlights[role as OrganismRole] ?? highlights.grazer, 0, 0, radius);
+    context.fillStyle = ORGANISM_STYLE.highlight;
+    context.fill();
+    context.restore();
+  }
 
   if (!path) traceOrganism(context, role, 0, 0, radius);
   context.lineJoin = "round";
@@ -193,9 +197,9 @@ export function paintOrganism(context: CanvasRenderingContext2D, role: string | 
   context.restore();
 }
 
-export function organismSprite(role: string | undefined, color: string, pitch: number, dpr: number): HTMLCanvasElement | null {
+export function organismSprite(role: string | undefined, color: string, pitch: number, dpr: number, magnification = 1): HTMLCanvasElement | null {
   if (typeof Path2D === "undefined" || typeof document === "undefined") return null;
-  const key = `${role ?? "grazer"}:${color}:${pitch}:${dpr}`, cached = spriteCache.get(key);
+  const key = `${role ?? "grazer"}:${color}:${pitch}:${dpr}:${pitch * magnification >= 8}`, cached = spriteCache.get(key);
   if (cached) return cached;
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(pitch * dpr));
@@ -204,7 +208,7 @@ export function organismSprite(role: string | undefined, color: string, pitch: n
   if (!context) return null;
   // Logical pitch maps to allocated pixels, including fractional pitch and DPR.
   context.setTransform(canvas.width / pitch, 0, 0, canvas.height / pitch, 0, 0);
-  paintOrganism(context, role, color, pitch / 2, pitch / 2, pitch);
+  paintOrganism(context, role, color, pitch / 2, pitch / 2, pitch, magnification);
   if (spriteCache.size >= SPRITE_CACHE_LIMIT) spriteCache.delete(spriteCache.keys().next().value!);
   spriteCache.set(key, canvas);
   return canvas;

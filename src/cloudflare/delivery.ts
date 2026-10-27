@@ -1,4 +1,4 @@
-import { demoVideo, serveDemoVideo, type AssetBinding } from "../lib/demo-video";
+import { demoVideo, legacyDemoVideo, serveDemoVideo, type AssetBinding } from "../lib/demo-video";
 export type PublicRoute = { asset: string; headers: Record<string, string>; rsc?: string; segments?: Record<string, string> };
 const vary = "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch, Next-Url";
 
@@ -6,7 +6,7 @@ const vary = "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Seg
 export async function servePublicRequest(request: Request, assets: AssetBinding, routes: Record<string, PublicRoute>): Promise<Response | undefined> {
   if (request.method !== "GET" && request.method !== "HEAD") return;
   const path = new URL(request.url).pathname;
-  if (path === demoVideo.route) return serveDemoVideo(request, assets);
+  if (path === demoVideo.route || path === legacyDemoVideo.route) return serveDemoVideo(request, assets);
   if (!Object.hasOwn(routes, path)) return;
   const route = routes[path];
   const isRsc = route.rsc !== undefined && request.headers.get("RSC") === "1";

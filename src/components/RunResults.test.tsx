@@ -48,6 +48,16 @@ it("retains the first observed species-extinction generation in completed result
   expect(screen.getByText("Species A first observed extinct at generation 7")).toBeInTheDocument();
 });
 
+it("shows supplied species names with canonical identities throughout results", () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  const evidence = { ...createRunEvidence(state), firstExtinction: [{ speciesId: "A" as const, generation: 7 }] };
+  render(<RunResults state={{ ...state, outcome: "surviving" }} evidence={evidence} question="" speciesNames={{ A: "Algae & friends" }} onEdit={vi.fn()} onNew={vi.fn()} onReplay={vi.fn()} onInspect={vi.fn()} />);
+  expect(screen.getAllByText(/Algae & friends/).length).toBeGreaterThan(0);
+  expect(screen.getByText(/Species A.*first observed extinct at generation 7/)).toHaveTextContent("Algae & friends");
+  expect(screen.getByRole("img", { name: /Whole-run species population history.*Algae & friends.*Species A/i })).toBeInTheDocument();
+  expect(document.querySelectorAll(".run-results__legend")[1]?.textContent).toContain("Algae & friends");
+});
+
 it("distinguishes empty worlds and wires replay and inspection actions", () => {
   const base = createSimulation({ seed: 8, config: defaultConfig(), initialPopulation: [], initialResources: [] });
   const onReplay = vi.fn(), onInspect = vi.fn();
