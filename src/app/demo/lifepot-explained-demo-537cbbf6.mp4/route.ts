@@ -1,10 +1,11 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { videoResponse, videoResponsePlan } from "@/lib/video-response";
-import { demoVideo, serveDemoVideo, unavailableVideo, type AssetBinding } from "@/lib/demo-video";
+import { demoVideoForRequest, serveDemoVideo, unavailableVideo, type AssetBinding } from "@/lib/demo-video";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  const demoVideo = demoVideoForRequest(request);
   const plan = videoResponsePlan(demoVideo.size, request, demoVideo.etag);
   if (plan instanceof Response) return plan;
   let assets: AssetBinding | undefined;

@@ -54,7 +54,7 @@ it("offers an accessible recovery when the active playback request fails", async
   render(<ProductWalkthrough />);
   await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Watch the walkthrough" })); });
   expect(screen.getByRole("alert")).toHaveTextContent("The video could not be played.");
-  expect(screen.getByRole("link", { name: "open it separately" })).toHaveAttribute("href", "/demo/lifepot-explained-demo-537cbbf6.mp4");
+  expect(screen.getByRole("link", { name: "open it separately" })).toHaveAttribute("href", "/demo/lifepot-explained-demo-8e6e10b2.mp4");
   expect(screen.getByRole("button", { name: "Watch the walkthrough" })).toBeInTheDocument();
 });
 
@@ -84,7 +84,7 @@ it("starts the unchanged on-demand video through a clear play action", () => {
   expect(video.preload).toBe("none");
   expect(video.autoplay).toBe(false);
   expect(video.controls).toBe(true);
-  expect(video.querySelector("source")).toHaveAttribute("src", "/demo/lifepot-explained-demo-537cbbf6.mp4");
+  expect(video.querySelector("source")).toHaveAttribute("src", "/demo/lifepot-explained-demo-8e6e10b2.mp4");
   const start = screen.getByRole("button", { name: "Watch the walkthrough" });
   expect(play).not.toHaveBeenCalled();
   fireEvent.click(start);
