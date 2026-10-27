@@ -979,3 +979,15 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 
 .family-compact-home { align-items:center; }
 .family-compact-home .family-feedback { border:1px solid var(--mp-ink);font-size:14px; }
+
+.player-change-dialog { position:fixed; width:min(620px,calc(100vw - 24px)); max-height:calc(100dvh - 32px); overflow:auto; padding:20px; border:1px solid var(--mp-control-boundary); border-radius:8px; background:var(--mp-surface); color:var(--mp-ink); font:15px/1.5 var(--mp-font); }
+.player-change-dialog::backdrop { background:rgb(0 0 0 / .65); }
+.player-change-dialog button { min-width:44px; min-height:44px; padding:8px 12px; border:1px solid var(--mp-control-boundary); border-radius:5px; background:var(--mp-raised); color:var(--mp-ink); cursor:pointer; }
+.player-change-dialog button:disabled { opacity:.5; cursor:default; }
+.player-change-dialog :focus-visible { outline:3px solid var(--mp-accent); outline-offset:2px; }
+.player-change-dialog h3 { margin-top:12px; }
+.player-change label { display:grid; gap:8px; }
+.player-change input { width:100%; min-height:44px; padding:10px; border:1px solid var(--mp-control-boundary); border-radius:5px; background:var(--mp-raised); color:var(--mp-ink); font:inherit; }
+.player-change-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.player-change [aria-label="Review Jev proposal"] { border-left:3px solid var(--mp-accent); padding-left:12px; }
+.player-change-status { margin:0; color:var(--mint); overflow-wrap:anywhere; }

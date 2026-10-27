@@ -6,7 +6,7 @@ import { ruleTimingLabel, selectedChangeLabel, conciseChangeLabel } from "@/game
 import { speciesColor } from "@/game/species-colors";
 import OrganismArtwork from "./OrganismArtwork";
 
-export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate, inspection }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string; inspection?: ReactNode | ((context: ReactNode) => ReactNode) }) {
+export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate, inspection,playerChange }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string; inspection?: ReactNode | ((context: ReactNode) => ReactNode);playerChange?:ReactNode }) {
   const rules = state.config.rules!;
   const counts = rules.species.map((species, index) => ({
     species,
@@ -58,6 +58,7 @@ export function GameplayObservation({ state, evidence, followed, decision, names
     </div>}
     {latest.length > 0 && <p role="status" aria-label="Latest retained extinction">{latest.map(item => `Generation ${item.generation}: ${item.text}`).join(" · ")}</p>}
     {cameraUpdate && <p role="status" aria-label="Camera update">{cameraUpdate}</p>}
-    {!inspection && intervention}
+    {inspection&&playerChange}
+    {!inspection && (playerChange??intervention)}
   </section>;
 }
