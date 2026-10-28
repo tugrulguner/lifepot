@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { RunEvidence } from "@/game/run-evidence";
 import type { EvolutionDecision } from "@/game/decisions";
 import type { SimulationState } from "@/game/world";
@@ -23,16 +23,19 @@ export function GameplayObservation({ state, evidence, followed, decision, names
   ] : [];
   const latestFor = (kind: "species" | "family") => milestones.filter(item => item.kind === kind).reduce<typeof milestones>((latest, item) => item.generation > (latest[0]?.generation ?? -1) ? [item] : item.generation === latest[0]?.generation ? [...latest, item] : latest, []);
   const latest = [...latestFor("species"), ...latestFor("family")];
+  const latestNotice = [...new Set(latest.map(item => item.generation))].map(generation =>
+    `Generation ${generation}: ${latest.filter(item => item.generation === generation).map(item => item.text).join("; ")}`
+  ).join(" · ");
   const timing = decision ? ruleTimingLabel(decision, state) : "";
 
-  const speciesKey = <div className="configured-species-counts" aria-label="Configured species counts">
+  const speciesKey = <div className="configured-species-counts" aria-label="Configured species counts" style={{ "--species-columns": counts.length } as CSSProperties}>
     <strong className={worldName ? "saved-world-heading" : "world-legend-heading"} title={worldName}>{worldName ? `Experiment: ${worldName}` : "World legend"}</strong>
     {counts.map(({ species, count }) => {
       const previous = recentSample?.species.find(item => item.speciesId === species.id);
       const current = latestSample?.species.find(item => item.speciesId === species.id);
       const delta = previous && current?.population === count ? count - previous.population : null;
       const interval = recentSample ? state.generation - recentSample.generation : 0;
-      return <span key={species.id} aria-label={`Species ${species.id} count`}><svg className="species-legend-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={speciesColor(species.id)} /></svg>{names?.[species.id] ?? species.role} · {species.id} {names?.[species.id] && <small>{species.role}</small>} <b>{count}</b>
+      return <span key={species.id} aria-label={`Species ${species.id} count`}><svg className="species-legend-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={speciesColor(species.id)} /></svg><span className="species-identity"><span className="species-name">{names?.[species.id] ?? species.role}</span><span className="species-id"> · {species.id}</span>{names?.[species.id] && <small className="species-role">{species.role}</small>}</span> <b>{count}</b>
         {delta !== null && <span className="species-recent-change" role="img" aria-label={`Species ${species.id} population: ${previous!.population} to ${count}, generations ${recentSample!.generation}–${state.generation}. Recorded change, not a prediction.`} title={`Recorded population change over ${interval} ${interval === 1 ? "generation" : "generations"}; not a prediction or explanation.`}>{delta > 0 ? "↑" : delta < 0 ? "↓" : "→"}{Math.abs(delta)} /{interval}g</span>}
       </span>;
     })}
@@ -68,7 +71,7 @@ export function GameplayObservation({ state, evidence, followed, decision, names
     {!inspection && <div className="followed-family-context" aria-live="polite">
       {followed === null ? <span>No founder lineage followed</span> : <span>Following lineage #{followed} · {familyCount ? `${familyCount} living ${familyCount === 1 ? "member" : "members"}` : "No living members"}</span>}
     </div>}
-    {latest.length > 0 && <p role="status" aria-label="Latest retained extinction">{latest.map(item => `Generation ${item.generation}: ${item.text}`).join(" · ")}</p>}
+    {latest.length > 0 && <p role="status" aria-label="Latest retained extinction">{latestNotice}</p>}
     {cameraUpdate && <p role="status" aria-label="Camera update">{cameraUpdate}</p>}
     {inspection&&playerChange}
     {!inspection && (playerChange??intervention)}

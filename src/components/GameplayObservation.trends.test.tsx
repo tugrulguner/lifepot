@@ -7,6 +7,14 @@ import {defaultConfig} from '@/game/setup';
 import {createRunEvidence} from '@/game/run-evidence';
 import {GameplayObservation} from './GameplayObservation';
 afterEach(cleanup);
+it('groups co-occurring species and family losses under one recorded generation',()=>{
+ const state={...createSimulation({seed:7,config:defaultConfig()}),generation:18};
+ const evidence={...createRunEvidence(state),firstExtinction:[{speciesId:'A',generation:18}],lineageExtinction:[{lineage:24,generation:18}]};
+ render(<GameplayObservation state={state} evidence={evidence} followed={24} decision={null}/>);
+ const notice=screen.getByRole('status',{name:'Latest retained extinction'});
+ expect(notice).toHaveTextContent('Species A first observed extinct');expect(notice).toHaveTextContent('Founder lineage #24 first observed extinct');
+ expect(notice.textContent?.match(/Generation 18/g)).toHaveLength(1);
+});
 it('shows neutral per-species recent changes beside current counts with the actual interval',()=>{
  const state={...createSimulation({seed:7,config:defaultConfig()}),generation:10};
  const first=createRunEvidence(state).samples[0];

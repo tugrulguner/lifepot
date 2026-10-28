@@ -641,6 +641,7 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .configured-species-counts > strong { margin-right: 4px; color: var(--muted); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
 .configured-species-counts > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .configured-species-counts b { font-weight: 700; }
+.species-identity { display: inline-flex; align-items: center; gap: 3px; }
 .species-recent-change { padding: 2px 3px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); font-size: 10px; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .species-color { width: 9px; height: 9px; border-radius: 50%; }
 .followed-family-context, .gameplay-observation > p, .intervention-status { margin: 0; overflow-wrap: anywhere; }
@@ -955,6 +956,19 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 @media(max-width: 1000px) {
   .simulation-shell { grid-template-areas: "stats" "controls" "observation" "camera-primary" "board" "focus-controls" "inspector" "camera" "focus" "status" "legend" "observatory" "decision" "event" "result"; row-gap: 8px; }
   .simulation-shell .gameplay-observation { gap: 2px; padding: 6px 10px; font-size: 11px; line-height: 1.3; }
+  /* Named worlds keep identity and measured changes together without adding
+     one full-width legend row per species as retained notices grow. */
+  .simulation-shell .configured-species-counts:has(.species-role) { display: grid; grid-template-columns: repeat(var(--species-columns), minmax(0, 1fr)); gap: 4px 6px; }
+  .simulation-shell .configured-species-counts:has(.species-role) > strong { grid-column: 1 / -1; }
+  .simulation-shell .configured-species-counts:has(.species-role) > span { display: grid; grid-template-columns: 18px max-content max-content minmax(0, 1fr); grid-template-rows: auto auto auto; gap: 1px 3px; white-space: normal; }
+  .simulation-shell .configured-species-counts:has(.species-role) .species-identity { display: contents; }
+  .simulation-shell .configured-species-counts:has(.species-role) .species-name { grid-area: 1 / 1 / 2 / -1; overflow-wrap: anywhere; }
+  .simulation-shell .configured-species-counts:has(.species-role) .species-role { grid-area: 2 / 1 / 3 / -1; }
+  .simulation-shell .configured-species-counts:has(.species-role) .species-legend-glyph { grid-area: 3 / 1; }
+  .simulation-shell .configured-species-counts:has(.species-role) .species-id { grid-area: 3 / 2; }
+  .simulation-shell .configured-species-counts:has(.species-role) b { grid-area: 3 / 3; }
+  .simulation-shell .configured-species-counts:has(.species-role) .species-recent-change { grid-area: 3 / 4; padding: 1px 2px; white-space: normal; }
+
   .simulation-shell .gameplay-observation > p[role="status"] { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; }
   .simulation-shell .camera-tools { padding: 6px 8px; }
   .simulation-shell .camera-tools p { margin: 2px 0; }
@@ -964,6 +978,8 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
   .simulation-shell .camera-buttons { gap: 4px; }
   .simulation-shell .camera-buttons + .camera-buttons { margin-top: 4px; }
 }
+
+@media(max-width: 370px) { .simulation-shell .configured-species-counts:has(.species-role) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Personal social links stay with the creator credit, never in project navigation. */
 .creator-row { display:flex;flex-wrap:wrap;align-items:center;column-gap:12px;row-gap:0;margin-top:12px;font-size:15px;line-height:1.5; }
