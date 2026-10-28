@@ -1,5 +1,6 @@
 import type { SimulationState } from "./world";
 import { speciesColor } from "./species-colors";
+import { paintOrganism } from "./organism-glyphs";
 
 export const RESULT_IMAGE_WIDTH = 1600;
 export const RESULT_IMAGE_HEIGHT = 1000;
@@ -65,12 +66,8 @@ export function drawResultImage(ctx: CanvasRenderingContext2D, model: ResultImag
     const cell = model.cells[i], x = bx + (i % model.boardSize) * cellSize, y = by + Math.floor(i / model.boardSize) * cellSize;
     if (cell.resource) { ctx.fillStyle = `rgba(55, 190, 133, ${Math.min(.65, .08 + cell.resource / 400)})`; ctx.fillRect(x, y, cellSize, cellSize); }
     if (cell.guild) {
-      ctx.fillStyle = cell.species ? speciesColor(cell.species as import("./rules").SpeciesId) : (cell.guild === 1 ? "#65d6a0" : "#ff8b72");
-      const inset = cellSize * .18; ctx.beginPath();
-      if (cell.role === "hunter") { ctx.moveTo(x + cellSize / 2, y + inset); ctx.lineTo(x + cellSize - inset, y + cellSize - inset); ctx.lineTo(x + inset, y + cellSize - inset); ctx.closePath(); }
-      else if (cell.role === "omnivore") ctx.fillRect(x + inset, y + inset, cellSize - inset * 2, cellSize - inset * 2);
-      else ctx.arc(x + cellSize / 2, y + cellSize / 2, cellSize * .32, 0, Math.PI * 2);
-      ctx.fill();
+      const color = cell.species ? speciesColor(cell.species as import("./rules").SpeciesId) : (cell.guild === 1 ? "#65d6a0" : "#ff8b72");
+      paintOrganism(ctx, cell.role, color, x + cellSize / 2, y + cellSize / 2, cellSize);
     }
   }
   const tx = 940, tw = 590; ctx.fillStyle = "#f2f6fb"; ctx.font = "700 30px system-ui, sans-serif"; ctx.fillText("Final ecosystem", tx, 190);

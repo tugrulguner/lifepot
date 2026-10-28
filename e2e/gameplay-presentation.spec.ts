@@ -70,7 +70,7 @@ test("ordinary three-question setup arrives at gameplay without retained review 
     const request = route.request().postDataJSON() as { answers?: Parameters<typeof deterministicSetup>[0]; kind?: string };
     if (!request.answers) return route.abort();
     fixtureCalls++;
-    await route.fulfill({ json: { config: deterministicSetup(request.answers), source: "fallback", requestHash: hashSetupRequest(request.answers) } });
+    await route.fulfill({ json: { config: deterministicSetup(request.answers), source: "jev", requestHash: hashSetupRequest(request.answers), model: "declared-browser-fixture", fidelity: { verdict: "approve", model: "declared-browser-fixture", usage: { input_tokens: 1, output_tokens: 1 } } } });
   });
   await page.setViewportSize({ width: 390, height: 850 });
   await page.goto("/play");
@@ -111,7 +111,10 @@ test("near-board observation loop stays readable beside the desktop board and ab
     await expect(canvas).toBeVisible();
     await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
     const observation = page.getByRole("region", { name: "Near-board observations" });
-    await expect(observation).toContainText("Configured species");
+    await expect(observation).toBeVisible();
+    const worldLegend = observation.getByLabel("Configured species counts");
+    await expect(worldLegend).toContainText("World legend");
+    await expect(worldLegend.locator("svg.species-legend-glyph").first()).toBeVisible();
     const geometry = await page.evaluate(() => {
       const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
       const observationRect = rect(".gameplay-observation");
@@ -148,6 +151,8 @@ test("mobile gameplay exposes direct inspector and observatory access beside sim
   await inspect.click();
   const inspector = page.getByRole("region", { name: "Creature inspector" });
   await expect(inspector).toContainText("Diet allowed by graph");
+  await expect(page.getByRole("region", { name: "Watching organism", exact: true })).toBeInViewport();
+  await page.getByRole("button", { name: "More organism details", exact: true }).click();
   await expect(inspector.getByRole("heading", { name: /Species/ })).toBeInViewport();
   await page.screenshot({ path: evidenceFile(testInfo, "mobile-inspector-390.png") });
   await page.getByRole("button", { name: "Resume", exact: true }).click();
@@ -179,14 +184,20 @@ test("running game keeps its intended dark canvas and semantic game colors under
     const pad = 18, cell = (size - pad * 2) / 50;
     const organisms: number[][] = [];
     for (let y = 0; y < 50; y++) for (let x = 0; x < 50; x++) {
-      const px = Math.round((pad + (x + .5) * cell) * ratio);
-      const py = Math.round((pad + (y + .5) * cell) * ratio);
-      organisms.push(Array.from(context.getImageData(px, py, 1, 1).data).slice(0, 3));
+      // Decorative dark cores now occupy cell centers. Sample the actual body,
+      // not one center pixel that would misclassify a populated cell as empty.
+      const samples: number[][] = [];
+      for (const dx of [-.24, 0, .24]) for (const dy of [-.24, 0, .24]) {
+        const px = Math.round((pad + (x + .5 + dx) * cell) * ratio);
+        const py = Math.round((pad + (y + .5 + dy) * cell) * ratio);
+        samples.push(Array.from(context.getImageData(px, py, 1, 1).data).slice(0, 3));
+      }
+      organisms.push(samples.reduce((best, rgb) => Math.max(...rgb) > Math.max(...best) ? rgb : best));
     }
     const backdrop = Array.from(context.getImageData(2, 2, 1, 1).data).slice(0, 3);
     const { data } = context.getImageData(0, 0, c.width, c.height);
     let varied = 0;
-    for (let i = 0; i < data.length; i += 4) if (data[i] < 80 && data[i + 1] < 120 && data[i + 2] < 100) varied++;
+    for (let i = 0; i < data.length; i += 4) if (data[i] !== backdrop[0] || data[i + 1] !== backdrop[1] || data[i + 2] !== backdrop[2]) varied++;
     return { backdrop, varied, organisms };
   });
   await expect(page.getByTestId("generation")).not.toHaveText("0 / 180");
@@ -261,8 +272,8 @@ test("gameplay header, stats, controls, and useful board geometry do not overlap
       const r = button.getBoundingClientRect();
       return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === button;
     }));
-    expect(buttonCenters.length).toBe(6);
-    expect(buttonCenters, `unobstructed gameplay controls at ${width}`).toEqual(Array(6).fill(true));
+    expect(buttonCenters.length).toBe(7);
+    expect(buttonCenters, `unobstructed gameplay controls at ${width}`).toEqual(Array(7).fill(true));
     measurements.push({ ...geometry, controlCentersUnobstructed: buttonCenters });
     const theme = page.getByRole("combobox", { name: "Color theme" });
     for (const [mode, os] of [["light", "light"], ["dark", "dark"], ["auto", "light"], ["auto", "dark"]] as const) {

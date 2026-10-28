@@ -45,6 +45,16 @@ Cloudflare's binding is location-local and eventually consistent, so it is an ab
 
 Only the boundary and an allowlisted error class are retained and logged. Provider errors, messages, response bodies, headers, private predictions, and credentials are neither attached to classified failures nor transported to the browser. This adds no inference attempts, retries, or quota changes. A classified boundary is evidence of where processing failed, not proof of its root cause; the historical reflection 503 remains unexplained.
 
+## Public page and walkthrough delivery
+
+`npm run build:cloudflare` builds Next/OpenNext, then prepares the delivery Worker used by Wrangler. Only immutable prerendered public HTML, client-navigation payloads, segments and downloads are copied to build-versioned assets. The homepage reads legacy replay links in the browser rather than making every visitor trigger server rendering. API, mutating and unmatched requests retain the original Next handler and inference protections.
+
+The fixed walkthrough endpoint runs ahead of Next and streams the requested range with bounded chunk memory; HEAD, matching conditional requests and invalid ranges do not read the video. It never forwards visitor cookies, authorization or replay data to the asset binding. Unknown-length asset streams are supported; a premature end fails the response stream rather than returning fabricated video bytes.
+
+After building, `npm run test:cloudflare` launches an isolated keyless local Worker, verifies the exact prepared homepage and runs delivery plus native-video acceptance without retries. Use `npm run test:cloudflare -- --all` for the complete browser suite. The runner stops its own Worker on completion. CI runs the focused Worker checks as well as the existing development-server browser suite. These local checks do not establish production CPU consumption; deployed revision and resource outcomes must still be verified after an approved rollout.
+
+The default walkthrough is a 2,125,192-byte, 1920×1080 H.264 export at 15 fps, retaining the full 168-second timeline, chapters, poster and captions. It was recompressed from the original 5,202,349-byte video with the shared ModePot video kit using CRF 28 and the slow preset. The new content-addressed URL ends in `8e6e10b2.mp4`; the original `537cbbf6.mp4` URL keeps its original bytes and ETag for existing links and immutable caches. This reduces transferred bytes by 59.15%; production CPU savings must be measured after deployment rather than inferred from file size alone.
+
 ## Verification before deployment
 
 ```bash

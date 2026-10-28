@@ -8,6 +8,7 @@
     "dev": "next dev",
     "prebuild": "node scripts/embed-learn-guides.mjs",
     "build": "next build",
+    "render:wordmark": "node scripts/render-wordmark.mjs",
     "start": "next start",
     "lint": "eslint .",
     "pretypecheck": "node scripts/embed-learn-guides.mjs",
@@ -16,20 +17,22 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "build:cloudflare": "opennextjs-cloudflare build",
-    "preview:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "test:cloudflare": "node scripts/check-worker-delivery.mjs",
+    "build:cloudflare": "opennextjs-cloudflare build && node scripts/prepare-worker-delivery.mjs",
+    "preview:cloudflare": "npm run build:cloudflare && opennextjs-cloudflare preview",
+    "deploy:cloudflare": "npm run build:cloudflare && opennextjs-cloudflare deploy"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "@typesafe-ai/sdk": "^0.6.0",
-    "next": "^16.3.8",
+    "next": "^16.4.3",
     "posthog-js": "^1.435.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "zod": "^4.1.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.20.6",
+    "@opennextjs/cloudflare": "^1.20.13",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^6.9.0",
@@ -45,6 +48,11 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.0",
     "vitest": "^5.0.3",
-    "wrangler": "^4.145.0"
+    "wrangler": "^4.154.0"
+  },
+  "overrides": {
+    "@node-minify/core@9.0.2": {
+      "glob": "^10.5.0"
+    }
   }
 }

@@ -9,6 +9,7 @@ on:
       - "README.md"
       - "ROADMAP.md"
       - "scripts/embed-learn-guides.mjs"
+      - "scripts/prepare-worker-delivery.mjs"
       - "package.json"
       - "package-lock.json"
       - "next.config.ts"

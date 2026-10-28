@@ -11,7 +11,8 @@ function mockPng() {
   const blob = new Blob(["png"], { type: "image/png" });
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
     fillStyle: "", font: "", fillRect: vi.fn(), fillText: vi.fn(), measureText: (s: string) => ({ width: s.length * 8 }),
-    beginPath: vi.fn(), arc: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), fill: vi.fn(),
+    save: vi.fn(), restore: vi.fn(), clip: vi.fn(), translate: vi.fn(), quadraticCurveTo: vi.fn(), createLinearGradient: () => ({ addColorStop: vi.fn() }),
+    beginPath: vi.fn(), arc: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), fill: vi.fn(), stroke: vi.fn(), lineJoin: "miter",
   } as unknown as CanvasRenderingContext2D);
   vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(callback => callback(blob));
   return blob;

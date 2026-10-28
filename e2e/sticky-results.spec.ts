@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { settleResultsLayout } from "./helpers/results-layout";
 
 async function unobscured(page: Page, target: Locator, top: number) {
   await target.evaluate((node, top) => window.scrollTo(0, scrollY + node.getBoundingClientRect().top - top), top);
@@ -26,6 +27,7 @@ test("real 180-generation results graph and actions stay unobscured at scrolled 
   for (const viewport of [{ width: 1280, height: 850 }, { width: 1280, height: 633 }, { width: 768, height: 850 }, { width: 390, height: 850 }, { width: 320, height: 850 }]) {
     await page.setViewportSize(viewport);
     await page.evaluate(() => document.fonts.ready);
+    await settleResultsLayout(page);
     const evidence = [];
     for (const top of [100, 220]) {
       const graph = await unobscured(page, results.getByRole("img", { name: "Whole-run population history" }), top);
@@ -42,6 +44,18 @@ test("real 180-generation results graph and actions stay unobscured at scrolled 
     await testInfo.attach(`sticky-${viewport.width}x${viewport.height}.json`, { body: JSON.stringify(evidence, null, 2), contentType: "application/json" });
     await results.getByRole("img", { name: "Whole-run population history" }).evaluate(node => window.scrollTo(0, scrollY + node.getBoundingClientRect().top - 100));
     await testInfo.attach(`sticky-${viewport.width}x${viewport.height}.png`, { body: await page.screenshot(), contentType: "image/png" });
+  }
+  // Exercise the exact 850 → 633 resize race repeatedly without changing hit targets.
+  for (let round = 0; round < 8; round++) {
+    for (const height of [850, 633]) {
+      await page.setViewportSize({ width: 1280, height });
+      await settleResultsLayout(page);
+      for (const button of await results.getByRole("navigation", { name: "Run actions" }).getByRole("button").all()) {
+        const action = await unobscured(page, button, 140);
+        expect(action.hits.every(hit => hit.clear), JSON.stringify({ round, height, action })).toBe(true);
+        await button.click({ trial: true });
+      }
+    }
   }
   await results.getByRole("button", { name: "Inspect final world", exact: true }).click();
   await expect(results).toHaveCount(0);
