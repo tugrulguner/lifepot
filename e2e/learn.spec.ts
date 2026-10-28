@@ -23,7 +23,10 @@ test("learn index and canonical guide pages render and serve matching Markdown",
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
     await expect(page.getByText(marker, { exact: false }).first()).toBeVisible();
     if (slug === "player-guide") {
-      await expect(page.locator(".learn-prose strong")).toHaveCount(21);
+      await expect(page.locator(".learn-prose strong")).toHaveCount(27);
+      for (const label of ["Measurements", "Close-up", "Full world", "Follow family", "Options"]) {
+        await expect(page.locator(".learn-prose strong").filter({ hasText: new RegExp(`^${label}$`) })).not.toHaveCount(0);
+      }
       await expect(page.locator(".learn-prose strong").first()).toHaveText("What exists in this world?");
     } else {
       await expect(page.locator(".learn-prose table")).toBeVisible();

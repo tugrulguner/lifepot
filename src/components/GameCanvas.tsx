@@ -296,6 +296,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
   const tracked = validTarget ? followCamera(camera, state, validTarget) : null;
   const view = target ? tracked ?? NEUTRAL_CAMERA : camera;
   const lost = !!target && !tracked;
+  const canFollowFamily = followed !== null && state.lineage.some((id, i) => id === followed && !!state.guild[i]);
   const cameraUpdate = lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Full world restored.` : "Family pin changed. Full world restored." : releasedNotice;
   useEffect(() => onCameraUpdate(cameraUpdate), [cameraUpdate, onCameraUpdate]);
   // Only deliberate panel actions return to the watching view. Engine ticks,
@@ -413,14 +414,17 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
       aria-label={`Ecosystem generation ${state.generation}; ${state.stats.population} organisms`}
     />
     <section className="camera-tools camera-primary" aria-label="World camera">
+      <div className="watching-progress" role="group" aria-label="Watching progress"><span>Generation {state.generation} / {DEFAULT_GENERATIONS} · {state.stats.population} living</span><a href="#live-measurements">Measurements</a></div>
       <div className="camera-buttons">
         <button aria-label="Zoom out" disabled={view.zoom <= 1} onClick={() => { zoom(-.5); returnToWorld(); }}>−</button>
         <output aria-label="Camera zoom">{view.zoom}×</output>
         <button aria-label="Zoom in" disabled={view.zoom >= 3} onClick={() => { zoom(.5); returnToWorld(); }}>+</button>
-        <button aria-label="Full world" onClick={() => { reset(); returnToWorld(); }}>Reset</button>
-        <button aria-label="Follow pinned family with camera" title="Follow the pinned family" disabled={followed === null || !state.lineage.some((id, i) => id === followed && !!state.guild[i])} onClick={() => { if (followed !== null) { follow({ kind: "family", id: followed }); returnToWorld(); } }}>Follow</button>
-        <button aria-label="More camera options" onClick={() => { const options = document.getElementById("world-camera-options"); options?.scrollIntoView({ block: "start" }); options?.focus({ preventScroll: true }); }}>More</button>
+        <button aria-label="Close-up view" aria-pressed={view.zoom === 2} title="2× close-up of the current view; simulation unchanged" onClick={() => { zoom(2 - view.zoom); returnToWorld(); }}>Close-up</button>
+        <button aria-label="Full world" onClick={() => { reset(); returnToWorld(); }}>Full world</button>
+        <button aria-label="Follow pinned family with camera" aria-describedby="world-camera-hint" title="Follow the pinned family" disabled={!canFollowFamily} onClick={() => { if (followed !== null) { follow({ kind: "family", id: followed }); returnToWorld(); } }}>Follow family</button>
+        <button aria-label="More camera options" onClick={() => { const options = document.getElementById("world-camera-options"); options?.scrollIntoView({ block: "start" }); options?.focus({ preventScroll: true }); }}>Options</button>
       </div>
+      <p id="world-camera-hint" className="camera-hint">{canFollowFamily ? `Family #${followed} pinned. Follow family keeps it in view.` : followed !== null ? `Family #${followed} has no living members. Inspect another creature to pin a family.` : "Pause and inspect a creature, then pin its family to follow."}</p>
     </section>
     <section id="world-camera-options" className="camera-tools camera-options" aria-label="Camera options" tabIndex={-1}>
       <div className="camera-buttons">
@@ -1060,7 +1064,7 @@ export function GameCanvas() {
       <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={followLineage} onClear={() => setSelected(null)} onPick={inspectLiving} />
       <FamilyHeader feedbackPath="/play" skipTarget="play-content"><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
       <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} /></div>
-      <section className="stats-strip" aria-label="Live ecosystem statistics">
+      <section id="live-measurements" tabIndex={-1} className="stats-strip" aria-label="Live ecosystem statistics">
         <Stat
           id="generation"
           label="Generation"

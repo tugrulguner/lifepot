@@ -27,7 +27,10 @@ describe("guide inline Markdown", () => {
       if (block.kind === "table") return <table key={index}><tbody>{(JSON.parse(block.text) as string[]).map((row, rowIndex) => <tr key={rowIndex}>{row.split("|").slice(1, -1).map((cell, cellIndex) => <td key={cellIndex}>{renderInline(cell)}</td>)}</tr>)}</tbody></table>;
       return <p key={index}>{renderInline(block.text)}</p>;
     })}</>);
-    expect(document.querySelectorAll("strong")).toHaveLength(21);
+    expect(document.querySelectorAll("strong")).toHaveLength(27);
+    for (const label of ["Measurements", "Close-up", "Full world", "Follow family", "Options"]) {
+      expect([...document.querySelectorAll("strong")].some(node => node.textContent === label)).toBe(true);
+    }
     expect(document.querySelector("pre code")).toBeInTheDocument();
     expect(document.querySelector("a[href]")).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/\*\*[^*]+\*\*/);
