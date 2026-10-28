@@ -36,7 +36,7 @@ try {
     await new Promise(resolve => setTimeout(resolve, 200));
   }
   if (!ready) throw new Error("Fixture did not serve the exact prepared homepage");
-  const specs = process.argv.includes("--all") ? [] : ["e2e/worker-delivery.spec.ts", "e2e/product-demo.spec.ts", "e2e/product-demo-presentation.spec.ts", "e2e/video-asset-compatibility.spec.ts"];
+  const specs = process.argv.includes("--all") ? [] : ["e2e/worker-delivery.spec.ts", "e2e/worker-runtime.spec.ts", "e2e/product-demo.spec.ts", "e2e/product-demo-presentation.spec.ts", "e2e/video-asset-compatibility.spec.ts"];
   const runner = spawn(process.execPath, ["node_modules/@playwright/test/cli.js", "test", ...specs, "--workers=1", "--retries=0", ...process.argv.slice(2).filter(value => value !== "--all")], { stdio: "inherit", env: environment });
   process.exitCode = await new Promise((resolve, reject) => { runner.once("error", reject); runner.once("exit", (code, signal) => resolve(signal ? 1 : code ?? 1)); });
 } finally { stopWorker(); }
