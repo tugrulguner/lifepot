@@ -256,11 +256,12 @@ test("gameplay header, stats, controls, and useful board geometry do not overlap
         const r = document.querySelector(s)!.getBoundingClientRect();
         return { x: r.x, y: r.y, width: r.width, height: r.height, bottom: r.bottom, right: r.right };
       };
-      return { header: rect(".family-header"), stats: rect(".stats-strip"), controls: rect(".controls"), board: rect("canvas.life-canvas"), inspector: rect("#creature-inspector"), focus: rect(".species-focus-buttons"), shell: rect(".simulation-shell"), viewport: { width: innerWidth, height: innerHeight } };
+      return { header: rect(".family-header"), stats: rect(".stats-strip"), progress: rect(".watching-progress"), controls: rect(".controls"), board: rect("canvas.life-canvas"), inspector: rect("#creature-inspector"), focus: rect(".species-focus-buttons"), shell: rect(".simulation-shell"), viewport: { width: innerWidth, height: innerHeight } };
     });
-    expect(geometry.stats.y, `stats below header at ${width}x${height}`).toBeGreaterThanOrEqual(geometry.header.bottom);
-    expect(geometry.stats.bottom, `complete stats visible at ${width}x${height}`).toBeLessThanOrEqual(height - 12);
-    expect(geometry.controls.y, `controls below stats at ${width}x${height}`).toBeGreaterThanOrEqual(geometry.stats.bottom);
+    expect(geometry.stats.y, `extended measurements follow the habitat at ${width}x${height}`).toBeGreaterThanOrEqual(geometry.board.bottom);
+    expect(geometry.progress.y, `watching progress below header at ${width}x${height}`).toBeGreaterThanOrEqual(geometry.header.bottom);
+    expect(geometry.progress.bottom, `watching progress before habitat at ${width}x${height}`).toBeLessThanOrEqual(geometry.board.y);
+    expect(geometry.controls.y, `controls below header at ${width}x${height}`).toBeGreaterThanOrEqual(geometry.header.bottom);
     expect(geometry.controls.bottom, `complete controls visible at ${width}x${height}`).toBeLessThanOrEqual(height - 12);
     expect(geometry.board.width, `useful canvas at ${width}x${height}`).toBeGreaterThanOrEqual(width <= 390 ? width - 40 : 300);
     expect(geometry.board.height).toBeGreaterThanOrEqual(width <= 390 ? 260 : 300);
@@ -282,6 +283,17 @@ test("gameplay header, stats, controls, and useful board geometry do not overlap
       await settle(page);
       await page.screenshot({ path: evidenceFile(testInfo, `paused-${width}-${mode}-${os}.png`) });
     }
+    // Measurements remain complete and directly reachable, without occupying
+    // the watching view before the habitat. Exercise the actual anchor.
+    const generation = await page.getByTestId("generation").textContent();
+    await page.getByRole("link", { name: "Measurements", exact: true }).click();
+    const fullStats = page.getByRole("region", { name: "Live ecosystem statistics" });
+    await expect(fullStats).toBeInViewport();
+    await expect(fullStats.locator(".stat")).toHaveCount(8);
+    const statsBounds = (await fullStats.boundingBox())!;
+    expect(statsBounds.y).toBeGreaterThanOrEqual(geometry.header.bottom);
+    expect(statsBounds.y + statsBounds.height).toBeLessThanOrEqual(height - 12);
+    await expect(page.getByTestId("generation")).toHaveText(generation!);
     expect(modelCalls()).toBe(0);
   }
   writeFileSync(evidenceFile(testInfo, "geometry.json"), JSON.stringify(measurements, null, 2));
