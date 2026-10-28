@@ -8,6 +8,10 @@ import OrganismArtwork from "./OrganismArtwork";
 
 export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate, inspection,playerChange }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string; inspection?: ReactNode | ((context: ReactNode) => ReactNode);playerChange?:ReactNode }) {
   const rules = state.config.rules!;
+  const latestSample = evidence?.samples.at(-1);
+  const recentSample = latestSample?.generation === state.generation
+    ? evidence?.samples.find(sample => sample.generation >= state.generation - 6 && sample.generation < state.generation)
+    : undefined;
   const counts = rules.species.map((species, index) => ({
     species,
     count: Array.from(state.guild).reduce((total, alive, cell) => total + (alive && state.ruleSpecies[cell] === index + 1 ? 1 : 0), 0),
@@ -23,7 +27,15 @@ export function GameplayObservation({ state, evidence, followed, decision, names
 
   const speciesKey = <div className="configured-species-counts" aria-label="Configured species counts">
     <strong className={worldName ? "saved-world-heading" : "world-legend-heading"} title={worldName}>{worldName ? `Experiment: ${worldName}` : "World legend"}</strong>
-    {counts.map(({ species, count }) => <span key={species.id} aria-label={`Species ${species.id} count`}><svg className="species-legend-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={speciesColor(species.id)} /></svg>{names?.[species.id] ?? species.role} · {species.id} {names?.[species.id] && <small>{species.role}</small>} <b>{count}</b></span>)}
+    {counts.map(({ species, count }) => {
+      const previous = recentSample?.species.find(item => item.speciesId === species.id);
+      const current = latestSample?.species.find(item => item.speciesId === species.id);
+      const delta = previous && current?.population === count ? count - previous.population : null;
+      const interval = recentSample ? state.generation - recentSample.generation : 0;
+      return <span key={species.id} aria-label={`Species ${species.id} count`}><svg className="species-legend-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={speciesColor(species.id)} /></svg>{names?.[species.id] ?? species.role} · {species.id} {names?.[species.id] && <small>{species.role}</small>} <b>{count}</b>
+        {delta !== null && <span className="species-recent-change" role="img" aria-label={`Species ${species.id} population: ${previous!.population} to ${count}, generations ${recentSample!.generation}–${state.generation}. Recorded change, not a prediction.`} title={`Recorded population change over ${interval} ${interval === 1 ? "generation" : "generations"}; not a prediction or explanation.`}>{delta > 0 ? "↑" : delta < 0 ? "↓" : "→"}{Math.abs(delta)} /{interval}g</span>}
+      </span>;
+    })}
   </div>;
   const activity = <>
     <section className="recorded-activity" aria-label="Recorded activity">

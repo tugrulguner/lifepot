@@ -641,6 +641,7 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .configured-species-counts > strong { margin-right: 4px; color: var(--muted); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
 .configured-species-counts > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .configured-species-counts b { font-weight: 700; }
+.species-recent-change { padding: 2px 3px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); font-size: 10px; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .species-color { width: 9px; height: 9px; border-radius: 50%; }
 .followed-family-context, .gameplay-observation > p, .intervention-status { margin: 0; overflow-wrap: anywhere; }
 .followed-family-context { color: var(--mint); }
