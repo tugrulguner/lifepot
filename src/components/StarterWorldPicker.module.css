@@ -19,7 +19,9 @@
 .choice:hover .previewAction { text-decoration: underline; }
 .habitat { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(210px, 1fr); gap: 16px; align-items: stretch; margin-top: 16px; }
 .canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; border: 1px solid var(--mp-border); border-radius: 8px; background: var(--mp-canvas); }
-.summary { align-content: center; display: grid; gap: 4px; min-width: 0; padding: 12px; border: 1px solid var(--mp-border); border-radius: 8px; background: var(--mp-raised); font-size: 13px; line-height: 1.45; }
+.summary { align-self: start; min-width: 0; padding: 12px; border: 1px solid var(--mp-border); border-radius: 8px; background: var(--mp-raised); font-size: 13px; line-height: 1.45; }
+.summary summary { min-height: 44px; cursor: pointer; padding: 10px 0; }
+.summary[open] summary { margin-bottom: 8px; }
 .summary p { margin: 0; }
 .summary ul { display: grid; gap: 3px; margin: 4px 0 0; padding-left: 20px; }
 .question { margin: 14px 0 0; color: var(--mp-muted); font-size: 14px; }

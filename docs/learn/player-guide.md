@@ -8,7 +8,7 @@ The `/play` entry previews Resource competition, Hunters and prey, and Recurring
 
 Choose **Describe your own world** for the three-question setup. Starter browsing does not require prose, and switching between browsing and the custom form preserves unsubmitted answers. These authored presets are distinct from a failed interpretation of a requested world; a rejected custom setup does not become seedable just because presets exist.
 
-## Describe an ecology
+## Start from the questions
 
 The setup asks three short questions. Each answer is trimmed, must contain 1–140 characters, and is interpreted into a fixed vocabulary—not compiled as a rule.
 

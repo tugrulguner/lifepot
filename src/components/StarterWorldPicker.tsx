@@ -53,13 +53,13 @@ export default function StarterWorldPicker({ customMode = false, onChoose, onDes
             {hazardCells.map(({ value, index }) => <rect key={`hazard-${index}`} x={index % GRID_SIZE * 10} y={Math.floor(index / GRID_SIZE) * 10} width="10" height="10" fill="#ee856b" opacity={.06 + value / 255 * .22} />)}
             {organisms.map(({ index, role, color }) => <svg key={`organism-${index}`} x={(index % GRID_SIZE + .12) * 10} y={(Math.floor(index / GRID_SIZE) + .12) * 10} width="7.6" height="7.6" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={role} color={color} /></svg>)}
           </svg>
-          <div className={styles.summary} role="group" aria-label={`${selected.title} habitat summary`}>
-            <p><strong>Generation 0 · {simulation.stats.population} organisms</strong></p>
+          <details className={styles.summary} aria-label={`${selected.title} habitat summary`}>
+            <summary><strong>Generation 0 · {simulation.stats.population} organisms</strong> · details</summary>
             <p>Starting population: {simulation.stats.population} organisms · mean resources: {resourceMean} units per cell</p>
             <p>Resources: {selected.config.environment.abundance}, {selected.config.environment.distribution}; pressure: {selected.config.rules!.environment.pressure}</p>
             {relation && <p>Relationship: {relationshipName(relation.mode)}</p>}
             <ul aria-label="Starter species populations">{populationBySpecies.map(({ species, population }) => <li key={species.id}>Species {species.id} · {species.role}: {population}</li>)}</ul>
-          </div>
+          </details>
         </div>
         <p className={styles.question}>Explore question: {selectedWorldQuestion(selected.id)}</p>
         <div className={styles.actions}>

@@ -10,4 +10,6 @@ for(const width of [390,1280])test(`${width}px entry opens on the real square ha
  expect(Math.abs(box!.width-box!.height)).toBeLessThan(2);
  expect(box!.y).toBeGreaterThanOrEqual(50);
  expect(box!.y+box!.height).toBeLessThanOrEqual(844);
+ const review=await page.getByRole('button',{name:'Review this world',exact:true}).boundingBox();
+ expect(review!.y+review!.height).toBeLessThanOrEqual(844);
 });
