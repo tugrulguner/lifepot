@@ -13,6 +13,12 @@ for(const width of [390,1280])test(`${width}px entry opens on the real square ha
  expect(box!.y).toBeGreaterThanOrEqual(50);
  expect(box!.y+box!.height).toBeLessThanOrEqual(844);
  const review=await page.getByRole('button',{name:'Review this world',exact:true}).boundingBox();
+ for(const name of ['Resource competition','Hunters and prey','Recurring scarcity']){
+  const choice=await page.getByRole('button',{name:`Preview ${name}`,exact:true}).boundingBox();
+  expect(choice!.height).toBeGreaterThanOrEqual(44);
+  expect(choice!.y).toBeGreaterThanOrEqual(50);
+  expect(choice!.y+choice!.height).toBeLessThanOrEqual(box!.y);
+ }
  expect(review!.y+review!.height).toBeLessThanOrEqual(844);
  expect(consoleErrors.filter(message=>/hydrat|didn't match/i.test(message))).toEqual([]);
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import {act,cleanup,fireEvent,render,screen} from '@testing-library/react';
+import {act,cleanup,fireEvent,render,screen,within} from '@testing-library/react';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {GameCanvas} from './GameCanvas';
 import {defaultConfig,hashSetupRequest} from '@/game/setup';
@@ -48,7 +48,20 @@ beforeEach(()=>{
  vi.stubGlobal('scrollTo',vi.fn());
  vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue(null);
 });
-afterEach(()=>{cleanup();vi.restoreAllMocks();vi.unstubAllGlobals()});
+afterEach(()=>{cleanup();vi.useRealTimers();vi.restoreAllMocks();vi.unstubAllGlobals()});
+
+it('keeps deliberate fixed play out of offline language after a real ecological trigger',async()=>{
+ vi.useFakeTimers();const fetch=vi.fn();vi.stubGlobal('fetch',fetch);render(<GameCanvas/>);
+ fireEvent.click(screen.getByRole('button',{name:'Review this world'}));
+ fireEvent.click(screen.getByRole('button',{name:/Seed ecosystem/}));
+ for(let tick=0;tick<16;tick++){
+  await act(async()=>{vi.advanceTimersByTime(1000);await Promise.resolve()});
+  expect(screen.queryByText(/^Offline observation:/i)).not.toBeInTheDocument();
+ }
+ expect(Number(screen.getByTestId('generation').textContent!.split('/')[0].trim())).toBeGreaterThanOrEqual(12);
+ expect(screen.queryByText('Offline · no intervention',{exact:true})).not.toBeInTheDocument();
+ expect(fetch).not.toHaveBeenCalled();
+});
 
 it('lets a newcomer review a designed food web without submitting prose or requesting inference',()=>{
  const fetch=vi.fn();vi.stubGlobal('fetch',fetch);
@@ -57,12 +70,17 @@ it('lets a newcomer review a designed food web without submitting prose or reque
  expect(screen.getByRole('img',{name:/Starter habitat preview/})).toBeInTheDocument();
  fireEvent.click(screen.getByRole('button',{name:'Review this world'}));
  expect(screen.getByRole('heading',{name:'World conditions'})).toBeInTheDocument();
+ expect(within(screen.getByRole('region',{name:'Starter world conditions'})).getByRole('heading',{name:'Starting habitat'})).toBeInTheDocument();
+ expect(screen.getByRole('button',{name:/Seed ecosystem/}).className).toMatch(/starterSeed/);
  expect(screen.getByLabelText('World policy')).toHaveValue('fixed');
  expect(screen.getByTestId('interpreter-source')).toHaveTextContent(/starter|preset|deterministic setup/i);
  expect(screen.queryByText('Deterministic fallback',{exact:true})).not.toBeInTheDocument();
  expect(fetch).not.toHaveBeenCalled();
  fireEvent.click(screen.getByRole('button',{name:/Seed ecosystem/}));
  expect(screen.getByRole('region',{name:'Run status'})).toHaveTextContent('Fixed world rules');
+ expect(screen.getByLabelText('Intervention status')).toHaveTextContent('Fixed rules · no runtime AI interventions');
+ expect(screen.getByLabelText('Intervention status')).not.toHaveTextContent(/offline|degraded|why this policy matters/i);
+ expect(screen.getByText('Fixed rules continue locally; no runtime AI interventions are requested.')).toBeInTheDocument();
  expect(fetch).not.toHaveBeenCalled();
 });
 

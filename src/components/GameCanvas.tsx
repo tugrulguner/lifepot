@@ -44,6 +44,7 @@ import { CreatureInspector } from "./CreatureInspector";
 import { WatchingOrganism } from "./WatchingOrganism";
 import { SpeciesFocus } from "./SpeciesFocus";
 import WorldPreview from "./WorldPreview";
+import gameplayStyles from "./GameCanvasGameplay.module.css";
 import { RunResults } from "./RunResults";
 import { MyWorldsPanel } from "./MyWorldsPanel";
 import { listWorlds, type WorldRecord } from "@/game/my-worlds";
@@ -695,7 +696,7 @@ export function GameCanvas() {
     pending.current = simulation.generation;
     setDeciding(true);
     setEvent(
-      `Jev evaluating ${triggerLabel(trigger)} at generation ${simulation.generation}`,
+      `${policy === "fixed" ? "Local observation of" : "Jev evaluating"} ${triggerLabel(trigger)} at generation ${simulation.generation}`,
     );
     void (async () => {
       let d: EvolutionDecision;
@@ -735,7 +736,7 @@ export function GameCanvas() {
         ledgerRef.current = l;
         setLedger(l);
         setEvent(
-          d.source === "fallback" ? "Offline observation: no intervention; inherited strategies continue" : `Jev decision recorded: ${d.speciesDirectives?.length ?? 0} species policies${d.scheduledRuleChange ? "; rule change scheduled" : ""}`,
+          d.source === "fallback" ? policy === "fixed" ? "Fixed-rule observation: no intervention; inherited strategies continue" : "Offline observation: no intervention; inherited strategies continue" : `Jev decision recorded: ${d.speciesDirectives?.length ?? 0} species policies${d.scheduledRuleChange ? "; rule change scheduled" : ""}`,
         );
       }
     })().finally(() => {
@@ -1011,7 +1012,7 @@ export function GameCanvas() {
   }
   if (stage === "review" && config)
     return (
-      <main className={`review-shell${parentWorldId ? " ph-no-capture" : ""}`} data-ph-no-capture={parentWorldId ? true : undefined}>
+      <main className={`review-shell${parentWorldId ? " ph-no-capture" : ""}${proof?.starter ? ` ${gameplayStyles.starterReview}` : ""}`} data-ph-no-capture={parentWorldId ? true : undefined}>
         <FamilyHeader feedbackPath="/play" skipTarget="play-content"><span className="header-detail">Interpretation complete</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
         <section id="play-content" tabIndex={-1} className="review-card">
           <p className="eyebrow">Founder ecology</p>
@@ -1045,7 +1046,7 @@ export function GameCanvas() {
           {proof?.fidelity?.mismatches?.length ? <section aria-label="Food-web contract conflicts"><p>The corrected proposal conflicts with the established food web:</p><ul>{proof.fidelity.mismatches.map((message, index) => <li key={index}>{message}</li>)}</ul></section> : null}
           {proof?.namedIntent && <p>Established organism intent: {proof.namedIntent.species.map(species => `${species.id} — ${species.name} (${species.role})`).join("; ")}.</p>}
           {parentWorldId && <p role="status">Review these saved conditions and choose your changes before seeding a new experiment. Recorded setup provenance is not a new Jev approval.</p>}
-          <WorldPreview config={config} answers={answers} onChange={next => { setConfig(next); setManuallyEdited(true); }} />
+          <WorldPreview starter={proof?.starter ?? false} config={config} answers={answers} onChange={next => { setConfig(next); setManuallyEdited(true); }} />
           <div className="experiment-intent">
             <label>Your question or prediction (optional)<input aria-label="Your question or prediction (optional)" value={question} maxLength={240} placeholder="What would you like to investigate?" onChange={event => setQuestion(event.target.value)}/></label>
             <p>This stays in this session. It is not sent to Jev, does not change the mechanics, and is not automatically scored.</p>
@@ -1066,7 +1067,7 @@ export function GameCanvas() {
           <button className="back-button" onClick={() => { setQi(0); setCustomSetup(true); setStage("questions"); }}>Edit setup answers</button>
           <p className="review-note">These are the validated mechanics, not unrestricted interpretations of your prose. Roles do not imply feeding links: consumption follows the relationship graph. Extinct species are not automatically restored.</p>
           <button
-            className="primary-button seed-button"
+            className={`primary-button seed-button${proof?.starter ? ` ${gameplayStyles.starterSeed}` : ""}`}
             disabled={!!proof?.requestFailed || (!!proof?.fidelity && proof.fidelity.verdict !== "approve")}
             onClick={() => { if (proof?.requestFailed || (proof?.fidelity && proof.fidelity.verdict !== "approve")) { gameplayAnalytics.setupFailed("setup_rejected"); return; } acceptedFollowup.current = Boolean(baseline); begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined); }}
           >
@@ -1101,7 +1102,7 @@ export function GameCanvas() {
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
       <World key={arrivalRevision} state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onCameraUpdate={setCameraUpdate} onInspect={index => { setSelected(index); setPaused(true); }} />
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
-      <GameplayObservation playerChange={playerEvents.some(e=>e.acceptedGeneration<=simulation.generation&&(!active||active.generation<e.generation+6))?<PlayerChangeStatus events={playerEvents} generation={simulation.generation}/>:undefined} inspection={selected === null ? undefined : context => <WatchingOrganism state={simulation} index={selected} followed={followed} onFollow={followLineage} onDetails={inspectDetails} context={context} />} cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
+      <GameplayObservation playerChange={playerEvents.some(e=>e.acceptedGeneration<=simulation.generation&&(!active||active.generation<e.generation+6))?<PlayerChangeStatus events={playerEvents} generation={simulation.generation}/>:undefined} inspection={selected === null ? undefined : context => <WatchingOrganism state={simulation} index={selected} followed={followed} onFollow={followLineage} onDetails={inspectDetails} context={context} />} cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} policy={replayMode ? "recorded" : policy} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
       <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={followLineage} onClear={() => setSelected(null)} onPick={inspectLiving} />
       <FamilyHeader feedbackPath="/play" skipTarget="play-content"><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
       <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} /></div>
@@ -1127,19 +1128,21 @@ export function GameCanvas() {
         <Stat id="kills" label="Kills · total" value={simulation.stats.kills} />
         <Stat id="resources" label="Resource mean" value={resources} />
       </section>
-      <aside className="decision-overlay" aria-label="Jev evolution state">
+      <aside className="decision-overlay" aria-label={!replayMode && policy === "fixed" ? "Local ecology rules" : "Jev evolution state"}>
         <div className="decision-heading">
-          <p>JEV EVOLUTION LAYER</p>
+          <p>{!replayMode && policy === "fixed" ? "LOCAL ECOLOGY RULES" : "JEV EVOLUTION LAYER"}</p>
           <span
-            className={`decision-source ${deciding ? "is-deciding" : active?.source === "jev" ? "is-jev" : "is-fallback"}`}
+            className={`decision-source ${!replayMode && policy === "fixed" ? "" : deciding ? "is-deciding" : active?.source === "jev" ? "is-jev" : "is-fallback"}`}
           >
             {deciding
               ? "Jev deciding…"
               : replayMode
                 ? `Replay v${currentReplay?.version??3}`
-                : active
-                  ? active.source === "fallback" ? "Offline · no intervention" : "Jev policies"
-                  : "Observing ecology"}
+                : policy === "fixed"
+                  ? "Fixed rules · no runtime AI interventions"
+                  : active
+                    ? active.source === "fallback" ? "Offline · no intervention" : "Jev policies"
+                    : "Observing ecology"}
           </span>
         </div>
         <p className="decision-brief">Observed: {active ? triggerLabel(active.trigger) : "awaiting an ecological trigger"}. Current graph pressure: {title(simulation.config.rules!.environment.pressure)}. Observations do not establish which pressure caused a population change.</p>
@@ -1170,7 +1173,7 @@ export function GameCanvas() {
             return <div key={species.id}><span>Species {species.id} · {title(species.role)}</span>{directive ? <div><strong>Next births: {title(directive.strategy.choice)}</strong><p>Undirected variation · {directive.mutationTempo.choice} rate. Target suggestion is advisory, not gene editing.</p><details><summary>Decision probabilities</summary>{[directive.strategy, directive.mutationTarget, directive.mutationTempo].map((answer, index) => <p key={index}>{title(answer.choice)} · confidence {Math.round(answer.confidence * 100)}%<br/>{Object.entries(answer.probabilities).map(([choice, probability]) => `${title(choice)} ${Math.round(probability * 100)}%`).join(" · ")}</p>)}</details></div> : <strong>{active?.speciesDirectives === undefined && active ? "Legacy cohort policy (replay)" : "Inherited · no new policy"}</strong>}</div>;
           })}
         </div>
-        <p className="decision-usage">Policies affect subsequent births, not every living organism. Offline observations do not introduce species or rescue extinct lineages.</p>
+        <p className="decision-usage">{!replayMode && policy === "fixed" ? "Fixed rules continue locally; no runtime AI interventions are requested." : "Policies affect subsequent births, not every living organism. Offline observations do not introduce species or rescue extinct lineages."}</p>
         <RuntimeCouncil decision={active} state={simulation} ledger={ledger} replay={replayMode}/>
         {active?.usage && <p className="decision-usage">Latest decision: {active.usage.input_tokens} input / {active.usage.output_tokens} output tokens</p>}
         <p className="decision-usage">
@@ -1209,7 +1212,7 @@ export function GameCanvas() {
         <button onClick={() => document.getElementById("world-observatory")?.scrollIntoView({ behavior: "smooth", block: "start" })}>World observatory</button>
         {!complete&&!replayMode&&policy==='adaptive'&&<button type="button" aria-label="Ask Jev to change this world" disabled={deciding} onClick={openPlayerChange}>Ask Jev</button>}
       </div>
-      {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} question={question} speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])}
+      {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} followedLineage={followed} question={question} comparison={baseline ? <RunComparison speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} before={baseline} after={{ evidence, config: initialConfig ?? config, seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }} /> : undefined} speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])}
         onInspect={() => { setShowResults(false); document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus(); }}
         onReplay={() => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); }}
         onEdit={() => { setParentWorldId(originWorldId ?? parentWorldId); setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); }}
@@ -1222,7 +1225,6 @@ export function GameCanvas() {
           setSeed(simulation.seed); setPolicy("fixed"); setReplayMode(false);
           setFixedBaselineReview(true); setStage("review"); window.scrollTo(0, 0);
         }}>Review fixed-rule baseline</button>
-        {baseline && <RunComparison speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} before={baseline} after={{ evidence, config: initialConfig ?? config, seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }} />}
         <RunReflectionPanel key={`reflection-${simulation.seed}-${simulation.generation}`} evidence={evidence} config={initialConfig ?? config} onExperiment={experiment => {
           setParentWorldId(originWorldId ?? parentWorldId);
           const next = structuredClone(initialConfigRef.current ?? config);

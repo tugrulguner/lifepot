@@ -6,6 +6,12 @@ import WorldPreview from "./WorldPreview";
 import { defaultConfig } from "@/game/setup";
 
 describe("WorldPreview", () => {
+  it("uses neutral review language for designed starter worlds", () => {
+    render(<WorldPreview starter config={defaultConfig()} answers={{ world: "starter", threat: "starter", reward: "starter" }} onChange={() => {}} />);
+    expect(screen.getByRole("heading", { name: "Starting habitat" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Your world, interpreted" })).toBeNull();
+  });
+
   it("shows a fidelity warning and delegates only validated manual edits", () => {
     const config = defaultConfig(); config.rules!.interactions[0].mode = "neutral";
     const onChange = vi.fn();
