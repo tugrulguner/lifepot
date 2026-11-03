@@ -2,7 +2,13 @@
 
 LifePot is a bounded artificial-life game. Describe an environment, review the proposed ecology, then watch a deterministic simulation. The model may propose typed choices; it cannot write rules or control organisms. Extinction is a valid outcome, and this is not a biological forecast.
 
-## Start from the questions
+## Choose a starter or describe your world
+
+The `/play` entry previews Resource competition, Hunters and prey, and Recurring scarcity. Each uses an explicit supported configuration and real generation-0 state, with an inhabited square habitat, resource measurements and species relationships. **Review this world** opens editable conditions; it does not start a run. Starters default to fixed rules and make no setup or runtime model requests unless you explicitly select adaptive policy. Their shared seed makes the configurations inspectable, but their multiple differences are not a controlled one-condition comparison.
+
+Choose **Describe your own world** for the three-question setup. Starter browsing does not require prose, and switching between browsing and the custom form preserves unsubmitted answers. These authored presets are distinct from a failed interpretation of a requested world; a rejected custom setup does not become seedable just because presets exist.
+
+## Describe an ecology
 
 The setup asks three short questions. Each answer is trimmed, must contain 1–140 characters, and is interpreted into a fixed vocabulary—not compiled as a rule.
 

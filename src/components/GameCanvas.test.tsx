@@ -214,6 +214,9 @@ test("seeds gameplay when analytics capture throws", () => {
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
   render(<GameCanvas />);
   fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
+  // The entry preview constructs its own generation-0 world. From here on,
+  // capture only the explicitly seeded gameplay instance under test.
+  captured.length = 0;
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
   expect(captured).toHaveLength(1);
   expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
@@ -231,6 +234,9 @@ test.each([false, true])("theme repaint preserves every engine field and continu
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
   render(<GameCanvas />);
   fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
+  // The entry preview constructs its own generation-0 world. From here on,
+  // capture only the explicitly seeded gameplay instance under test.
+  captured.length = 0;
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
   expect(captured).toHaveLength(1);
   expect(context.createRadialGradient.mock.calls.length).toBeLessThanOrEqual(contextCalls.mock.calls.length * 100);

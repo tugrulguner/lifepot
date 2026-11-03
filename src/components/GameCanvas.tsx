@@ -66,6 +66,8 @@ import { organismSprite, paintOrganism } from "@/game/organism-glyphs";
 import OrganismArtwork from "./OrganismArtwork";
 import { gameplayAnalytics } from "@/app/gameplay-analytics";
 import { isSurvivingNewborn, relationshipLabel, triggerLabel } from "@/game/visuals";
+import StarterWorldPicker from "./StarterWorldPicker";
+import type { StarterWorld } from "@/game/starter-worlds";
 export type LifePotViewModel = {
   answers: SetupAnswers;
   config: LifeConfig;
@@ -445,6 +447,8 @@ export function GameCanvas() {
   const [playerBinding,setPlayerBinding]=useState<PlayerProposalBinding|null>(null);
   const [isExample, setIsExample] = useState(false);
   const exampleJourney = useRef(0);
+  const setupJourney = useRef(0);
+  const [customSetup, setCustomSetup] = useState(false);
   const exampleRequest = useRef<AbortController | null>(null);
   const cancelExample = useCallback(() => {
     exampleJourney.current++;
@@ -498,6 +502,7 @@ export function GameCanvas() {
     [config, setConfig] = useState<LifeConfig | null>(null),
     [proof, setProof] = useState<{
       source: "jev" | "fallback";
+      starter?: boolean;
       model?: string;
       usage?: { input_tokens: number; output_tokens: number };
       fidelity?: SetupFidelity;
@@ -786,9 +791,30 @@ export function GameCanvas() {
       );
     }
   }, [answers, replayMode, simulation]);
+  function chooseStarter(world: StarterWorld) {
+    cancelExample();
+    setupJourney.current++;
+    setInterpreting(false);
+    setCustomSetup(false);
+    setQuestion("");
+    setAnswers(world.answers);
+    setConfig(structuredClone(world.config));
+    setInitialConfig(structuredClone(world.config));
+    setProof({ source: "fallback", starter: true });
+    setSeed(world.seed);
+    setPolicy("fixed");
+    setReplayMode(false);
+    setManuallyEdited(false);
+    setFixedBaselineReview(false);
+    setSimulation(null);
+    setStage("review");
+    window.scrollTo(0, 0);
+  }
   async function interpret(a: SetupAnswers) {
     cancelExample();
     if (interpreting) return;
+    const journey = ++setupJourney.current;
+    const isCurrent = () => setupJourney.current === journey;
     setInterpreting(true);
     const ca = canonicalAnswers(a),
       hash = hashSetupRequest(ca);
@@ -823,6 +849,7 @@ export function GameCanvas() {
         failureCategory = "invalid_response";
         throw new Error("Setup response did not match its request");
       }
+      if (!isCurrent()) return;
       const namedIntent = setupNamedIntentSchema.safeParse(p.evidence?.establishedIntent);
       setConfig(p.config);
       setProof({ source: p.source, model: p.model, usage: p.usage, fidelity: p.fidelity, fallbackReason: p.fallbackReason, failure: p.failure, namedIntent: namedIntent.success ? namedIntent.data : undefined });
@@ -838,10 +865,12 @@ export function GameCanvas() {
         }
       }
     } catch {
+      if (!isCurrent()) return;
       gameplayAnalytics.setupFailed(failureCategory);
       setConfig(deterministicSetup(ca));
       setProof({ source: "fallback", requestFailed: true, fallbackReason: failureCategory === "provider_unavailable" ? "unavailable" : failureCategory === "rate_limited" ? "rate_limited" : failureCategory === "invalid_response" ? "invalid_response" : "unknown" });
     }
+    if (!isCurrent()) return;
     setAnswers(ca);
     setSeed(seedFromHash(hash));
     setInterpreting(false);
@@ -850,6 +879,8 @@ export function GameCanvas() {
   }
   function loadDeterministicPreset() {
     cancelExample();
+    setupJourney.current++;
+    setInterpreting(false);
     const preset = canonicalAnswers(RECORDED_PRESET), hash = hashSetupRequest(preset);
     setAnswers(preset);
     setConfig(deterministicSetup(preset));
@@ -885,9 +916,11 @@ export function GameCanvas() {
     const q = QUESTIONS[qi];
     return (
       <main className="setup-shell">
-        <FamilyHeader feedbackPath="/play" skipTarget="play-content"><span className="header-detail">Co-evolution laboratory</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
-        <section id="play-content" tabIndex={-1} className="question-panel" onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
+        <FamilyHeader feedbackPath="/play" skipTarget="play-content"><span className="header-detail">{proof?.starter ? "Designed starter" : "Co-evolution laboratory"}</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
+        <section id="play-content" tabIndex={-1} className="question-panel" style={!customSetup ? { width: "min(1000px, calc(100% - 40px))", maxWidth: "1000px" } : undefined} onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
           <div id="my-worlds-entry" />
+          <StarterWorldPicker customMode={customSetup} onChoose={chooseStarter} onDescribeOwn={() => setCustomSetup(true)} onReturnToStarters={() => setCustomSetup(false)} />
+          <>
           <div className="step-label">QUESTION {qi + 1} / 3</div>
           <div className="progress-track">
             <i style={{ width: `${((qi + 1) / 3) * 100}%` }} />
@@ -904,7 +937,7 @@ export function GameCanvas() {
           >
             <div className="answer-field">
               <input
-                autoFocus
+                autoFocus={customSetup || qi > 0}
                 aria-label={q.title}
                 maxLength={140}
                 value={answers[q.key]}
@@ -965,6 +998,7 @@ export function GameCanvas() {
             </details>
           )}
           {qi === 0 && <button type="button" className="back-button" onClick={loadDeterministicPreset}>Explore deterministic preset</button>}
+          </>
         </section>
         <MyWorldsPanel entryShortcut onOpen={openSavedWorld} onReview={reviewSavedWorld} />
       </main>
@@ -988,9 +1022,11 @@ export function GameCanvas() {
             data-testid="interpreter-source"
           >
             <span />
-            {parentWorldId ? "Saved setup provenance · " : ""}{proof?.source === "jev"
-              ? `Jev API · ${proof.model ?? "jev-latest"}`
-              : "Deterministic fallback"}
+            {parentWorldId ? "Saved setup provenance · " : ""}{proof?.starter
+              ? "Designed starter · deterministic setup"
+              : proof?.source === "jev"
+                ? `Jev API · ${proof.model ?? "jev-latest"}`
+                : "Deterministic fallback"}
           </p>
           {proof?.fidelity?.verdict === "approve" && proof.fidelity.repairAttempted && <p role="status">Jev corrected its proposed food web and checked it again against your original answers. Review the corrected world below before seeding.</p>}
           {proof?.fidelity && proof.fidelity.verdict !== "approve" && <section aria-label="Setup needs clarification" role="alert">
@@ -1022,7 +1058,7 @@ export function GameCanvas() {
           {config.rules && <SetupCouncil rules={config.rules}/>}
           {proof?.usage && <p>Setup total: {proof.usage.input_tokens} input / {proof.usage.output_tokens} output tokens (interpretation, fidelity review, any bounded correction, and council selection).</p>}
           </details>
-          <button className="back-button" onClick={() => { setQi(0); setStage("questions"); }}>Edit setup answers</button>
+          <button className="back-button" onClick={() => { setQi(0); setCustomSetup(true); setStage("questions"); }}>Edit setup answers</button>
           <p className="review-note">These are the validated mechanics, not unrestricted interpretations of your prose. Roles do not imply feeding links: consumption follows the relationship graph. Extinct species are not automatically restored.</p>
           <button
             className="primary-button seed-button"
