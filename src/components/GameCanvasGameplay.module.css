@@ -1,6 +1,12 @@
 /* Clip the decorative horizontal overflow without creating a sticky scroll container. */
 main.starterReview { overflow: clip; }
 
+.fixedStatus:global(.decision-source) {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .starterSeed {
   position: sticky;
   z-index: 4;

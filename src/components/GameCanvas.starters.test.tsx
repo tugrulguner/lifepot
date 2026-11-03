@@ -54,11 +54,24 @@ it('keeps deliberate fixed play out of offline language after a real ecological 
  vi.useFakeTimers();const fetch=vi.fn();vi.stubGlobal('fetch',fetch);render(<GameCanvas/>);
  fireEvent.click(screen.getByRole('button',{name:'Review this world'}));
  fireEvent.click(screen.getByRole('button',{name:/Seed ecosystem/}));
- for(let tick=0;tick<16;tick++){
+ expect(screen.getByLabelText('Local ecology rules')).toBeInTheDocument();
+ expect(document.querySelector('.council-details summary')?.textContent).toBe('World input, policies & council evidence');
+ const observedSources:string[]=[];
+ const observer=new MutationObserver(()=>{
+  const source=document.querySelector('.decision-source')?.textContent?.trim();
+  if(source)observedSources.push(source);
+ });
+ observer.observe(document.body,{subtree:true,childList:true,characterData:true});
+ for(let tick=0;tick<40;tick++){
   await act(async()=>{vi.advanceTimersByTime(1000);await Promise.resolve()});
   expect(screen.queryByText(/^Offline observation:/i)).not.toBeInTheDocument();
  }
- expect(Number(screen.getByTestId('generation').textContent!.split('/')[0].trim())).toBeGreaterThanOrEqual(12);
+ observer.disconnect();
+ expect(Number(screen.getByTestId('generation').textContent!.split('/')[0].trim())).toBeGreaterThanOrEqual(30);
+ expect(document.querySelector('.decision-brief')?.textContent).not.toMatch(/awaiting an ecological trigger/);
+ expect(observedSources).toContain('Fixed rules · no runtime AI interventions');
+ expect(observedSources).not.toContain('Jev deciding…');
+ expect(document.querySelector('.decision-source')).toHaveTextContent('Fixed rules · no runtime AI interventions');
  expect(screen.queryByText('Offline · no intervention',{exact:true})).not.toBeInTheDocument();
  expect(fetch).not.toHaveBeenCalled();
 });

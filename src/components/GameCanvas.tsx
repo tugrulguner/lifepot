@@ -1135,21 +1135,21 @@ export function GameCanvas() {
         <div className="decision-heading">
           <p>{!replayMode && policy === "fixed" ? "LOCAL ECOLOGY RULES" : "JEV EVOLUTION LAYER"}</p>
           <span
-            className={`decision-source ${!replayMode && policy === "fixed" ? "" : deciding ? "is-deciding" : active?.source === "jev" ? "is-jev" : "is-fallback"}`}
+            className={`decision-source ${!replayMode && policy === "fixed" ? gameplayStyles.fixedStatus : deciding ? "is-deciding" : active?.source === "jev" ? "is-jev" : "is-fallback"}`}
           >
-            {deciding
-              ? "Jev deciding…"
-              : replayMode
-                ? `Replay v${currentReplay?.version??3}`
-                : policy === "fixed"
-                  ? "Fixed rules · no runtime AI interventions"
+            {!replayMode && policy === "fixed"
+              ? "Fixed rules · no runtime AI interventions"
+              : deciding
+                ? "Jev deciding…"
+                : replayMode
+                  ? `Replay v${currentReplay?.version??3}`
                   : active
                     ? active.source === "fallback" ? "Offline · no intervention" : "Jev policies"
                     : "Observing ecology"}
           </span>
         </div>
         <p className="decision-brief">Observed: {active ? triggerLabel(active.trigger) : "awaiting an ecological trigger"}. Current graph pressure: {title(simulation.config.rules!.environment.pressure)}. Observations do not establish which pressure caused a population change.</p>
-        <details className="council-details"><summary>Jev input, policies & council evidence</summary>
+        <details className="council-details"><summary>{!replayMode && policy === "fixed" ? "World input, policies & council evidence" : "Jev input, policies & council evidence"}</summary>
         <p>World: {answers.world}<br/>Threat: {answers.threat}<br/>Objective: {answers.reward}</p>
         <dl className="decision-meta">
           <div>
