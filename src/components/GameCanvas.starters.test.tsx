@@ -70,6 +70,6 @@ it('keeps custom world creation available after browsing starters',()=>{
  render(<GameCanvas/>);
  fireEvent.click(screen.getByRole('button',{name:'Preview Hunters and prey'}));
  fireEvent.click(screen.getByRole('button',{name:'Describe your own world'}));
- expect(screen.getByRole('textbox',{name:/world/i})).toBeInTheDocument();
+ expect(screen.getByRole('textbox',{name:/world/i})).toHaveFocus();
  expect(screen.queryByRole('button',{name:'Review this world'})).not.toBeInTheDocument();
 });

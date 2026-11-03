@@ -449,6 +449,7 @@ export function GameCanvas() {
   const exampleJourney = useRef(0);
   const setupJourney = useRef(0);
   const [customSetup, setCustomSetup] = useState(false);
+  const customAnswerInput = useRef<HTMLInputElement>(null);
   const exampleRequest = useRef<AbortController | null>(null);
   const cancelExample = useCallback(() => {
     exampleJourney.current++;
@@ -532,6 +533,9 @@ export function GameCanvas() {
     analyticsProof = useRef<typeof proof>(null),
     analyticsBaseline = useRef(false),
     acceptedFollowup = useRef(false);
+  useEffect(() => {
+    if (stage === "questions" && customSetup) customAnswerInput.current?.focus();
+  }, [customSetup, stage]);
   useEffect(() => { analyticsProof.current = proof; analyticsBaseline.current = Boolean(baseline); }, [proof, baseline]);
   const complete = simulation && simulation.outcome !== "running";
   const completedReplay = currentReplay;
@@ -937,6 +941,7 @@ export function GameCanvas() {
           >
             <div className="answer-field">
               <input
+                ref={customAnswerInput}
                 autoFocus={customSetup || qi > 0}
                 aria-label={q.title}
                 maxLength={140}
