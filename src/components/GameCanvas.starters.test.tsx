@@ -74,6 +74,7 @@ it('lets a newcomer review a designed food web without submitting prose or reque
  expect(screen.getByRole('button',{name:/Seed ecosystem/}).className).toMatch(/starterSeed/);
  expect(screen.getByLabelText('World policy')).toHaveValue('fixed');
  expect(screen.getByTestId('interpreter-source')).toHaveTextContent(/starter|preset|deterministic setup/i);
+ expect(screen.queryByText('Interpretation complete',{exact:true})).not.toBeInTheDocument();
  expect(screen.queryByText('Deterministic fallback',{exact:true})).not.toBeInTheDocument();
  expect(fetch).not.toHaveBeenCalled();
  fireEvent.click(screen.getByRole('button',{name:/Seed ecosystem/}));
@@ -81,6 +82,16 @@ it('lets a newcomer review a designed food web without submitting prose or reque
  expect(screen.getByLabelText('Intervention status')).toHaveTextContent('Fixed rules · no runtime AI interventions');
  expect(screen.getByLabelText('Intervention status')).not.toHaveTextContent(/offline|degraded|why this policy matters/i);
  expect(screen.getByText('Fixed rules continue locally; no runtime AI interventions are requested.')).toBeInTheDocument();
+ expect(fetch).not.toHaveBeenCalled();
+});
+
+it.each(['focus','typing'] as const)('enters custom mode when the questionnaire is used directly (%s)',mode=>{
+ const fetch=vi.fn();vi.stubGlobal('fetch',fetch);render(<GameCanvas/>);
+ const answer=screen.getByRole('textbox',{name:'What exists in this world?'});
+ if(mode==='focus')fireEvent.focus(answer);else fireEvent.change(answer,{target:{value:'My directly described pond'}});
+ expect(screen.queryByRole('img',{name:/Starter habitat preview/})).not.toBeInTheDocument();
+ expect(screen.getByRole('button',{name:'Back to starter worlds'})).toBeInTheDocument();
+ if(mode==='typing')expect(answer).toHaveValue('My directly described pond');
  expect(fetch).not.toHaveBeenCalled();
 });
 

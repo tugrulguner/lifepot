@@ -936,6 +936,7 @@ export function GameCanvas() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              setCustomSetup(true);
               if (qi < 2) setQi(qi + 1);
               else void interpret(answers);
             }}
@@ -943,13 +944,15 @@ export function GameCanvas() {
             <div className="answer-field">
               <input
                 ref={customAnswerInput}
+                onFocus={() => { cancelExample(); setCustomSetup(true); }}
                 autoFocus={customSetup || qi > 0}
                 aria-label={q.title}
                 maxLength={140}
                 value={answers[q.key]}
-                onChange={(e) =>
-                  setAnswers({ ...answers, [q.key]: e.target.value })
-                }
+                onChange={(e) => {
+                  setCustomSetup(true);
+                  setAnswers({ ...answers, [q.key]: e.target.value });
+                }}
               />
               <span>{answers[q.key].length}/140</span>
             </div>
@@ -1013,7 +1016,7 @@ export function GameCanvas() {
   if (stage === "review" && config)
     return (
       <main className={`review-shell${parentWorldId ? " ph-no-capture" : ""}${proof?.starter ? ` ${gameplayStyles.starterReview}` : ""}`} data-ph-no-capture={parentWorldId ? true : undefined}>
-        <FamilyHeader feedbackPath="/play" skipTarget="play-content"><span className="header-detail">Interpretation complete</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
+        <FamilyHeader feedbackPath="/play" skipTarget="play-content"><span className="header-detail">{proof?.starter ? "Review starting conditions" : "Interpretation complete"}</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
         <section id="play-content" tabIndex={-1} className="review-card">
           <p className="eyebrow">Founder ecology</p>
           {localWorldName && <p className="world-identity">Experiment: <strong>{localWorldName}</strong></p>}
