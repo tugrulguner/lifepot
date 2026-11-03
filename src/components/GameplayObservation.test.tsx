@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { createRunEvidence } from "@/game/run-evidence";
-import { createSimulation, ENGINE_VERSION, LEGACY_ENGINE_VERSION } from "@/game/world";
+import { createSimulation, ENGINE_VERSION, GRID_CELLS, LEGACY_ENGINE_VERSION } from "@/game/world";
 import { buildWorldReport } from "@/game/observatory";
 import { deterministicSetup } from "@/game/setup";
 import { GameplayObservation } from "./GameplayObservation";
@@ -34,6 +34,14 @@ describe("near-board observation summary", () => {
     expect(details).not.toHaveTextContent(/fixed feeding gain/i);
     expect(buildWorldReport(current, [decision]).timeline[0].changes).toContain("share of captured prey energy");
   });
+  it("labels fixed runs as local rules without offline AI language and shows mean resources", () => {
+    const { container } = render(<GameplayObservation state={state} evidence={null} followed={null} decision={null} policy="fixed" />);
+    const observation = container.querySelector(".gameplay-observation")!;
+    expect(observation).toHaveTextContent("Fixed rules · no runtime AI interventions");
+    expect(observation).not.toHaveTextContent(/offline|degraded|why this policy matters/i);
+    expect(observation).toHaveTextContent(`${(state.stats.resources / GRID_CELLS).toFixed(1)} mean resources per cell`);
+  });
+
   it("keeps the local saved-world identity beside the board", () => {
     render(<GameplayObservation state={state} evidence={null} followed={null} decision={null} worldName="Pond notebook" />);
     expect(screen.getByRole("region", {name:"Near-board observations"})).toHaveTextContent("Experiment: Pond notebook");

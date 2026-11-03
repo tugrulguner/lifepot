@@ -1,0 +1,20 @@
+/* Clip the decorative horizontal overflow without creating a sticky scroll container. */
+main.starterReview { overflow: clip; }
+
+.fixedStatus:global(.decision-source) {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.starterSeed {
+  position: sticky;
+  z-index: 4;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  width: min(100%, 34rem);
+  margin-inline: auto;
+  border: 1px solid var(--mp-border);
+  background: var(--mp-accent);
+  color: var(--mp-accent-ink);
+  box-shadow: 0 0.4rem 1.2rem rgb(0 0 0 / 22%);
+}

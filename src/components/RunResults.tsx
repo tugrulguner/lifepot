@@ -14,14 +14,16 @@ export type RunResultsProps = {
   onReplay: () => void;
   onInspect: () => void;
   children?: ReactNode;
+  comparison?: ReactNode;
   speciesNames?: Partial<Record<SpeciesId, string>>;
+  followedLineage?: number | null;
 };
 
 const WIDTH = 640;
 const HEIGHT = 220;
 const PAD = 32;
 
-export function RunResults({ state, evidence, question, onEdit, onNew, onReplay, onInspect, children, speciesNames = {} }: RunResultsProps) {
+export function RunResults({ state, evidence, question, onEdit, onNew, onReplay, onInspect, children, comparison, speciesNames = {}, followedLineage = null }: RunResultsProps) {
   const displayName = (id: string) => { const value = speciesNames[id as SpeciesId]; return typeof value === "string" && value.trim() ? value.trim() : undefined; };
   const named = (id: string) => displayName(id) ? `${displayName(id)} (Species ${id})` : `Species ${id}`;
   const namedSpecies = state.config.rules!.species.filter(rule => displayName(rule.id)).map(rule => named(rule.id)).join(", ");
@@ -29,6 +31,8 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
   const chartIdentity = namedSpecies ? `${namedSpecies}${unnamedCount ? ", plus unnamed configured species" : ""}` : "";
   const history = evidence.samples;
   const last = history[history.length - 1];
+  const followedLiving = followedLineage === null ? 0 : state.guild.reduce((count, alive, cell) => count + (alive && state.lineage[cell] === followedLineage ? 1 : 0), 0);
+  const followedExtinction = followedLineage === null ? undefined : evidence.lineageExtinction.find(item => item.lineage === followedLineage);
   const empty = state.stats.population === 0;
   const limitReached = state.generation >= 180;
   const max = Math.max(1, ...history.map(sample => Math.max(sample.population, sample.resources / GRID_CELLS)));
@@ -43,6 +47,7 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
       <p>{empty ? "No organisms remain" : limitReached ? "Reached the 180-generation observation limit" : "Observation stopped before the 180-generation limit."}</p>
       <p>This is a toy model, not biological proof; it is an observation, not a universal survival score.</p>
     </header>
+    {followedLineage !== null && <p className="followed-lineage-outcome" role="status" aria-label="Followed lineage outcome">{followedLiving > 0 ? `Lineage #${followedLineage} · ${followedLiving} living ${followedLiving === 1 ? "member" : "members"} at final observation` : followedExtinction ? `Lineage #${followedLineage} · no living members at final observation; first observed extinct at generation ${followedExtinction.generation}` : `Lineage #${followedLineage} · no living members at final observation; extinction time unknown from retained observations`}</p>}
     {question.trim() && <p><strong>Your question:</strong> {question}</p>}
     <nav aria-label="Run actions"><button type="button" onClick={onInspect}>Inspect final world</button><button type="button" onClick={onReplay}>Replay this run</button><button type="button" onClick={onEdit}>Edit this world</button><button type="button" onClick={onNew}>New world</button></nav>
     {last && <ul aria-label="Observed outcomes">
@@ -52,6 +57,7 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
       {evidence.firstExtinction.map(item => <li key={item.speciesId}>{named(item.speciesId)} first observed extinct at generation {item.generation}</li>)}
       {configured.filter(rule => !foundedSpecies.has(rule.id)).map(rule => <li key={`not-seeded-${rule.id}`}>Species {rule.id} ({rule.role}) was not seeded</li>)}
     </ul>}
+    {comparison}
     <figure className="run-results__trajectory"><figcaption>Whole-run population history</figcaption>
       <svg className="run-results__graph" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Whole-run population history">
         <line className="run-results__axis" x1={PAD} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} />

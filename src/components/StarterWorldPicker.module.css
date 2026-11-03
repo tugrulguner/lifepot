@@ -1,0 +1,35 @@
+.picker {
+  width: min(900px, 100%);
+  margin: 0 auto 34px;
+  padding: 18px clamp(18px, 3vw, 28px);
+  border: 1px solid var(--mp-border);
+  border-radius: 10px;
+  background: var(--mp-surface);
+  color: var(--mp-ink);
+}
+.eyebrow { margin: 0 0 4px; color: var(--mp-accent); font-size: 13px; font-weight: 650; }
+.picker h2 { margin: 0; font-size: clamp(23px, 3vw, 30px); line-height: 1.2; }
+.choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.choice { display: grid; align-content: center; min-width: 0; min-height: 48px; padding: 8px; border: 1px solid var(--mp-border); border-radius: 8px; background: var(--mp-raised); color: var(--mp-ink); text-align: center; cursor: pointer; }
+.choice[aria-pressed="true"] { border-color: var(--mp-accent); box-shadow: inset 0 0 0 1px var(--mp-accent); }
+.choice strong { font-size: clamp(12px, 1.4vw, 15px); line-height: 1.3; }
+.choice:hover { border-color: var(--mp-accent); }
+.habitat { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(210px, 1fr); gap: 12px; align-items: stretch; margin-top: 12px; }
+.canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; border: 1px solid var(--mp-border); border-radius: 8px; background: var(--mp-canvas); }
+.summary { align-self: start; min-width: 0; padding: 12px; border: 1px solid var(--mp-border); border-radius: 8px; background: var(--mp-raised); font-size: 13px; line-height: 1.45; }
+.summary summary { min-height: 44px; cursor: pointer; padding: 10px 0; }
+.summary[open] summary { margin-bottom: 8px; }
+.summary p { margin: 0; }
+.summary ul { display: grid; gap: 3px; margin: 4px 0 0; padding-left: 20px; }
+.question { margin: 10px 0 0; color: var(--mp-muted); font-size: 13px; line-height: 1.4; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.primary, .secondary { min-height: 46px; padding: 10px 16px; border: 1px solid var(--mp-control-boundary); border-radius: 6px; background: var(--mp-surface); color: var(--mp-ink); font: 600 14px/1.4 var(--mp-font); cursor: pointer; }
+.primary { border-color: var(--mp-accent); background: var(--mp-accent); color: var(--mp-accent-ink); }
+.secondary:hover { background: var(--mp-raised); }
+.primary:hover { filter: brightness(.95); }
+@media (max-width: 700px) {
+  .habitat { grid-template-columns: 1fr; }
+  .canvas { height: auto; aspect-ratio: 1; }
+  .actions { display: grid; grid-template-columns: 1fr; }
+  .actions button { width: 100%; }
+}

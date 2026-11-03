@@ -4,6 +4,7 @@ for (const width of [1280, 768, 390, 320]) {
   test(`setup is centered and usable at ${width}px in both themes`, async ({ page }) => {
     await page.setViewportSize({ width, height: 850 });
     await page.goto("/play");
+    await page.getByRole("button", { name: "Describe your own world", exact: true }).click();
     for (const theme of ["Light", "Dark"]) {
       await page.getByRole("combobox", { name: "Theme" }).selectOption({ label: theme });
       const panel = page.locator(".question-panel");
