@@ -1,5 +1,7 @@
 import {expect,test} from '@playwright/test';
 for(const width of [390,1280])test(`${width}px entry opens on the real square habitat without autofocus scrolling`,async({page})=>{
+ const consoleErrors:string[]=[];
+ page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())});
  await page.setViewportSize({width,height:844});
  await page.goto('/play');
  const preview=page.getByRole('img',{name:/Starter habitat preview/});
@@ -12,4 +14,5 @@ for(const width of [390,1280])test(`${width}px entry opens on the real square ha
  expect(box!.y+box!.height).toBeLessThanOrEqual(844);
  const review=await page.getByRole('button',{name:'Review this world',exact:true}).boundingBox();
  expect(review!.y+review!.height).toBeLessThanOrEqual(844);
+ expect(consoleErrors.filter(message=>/hydrat|didn't match/i.test(message))).toEqual([]);
 });

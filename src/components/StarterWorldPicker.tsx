@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { createSimulation, GRID_SIZE } from "@/game/world";
 import { createStarterWorld, STARTER_WORLDS, type StarterId, type StarterWorld } from "@/game/starter-worlds";
 import { speciesColor } from "@/game/species-colors";
@@ -18,7 +18,15 @@ function relationshipName(mode: string): string {
   return mode.split("_").map((word) => word === "a" || word === "b" ? word.toUpperCase() : word).join(" ").replace(/^./, (letter) => letter.toUpperCase());
 }
 
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export default function StarterWorldPicker({ customMode = false, onChoose, onDescribeOwn, onReturnToStarters }: Props) {
+  // Shared glyph paths use transcendental arithmetic whose final float digits
+  // can differ across Node and browser engines. Paint them after hydration,
+  // without changing the deterministic world or suppressing mismatch warnings.
+  const hydrated = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
   const [selectedId, setSelectedId] = useState<StarterId>("resource-competition");
   const selected = useMemo(() => createStarterWorld(selectedId), [selectedId]);
   const simulation = useMemo(() => createSimulation({ seed: selected.seed, config: selected.config }), [selected]);
@@ -51,7 +59,7 @@ export default function StarterWorldPicker({ customMode = false, onChoose, onDes
             <rect width="500" height="500" fill="var(--mp-canvas)" />
             {resourceCells.map(({ value, index }) => <circle key={`resource-${index}`} cx={(index % GRID_SIZE + .5) * 10} cy={(Math.floor(index / GRID_SIZE) + .5) * 10} r={.6 + value / 255} fill="#71ca8b" opacity={.2 + value / 255 * .5} />)}
             {hazardCells.map(({ value, index }) => <rect key={`hazard-${index}`} x={index % GRID_SIZE * 10} y={Math.floor(index / GRID_SIZE) * 10} width="10" height="10" fill="#ee856b" opacity={.06 + value / 255 * .22} />)}
-            {organisms.map(({ index, role, color }) => <svg key={`organism-${index}`} x={(index % GRID_SIZE + .12) * 10} y={(Math.floor(index / GRID_SIZE) + .12) * 10} width="7.6" height="7.6" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={role} color={color} /></svg>)}
+            {hydrated && organisms.map(({ index, role, color }) => <svg key={`organism-${index}`} x={(index % GRID_SIZE + .12) * 10} y={(Math.floor(index / GRID_SIZE) + .12) * 10} width="7.6" height="7.6" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={role} color={color} /></svg>)}
           </svg>
           <details className={styles.summary} aria-label={`${selected.title} habitat summary`}>
             <summary><strong>Generation 0 · {simulation.stats.population} organisms</strong> · details</summary>
