@@ -1,12 +1,12 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { RunEvidence } from "@/game/run-evidence";
 import type { EvolutionDecision } from "@/game/decisions";
-import type { SimulationState } from "@/game/world";
+import { GRID_CELLS, type SimulationState } from "@/game/world";
 import { ruleTimingLabel, selectedChangeLabel, conciseChangeLabel } from "@/game/council-display";
 import { speciesColor } from "@/game/species-colors";
 import OrganismArtwork from "./OrganismArtwork";
 
-export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate, inspection,playerChange }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string; inspection?: ReactNode | ((context: ReactNode) => ReactNode);playerChange?:ReactNode }) {
+export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate, inspection, playerChange, policy }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string; inspection?: ReactNode | ((context: ReactNode) => ReactNode); playerChange?: ReactNode; policy?: "fixed" | "adaptive" | "recorded" }) {
   const rules = state.config.rules!;
   const latestSample = evidence?.samples.at(-1);
   const recentSample = latestSample?.generation === state.generation
@@ -43,6 +43,7 @@ export function GameplayObservation({ state, evidence, followed, decision, names
   const activity = <>
     <section className="recorded-activity" aria-label="Recorded activity">
       <strong>Generation {state.generation}</strong>
+      <span>{(state.stats.resources / GRID_CELLS).toFixed(1)} mean resources per cell</span>
       <div>{(["birth", "feeding", "death"] as const).map(kind => {
         const count = state.events.filter(event => event.generation === state.generation && event.kind === kind).length;
         return <span key={kind} className={`activity-${kind}`}><b>{count}</b> {kind}{count === 1 ? "" : "s"}</span>;
@@ -51,7 +52,7 @@ export function GameplayObservation({ state, evidence, followed, decision, names
 
     </>;
   const intervention = <div className="intervention-status" aria-label="Intervention status">
-      {decision ? <>
+      {policy === "fixed" ? <span>Fixed rules · no runtime AI interventions</span> : decision ? <>
         <span>{conciseChangeLabel(decision, state.engineVersion)}</span>
         {timing && <span>{timing}</span>}
         <details aria-label="Policy explanation">

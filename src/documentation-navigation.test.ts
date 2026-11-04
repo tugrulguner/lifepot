@@ -17,5 +17,7 @@ describe("task-first LifePot documentation", () => {
     const source = readFileSync("docs/learn/player-guide.md", "utf8");
     const selected = source.slice(source.indexOf("## Start from the questions"), source.indexOf("## Observe and inspect"));
     expect(guideMarkdown("setup-and-review")).toContain(selected.trim());
+    expect(guideMarkdown("setup-and-review")).toContain("## Choose a starter or describe your world");
+    expect(guideMarkdown("setup-and-review")).toContain("authored presets are distinct from a failed interpretation");
   });
 });

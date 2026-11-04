@@ -55,22 +55,30 @@ test("overview has first-fold Play and preserves the keyless game entry across t
   }
 });
 
-test("Play skip link bypasses FamilyHeader and tabs into the question content", async ({ page }) => {
+test("Play skip link bypasses FamilyHeader and enters starter and custom content", async ({ page }) => {
   await page.route("**/api/judge**", route => route.abort());
-  await page.goto("/play");
-  const skip = page.getByRole("link", { name: "Skip to main content" });
-  // Preserve the application's deliberate question autofocus. Reach the preceding
-  // skip link using real keyboard traversal rather than imperatively focusing it.
-  await expect(page.getByRole("textbox").first()).toBeFocused();
-  for (let index = 0; index < 20 && !(await skip.evaluate(element => element === document.activeElement)); index++) {
-    await page.keyboard.press("Shift+Tab");
+  for (const custom of [false, true]) {
+    await page.goto("/play");
+    const skip = page.getByRole("link", { name: "Skip to main content" });
+    if (custom) {
+      await page.getByRole("button", { name: "Describe your own world", exact: true }).click();
+      await expect(page.getByRole("textbox").first()).toBeFocused();
+      // Traverse backward from deliberate custom-input focus, not an imperative focus call.
+      for (let index = 0; index < 20 && !(await skip.evaluate(element => element === document.activeElement)); index++) {
+        await page.keyboard.press("Shift+Tab");
+      }
+    } else {
+      // Starter entry must not scroll to the questionnaire through autofocus.
+      await expect(page.getByRole("textbox").first()).not.toBeFocused();
+      await page.keyboard.press("Tab");
+    }
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeInViewport();
+    await skip.press("Enter");
+    await expect(page.locator("#play-content")).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect.poll(() => page.locator("#play-content").evaluate(element => element.contains(document.activeElement) && element !== document.activeElement)).toBe(true);
   }
-  await expect(skip).toBeFocused();
-  await expect(skip).toBeInViewport();
-  await skip.press("Enter");
-  await expect(page.locator("#play-content")).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect.poll(() => page.locator("#play-content").evaluate(element => element.contains(document.activeElement) && element !== document.activeElement)).toBe(true);
 });
 
 test("skip navigation enters Learn, review, and paused-world content without inference", async ({ page }) => {
