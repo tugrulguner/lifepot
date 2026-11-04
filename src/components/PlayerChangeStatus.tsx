@@ -1,9 +1,10 @@
 import type {AcceptedPlayerEvent} from '@/game/player-proposal';
 import type {RunEvidence} from '@/game/run-evidence';
-import {GRID_CELLS} from '@/game/world';
+import {GRID_CELLS,type SimulationOutcome} from '@/game/world';
 import styles from './PlayerChangeStatus.module.css';
-export function playerChangeLabel(event:AcceptedPlayerEvent,generation:number){
+export function playerChangeLabel(event:AcceptedPlayerEvent,generation:number,outcome:SimulationOutcome){
  const name=event.proposal.pressure.replaceAll('_',' ');
+ if(outcome!=="running"&&generation<event.generation+6)return `World ended at generation ${generation} · player-requested ${name}; ${generation<event.generation?'activation not observed; ':''}restoration not observed.`;
  if(generation<event.generation)return `Accepted · ${name} starts at generation ${event.generation}; still paused before execution.`;
  if(generation<event.generation+6)return `Active · player-requested ${name}, generations ${event.generation}–${event.generation+5}.`;
  return `Previous pressure restored at generation ${event.generation+6} after player-requested ${name}.`;
@@ -23,12 +24,12 @@ function RecordedWindow({event,generation,evidence}:{event:AcceptedPlayerEvent;g
   <p>Recorded alongside this change, not proof of cause. Restoring the pressure does not restore organisms or earlier populations.</p>
  </details>;
 }
-type ObservationProps={events:readonly AcceptedPlayerEvent[];generation:number;evidence?:RunEvidence|null};
-export function PlayerChangeStatus({events,generation,evidence}:ObservationProps){
+type ObservationProps={events:readonly AcceptedPlayerEvent[];generation:number;outcome:SimulationOutcome;evidence?:RunEvidence|null};
+export function PlayerChangeStatus({events,generation,outcome,evidence}:ObservationProps){
  const latest=events.filter(e=>e.acceptedGeneration<=generation).at(-1);
- return latest?<div className={styles.observation}><p className="player-change-status" aria-label="Player change status" aria-live="polite">{playerChangeLabel(latest,generation)}</p><RecordedWindow event={latest} generation={generation} evidence={evidence}/></div>:null;
+ return latest?<div className={styles.observation}><p className="player-change-status" aria-label="Player change status" aria-live="polite">{playerChangeLabel(latest,generation,outcome)}</p><RecordedWindow event={latest} generation={generation} evidence={evidence}/></div>:null;
 }
-export function PlayerChangeHistory({events,generation,evidence}:ObservationProps){
+export function PlayerChangeHistory({events,generation,outcome,evidence}:ObservationProps){
  const observed=events.filter(e=>e.acceptedGeneration<=generation);
- return observed.length?<section aria-label="Player-directed changes"><h3>Player-directed changes</h3><p>Explicit player requests interpreted by Jev. These conditions were imposed; they are not spontaneous biological changes or proof of ecological cause.</p><ul>{observed.map(e=><li key={e.acceptedGeneration}>Accepted at generation {e.acceptedGeneration}: {playerChangeLabel(e,generation)} Jev · {e.proposal.model}.<RecordedWindow event={e} generation={generation} evidence={evidence}/></li>)}</ul></section>:null;
+ return observed.length?<section aria-label="Player-directed changes"><h3>Player-directed changes</h3><p>Explicit player requests interpreted by Jev. These conditions were imposed; they are not spontaneous biological changes or proof of ecological cause.</p><ul>{observed.map(e=><li key={e.acceptedGeneration}>Accepted at generation {e.acceptedGeneration}: {playerChangeLabel(e,generation,outcome)} Jev · {e.proposal.model}.<RecordedWindow event={e} generation={generation} evidence={evidence}/></li>)}</ul></section>:null;
 }
