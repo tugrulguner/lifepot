@@ -1,7 +1,7 @@
 import {expect,test,type BrowserContext,type Page} from '@playwright/test';
 // Keep each real trial inside the original test budget. Serial legs preserve the actual
 // completed baseline, rather than injecting outcomes or extending the whole test timeout.
-// Fast baseline and guarded-Step comparison checks are separate from ordinary-speed play sessions.
+// Fast functional checks are separate from the retained ordinary-speed play sessions.
 for(const width of [390,1280])test.describe.serial(`${width}px connected starter gameplay`,()=>{
  let context:BrowserContext,page:Page,calls=0;
  test.beforeAll(async({browser})=>{context=await browser.newContext({viewport:{width,height:844}});page=await context.newPage();await page.route('**/api/judge',route=>{calls++;return route.abort()})});
