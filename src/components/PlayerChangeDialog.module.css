@@ -11,7 +11,7 @@ dialog.dialog.playerChangeDialog {
   padding: 1.25rem;
   border: 1px solid var(--mp-control-boundary);
   border-radius: 1rem 0 0 1rem;
-  background: var(--mp-surface);
+  background: var(--mp-raised);
   color: var(--mp-ink);
   font: 15px/1.5 var(--mp-font);
   box-shadow: 0 0 2rem rgb(0 0 0 / 0.16);
@@ -44,9 +44,14 @@ dialog.dialog.playerChangeDialog :focus-visible {
 }
 
 dialog.dialog > button:first-child {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: block;
   margin-left: auto;
 }
+
+dialog.dialog h4 { scroll-margin-top: 4rem; }
 
 @media (max-width: 1000px) {
   dialog.dialog.playerChangeDialog {

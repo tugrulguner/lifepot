@@ -12,6 +12,7 @@ for(const width of [320,390,768,1280])test(`shape conditions without losing the 
  await page.getByRole('button',{name:/Seed ecosystem/}).click();
  await page.getByRole('button',{name:'Ask Jev to change this world'}).click();
  const dialog=page.getByRole('dialog',{name:'Review a player-directed world change'});await expect(dialog).toBeVisible();
+ expect(await dialog.evaluate(e=>Number(getComputedStyle(e).backgroundColor.match(/[\d.]+/g)?.[3]??1))).toBe(1);
  const habitat=(await page.locator('canvas.life-canvas').boundingBox())!;const sheet=(await dialog.boundingBox())!;
  const overlapWidth=Math.max(0,Math.min(habitat.x+habitat.width,sheet.x+sheet.width)-Math.max(habitat.x,sheet.x));
  const overlapHeight=Math.max(0,Math.min(habitat.y+habitat.height,sheet.y+sheet.height)-Math.max(habitat.y,sheet.y));
@@ -22,6 +23,10 @@ for(const width of [320,390,768,1280])test(`shape conditions without losing the 
  expect(requests).toHaveLength(0);await expect(page.getByTestId('generation')).toHaveText('0 / 180');
  await page.getByRole('button',{name:'Ask Jev for a proposal'}).click();
  const review=page.getByRole('region',{name:'Review Jev proposal'});await expect(review).toContainText('nutrient bloom');
+ const heading=review.getByRole('heading',{name:'Review Jev proposal'});await expect(heading).toBeFocused();
+ const ready=(await heading.boundingBox())!;expect(ready.y).toBeGreaterThanOrEqual(sheet.y);expect(ready.y+ready.height).toBeLessThanOrEqual(sheet.y+sheet.height);
+ const close=(await dialog.getByRole('button',{name:'Close proposal'}).boundingBox())!;expect(close.y).toBeGreaterThanOrEqual(sheet.y);expect(close.y+close.height).toBeLessThanOrEqual(ready.y);
+ expect(Math.abs((await page.locator('canvas.life-canvas').boundingBox())!.y-habitat.y)).toBeLessThanOrEqual(1);
  // A shortcut is an editable request, not a guaranteed selection; returned pressure wins.
  await expect(review).toContainText(/regeneration/i);
  await page.screenshot({path:info.outputPath('habitat-and-proposal.png')});

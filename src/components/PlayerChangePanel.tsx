@@ -17,6 +17,8 @@ function ProposalJourney({enabled,disabledReason,config,generation,onAccept}:Pla
  const [request,setRequest]=useState('');
  const [proposal,setProposal]=useState<PlayerProposal|null>(null);
  const [busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ const reviewHeading=useRef<HTMLHeadingElement|null>(null);
+ useEffect(()=>{if(proposal){reviewHeading.current?.focus({preventScroll:true});reviewHeading.current?.scrollIntoView?.({block:'start'});}},[proposal]);
  const pending=useRef<AbortController|null>(null),alive=useRef(true),serial=useRef(0),consumed=useRef(false);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;pending.current?.abort()}},[]);
  const cancel=()=>{serial.current++;pending.current?.abort();pending.current=null;setBusy(false);setProposal(null);setRequest('');setMessage('Proposal cancelled. The paused world is unchanged.')};
@@ -67,7 +69,7 @@ function ProposalJourney({enabled,disabledReason,config,generation,onAccept}:Pla
   </div>
   <label>Request a temporary world change<input value={request} onChange={e=>{setRequest(e.target.value);setProposal(null);setMessage('')}} maxLength={280} disabled={!enabled||busy}/></label>
   <div className="player-change-actions"><button type="button" onClick={()=>void ask()} disabled={!enabled||busy||!request.trim()}>{busy?'Jev is considering the request…':'Ask Jev for a proposal'}</button>{(busy||proposal)&&<button type="button" onClick={cancel}>Cancel proposal</button>}</div>
-  {proposal&&<section aria-label="Review Jev proposal"><h4>Review Jev proposal</h4><p>Environmental pressure: {label(config.rules!.environment.pressure)} → <strong>{label(proposal.pressure)}</strong>.</p><p>{mechanism[proposal.pressure]} Starts on the next generation after acceptance, lasts six engine generations, then restores the previous pressure. Existing intensity stays {config.rules!.environment.intensity}. Automatic decisions wait while this change is active; existing birth policies continue. This pressure may affect conditions, but cannot guarantee survival or cause a particular population outcome.</p><p>Jev · {proposal.model}. Nothing has been applied.</p><button type="button" onClick={accept}>Accept this change</button></section>}
+  {proposal&&<section aria-label="Review Jev proposal"><h4 ref={reviewHeading} tabIndex={-1}>Review Jev proposal</h4><p>Environmental pressure: {label(config.rules!.environment.pressure)} → <strong>{label(proposal.pressure)}</strong>.</p><p>{mechanism[proposal.pressure]} Starts next generation, lasts six engine generations, then restores {label(config.rules!.environment.pressure)}. Restoring pressure does not restore organisms.</p><p>This change cannot guarantee survival or a particular population outcome. Nothing has been applied.</p><button type="button" onClick={accept}>Accept this change</button><details><summary>Scope & Jev evidence</summary><p>Existing intensity stays {config.rules!.environment.intensity}. Automatic decisions wait while this change is active; existing birth policies continue. Jev · {proposal.model}.</p></details></section>}
   {message&&<p role="status">{message}</p>}
  </section>
 }
