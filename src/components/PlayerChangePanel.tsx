@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {z} from 'zod';
 import type {LifeConfig} from '@/game/world';
 import {validatePlayerProposal,type PlayerProposal} from '@/game/player-proposal';
+import styles from './PlayerChangePanel.module.css';
 export type PlayerChangePanelProps={bindingKey:string;enabled:boolean;disabledReason?:string;config:LifeConfig;generation:number;onAccept:(proposal:PlayerProposal)=>void};
 const envelope=z.discriminatedUnion('outcome',[
  z.object({outcome:z.literal('proposed'),proposal:z.unknown()}).strict(),
@@ -44,13 +45,29 @@ function ProposalJourney({enabled,disabledReason,config,generation,onAccept}:Pla
   try{onAccept(proposal);setMessage('Change accepted for the next generation. The world remains paused; resume or step to execute it.')}catch{setMessage('This proposal no longer matches the paused world. Request a new proposal; nothing was applied.')}
  }
  const label=(value:string)=>value.replaceAll('_',' ');
- return <section className="player-change ph-no-capture" data-ph-no-capture="true" aria-label="Player-directed Jev change">
+ const shortcuts=[
+  {name:'Drought',request:'Temporarily reduce regeneration with a drought'},
+  {name:'Nutrient bloom',request:'Temporarily increase regeneration with a nutrient bloom'},
+  {name:'Stability',request:'Temporarily reduce hazard contribution with a stability pressure'},
+ ] as const;
+ const mechanism:Record<PlayerProposal['pressure'],string>={
+  drought:'Drought reduces regeneration.',
+  nutrient_bloom:'Nutrient bloom increases regeneration.',
+  stability:'Stability reduces hazard contribution, not every hazard.',
+  toxin_wave:'Toxin waves periodically raise hazards in bands and lower them elsewhere.',
+  heat_wave:'Heat waves raise hazards across the grid.',
+  fragmentation:'Fragmentation reduces regeneration in habitat bands.',
+ };
+ return <section className={`player-change ph-no-capture ${styles.panel}`} data-ph-no-capture="true" aria-label="Player-directed Jev change">
   <h3>Ask Jev to change this world</h3>
   <p>Optional: request a temporary environmental pressure for six generations. Your request is sent to Jev only when you ask; it is omitted from replay and exports. Species, relationships, intensity and existing organisms are not rewritten.</p>
   {!enabled&&<p>{disabledReason??'Pause this live world to request a change.'}</p>}
-  <label>Request a temporary world change<input value={request} onChange={e=>{setRequest(e.target.value);setProposal(null)}} maxLength={280} disabled={!enabled||busy}/></label>
+  <div className={styles.shortcuts} role="group" aria-label="Optional request shortcuts">
+   {shortcuts.map(shortcut=>{const selected=request===shortcut.request;return <button key={shortcut.name} type="button" className={styles.shortcut} aria-pressed={selected} disabled={!enabled||busy} onClick={()=>{setRequest(shortcut.request);setProposal(null);setMessage('')}}>{shortcut.name}</button>})}
+  </div>
+  <label>Request a temporary world change<input value={request} onChange={e=>{setRequest(e.target.value);setProposal(null);setMessage('')}} maxLength={280} disabled={!enabled||busy}/></label>
   <div className="player-change-actions"><button type="button" onClick={()=>void ask()} disabled={!enabled||busy||!request.trim()}>{busy?'Jev is considering the request…':'Ask Jev for a proposal'}</button>{(busy||proposal)&&<button type="button" onClick={cancel}>Cancel proposal</button>}</div>
-  {proposal&&<section aria-label="Review Jev proposal"><h4>Review Jev proposal</h4><p>Environmental pressure: {label(config.rules!.environment.pressure)} → <strong>{label(proposal.pressure)}</strong>.</p><p>Starts on the next generation after acceptance, lasts six engine generations, then restores the previous pressure. Existing intensity stays {config.rules!.environment.intensity}. Automatic decisions wait while this change is active; existing birth policies continue. This changes conditions, not a guaranteed population outcome.</p><p>Jev · {proposal.model}. Nothing has been applied.</p><button type="button" onClick={accept}>Accept this change</button></section>}
+  {proposal&&<section aria-label="Review Jev proposal"><h4>Review Jev proposal</h4><p>Environmental pressure: {label(config.rules!.environment.pressure)} → <strong>{label(proposal.pressure)}</strong>.</p><p>{mechanism[proposal.pressure]} Starts on the next generation after acceptance, lasts six engine generations, then restores the previous pressure. Existing intensity stays {config.rules!.environment.intensity}. Automatic decisions wait while this change is active; existing birth policies continue. This pressure may affect conditions, but cannot guarantee survival or cause a particular population outcome.</p><p>Jev · {proposal.model}. Nothing has been applied.</p><button type="button" onClick={accept}>Accept this change</button></section>}
   {message&&<p role="status">{message}</p>}
  </section>
 }

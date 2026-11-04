@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from 'react';
 import { PlayerChangePanel, type PlayerChangePanelProps } from './PlayerChangePanel';
+import styles from './PlayerChangeDialog.module.css';
 
 export function PlayerChangeDialog({ onClose, ...props }: PlayerChangePanelProps & { onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -33,7 +34,7 @@ export function PlayerChangeDialog({ onClose, ...props }: PlayerChangePanelProps
     closeAndRestoreFocus();
   };
 
-  return <dialog ref={ref} className="player-change-dialog ph-no-capture" data-ph-no-capture="true"
+  return <dialog ref={ref} className={`${styles.dialog} ${styles.playerChangeDialog} player-change-dialog ph-no-capture`} data-ph-no-capture="true"
     aria-label="Review a player-directed world change"
     onCancel={event => { event.preventDefault(); closeProposal(); }}>
     <button type="button" className="player-change-close" onClick={closeProposal}>Close proposal</button>

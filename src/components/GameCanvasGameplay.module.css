@@ -18,3 +18,8 @@ main.starterReview { overflow: clip; }
   color: var(--mp-accent-ink);
   box-shadow: 0 0.4rem 1.2rem rgb(0 0 0 / 22%);
 }
+
+/* Keep the real square habitat above the compact mobile/tablet proposal sheet. */
+@media (max-width: 1000px) {
+  .proposing :global(.life-canvas) { max-width: max(280px, min(100%, calc(55dvh - 96px))); }
+}

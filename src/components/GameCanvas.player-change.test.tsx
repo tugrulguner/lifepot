@@ -14,12 +14,13 @@ function seed(){
  render(<GameCanvas/>);fireEvent.click(screen.getByRole('button',{name:'Explore deterministic preset'}));fireEvent.click(screen.getByRole('button',{name:/Seed ecosystem/}));
 }
 test('requesting an optional Jev change pauses the exact running world without advancing it',()=>{
- seed();const before=JSON.stringify(states.at(-1));
+ seed();const before=JSON.stringify(states.at(-1));vi.mocked(window.scrollTo).mockClear();
  fireEvent.click(screen.getByRole('button',{name:'Ask Jev to change this world'}));
  expect(screen.getByRole('button',{name:'Resume'})).toBeInTheDocument();
  expect(screen.getByRole('textbox',{name:'Request a temporary world change'})).toBeInTheDocument();
  expect(JSON.stringify(states.at(-1))).toBe(before);
  expect(screen.getByTestId('generation')).toHaveTextContent('0 / 180');
+ expect(window.scrollTo).toHaveBeenLastCalledWith(0,0);
 });
 test('a reviewed request stays queued while paused and reports actual activation and restoration',async()=>{
  seed();const before=JSON.stringify(states.at(-1));
@@ -31,5 +32,6 @@ test('a reviewed request stays queued while paused and reports actual activation
  expect(JSON.stringify(states.at(-1))).toBe(before);expect(screen.getByTestId('generation')).toHaveTextContent('0 / 180');expect(screen.getByLabelText('Player change status')).toHaveTextContent('Accepted');
  for(let i=1;i<=6;i++){fireEvent.click(screen.getByRole('button',{name:'Step one generation'}));expect(screen.getByTestId('generation')).toHaveTextContent(`${i} / 180`)}
  expect(screen.getByLabelText('Player change status')).toHaveTextContent('Active');
+ expect(screen.getByLabelText('Recorded response to player change')).toHaveTextContent('generations 0–6');
  fireEvent.click(screen.getByRole('button',{name:'Step one generation'}));expect(screen.getByLabelText('Player change status')).toHaveTextContent('restored');
 });
