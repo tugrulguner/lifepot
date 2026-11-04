@@ -66,3 +66,10 @@ dialog.dialog h4 { scroll-margin-top: 4rem; }
     border-bottom: 0;
   }
 }
+
+/* A short screen must still leave room for the 280px habitat and header. */
+@media (max-width: 1000px) and (max-height: 684px) {
+  dialog.dialog.playerChangeDialog {
+    max-height: min(45dvh, max(8rem, calc(100dvh - 376px)));
+  }
+}
