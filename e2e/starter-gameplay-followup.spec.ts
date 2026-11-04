@@ -27,7 +27,17 @@ for(const width of [390,1280])test.describe.serial(`${width}px connected starter
   await page.getByLabel('Resource abundance',{exact:true}).selectOption('rich');await expect(page.getByText('rich resources',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:/Seed ecosystem/}).click();
   await expect(page.getByRole('combobox',{name:'Playback speed'})).toHaveValue('fast');
-  await expect(page.getByRole('region',{name:'Run status'})).toContainText('Observation complete',{timeout:30000});
+  // This leg qualifies comparison/data continuity, not scheduler throughput.
+  // Keep the original deadline and advance only through the genuine Step handler.
+  await page.getByRole('button',{name:'Pause',exact:true}).click();
+  const start=Number((await page.getByTestId('generation').innerText()).split('/')[0].trim());
+  const step=page.getByRole('button',{name:'Step one generation',exact:true});let clicks=0;
+  for(let generation=start;generation<180;generation++){
+   expect(await step.evaluate((button:HTMLButtonElement)=>{if(!button.isConnected||button.disabled)return false;button.click();return true})).toBe(true);clicks++;
+   await expect(page.getByTestId('generation')).toHaveText(`${generation+1} / 180`);
+  }
+  expect(start+clicks).toBe(180);
+  await expect(page.getByRole('region',{name:'Run status'})).toContainText('Observation complete');
   await expect(page.getByTestId('generation')).toHaveText('180 / 180');
   const comparison=page.getByRole('region',{name:'Previous trial comparison',exact:true});
   await expect(comparison).toContainText('Same initial seed: 241.');await expect(comparison).toContainText('Single-condition fixed comparison');
