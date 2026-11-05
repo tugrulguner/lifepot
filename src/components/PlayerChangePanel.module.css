@@ -1,0 +1,49 @@
+.panel {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0.75rem;
+}
+
+.shortcuts .shortcut {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--mp-control-boundary);
+  border-radius: 999px;
+  background: var(--mp-raised);
+  color: var(--mp-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.shortcuts .shortcut[aria-pressed="true"] {
+  border-color: var(--mp-accent);
+  background: color-mix(in srgb, var(--mp-accent) 18%, var(--mp-raised));
+  box-shadow: inset 0 0 0 1px var(--mp-accent);
+}
+
+.shortcuts .shortcut:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.shortcuts :focus-visible {
+  outline: 3px solid var(--mp-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .shortcuts {
+    gap: 0.35rem;
+  }
+
+  .shortcuts .shortcut {
+    flex: 1 1 auto;
+  }
+}

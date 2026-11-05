@@ -20,7 +20,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node --test scripts/prepare-playwright-mirrors.test.mjs scripts/dependency-compat.test.mjs
-      - run: npm test
+      # Match the bounded local gate without weakening any per-test deadline.
+      - run: npm test -- --maxWorkers=2
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build:cloudflare

@@ -15,6 +15,7 @@ export type RunResultsProps = {
   onInspect: () => void;
   children?: ReactNode;
   comparison?: ReactNode;
+  interventions?: ReactNode;
   speciesNames?: Partial<Record<SpeciesId, string>>;
   followedLineage?: number | null;
 };
@@ -23,7 +24,7 @@ const WIDTH = 640;
 const HEIGHT = 220;
 const PAD = 32;
 
-export function RunResults({ state, evidence, question, onEdit, onNew, onReplay, onInspect, children, comparison, speciesNames = {}, followedLineage = null }: RunResultsProps) {
+export function RunResults({ state, evidence, question, onEdit, onNew, onReplay, onInspect, children, comparison, interventions, speciesNames = {}, followedLineage = null }: RunResultsProps) {
   const displayName = (id: string) => { const value = speciesNames[id as SpeciesId]; return typeof value === "string" && value.trim() ? value.trim() : undefined; };
   const named = (id: string) => displayName(id) ? `${displayName(id)} (Species ${id})` : `Species ${id}`;
   const namedSpecies = state.config.rules!.species.filter(rule => displayName(rule.id)).map(rule => named(rule.id)).join(", ");
@@ -57,6 +58,7 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
       {evidence.firstExtinction.map(item => <li key={item.speciesId}>{named(item.speciesId)} first observed extinct at generation {item.generation}</li>)}
       {configured.filter(rule => !foundedSpecies.has(rule.id)).map(rule => <li key={`not-seeded-${rule.id}`}>Species {rule.id} ({rule.role}) was not seeded</li>)}
     </ul>}
+    {interventions}
     {comparison}
     <figure className="run-results__trajectory"><figcaption>Whole-run population history</figcaption>
       <svg className="run-results__graph" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Whole-run population history">
