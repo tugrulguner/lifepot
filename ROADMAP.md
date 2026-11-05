@@ -2,20 +2,54 @@
 
 This roadmap describes direction, not shipped behavior. The README's “What ships today” section remains the public product contract. Roadmap changes do not authorize runtime changes, deployment, or a promise of delivery dates.
 
-## North star — watch life develop a history
+## North star — create worlds that develop their own histories
 
-Build a living-world sandbox where players can start with simple life, follow its descendants, optionally shape conditions, and discover how populations and their ways of living change. The long-term ambition is to explore whether worlds can develop increasingly complex behavior, social groups, culture and eventually civilizations.
+Build a creative living-world sandbox where someone can describe an ecology they are curious about, give that description an understandable working interpretation, shape its conditions and discover what its inhabitants actually do. Start with simple mechanisms and investigate how their local interactions can sustain patterns, ecological relationships and evolving ways of living. The long-term ambition extends toward richer organization, social groups, culture and possible civilizations.
 
-Civilization is a research direction, not an existing capability or an inevitable final level. Biological evolution is not a ladder toward intelligence or civilization. Worlds may remain simple, diversify, stabilize, collapse or go extinct. Preserve open-ended observation and creation alongside optional experimentation; do not force every player into survival, optimization or civilization-building objectives.
+The article *Game of Life: how simple rules give rise to complex worlds* supplies the conceptual direction: local rules can produce organization that is not named in those rules; reproduction can preserve information; inherited variation and environmental conditions can change what persists. LifePot explores those questions through playable software. It does not currently explain the origin of life or reproduce the capabilities demonstrated by other artificial-life systems.
 
-The immediate product test is not “does the simulation run?” It is “does an ordinary session give someone something worth following, a comprehensible choice if they want one, and a reason to play again?”
+Civilization is a research direction, not an existing capability or an inevitable final level. Biological evolution is not a ladder toward intelligence or civilization. Worlds may remain simple, diversify, stabilize, collapse or go extinct. Preserve open-ended creation, observation and optional experimentation; do not force every player into survival, optimization or civilization-building objectives.
+
+### Why participate rather than watch a recording?
+
+The primary gameplay promise is **make a world, shape its conditions, and discover a history that belongs to it**. Creation, consequential experimentation and attachment are the motivations to develop, not established retention findings:
+
+- **Authorship:** express an idea, inspect how it becomes an ecology and recognize the intended inhabitants and relationships in the world. Different requests must create meaningfully different possibilities, not merely different labels over similar fields.
+- **Discovery and mastery:** form an expectation, make an understandable change and learn from the response. Outcomes need enough consistency to learn and enough interaction to surprise. Neither arbitrary noise nor a predetermined success sequence supplies this.
+- **Attachment:** recognize places, families, relationships or organized patterns and follow what happens to them. Names, ancestry IDs and counters support continuity; distinctive activity and consequential history must give that continuity meaning.
+
+These motivations should reinforce one another: create a world, encounter something unexpected, choose what to follow, optionally influence conditions, recognize the consequences and decide what to explore next. Watching without intervention remains legitimate play. Following a family is one entry point, not the entire game.
+
+The first session must be worthwhile with simple life. More capable evolution or eventual civilizations must deepen an already useful experience rather than act as a distant reward for uninteresting waiting. A simulation achievement that is as satisfying in a video has not, by itself, established a reason to play.
+
+### Simple-to-complex emergence is a first-class track
+
+Keep two connected questions explicit:
+
+1. **Emergent organization:** can local interactions produce a persistent or recurring higher-level pattern whose complete behavior was not prescribed? Investigate how it forms, changes and persists through turnover in its parts.
+2. **Evolution:** can inherited differences change population behavior and reproductive outcomes, and eventually support capabilities absent from the ancestors?
+
+Neither establishes the other. A moving pattern can exist without heredity; mutation of a few numerical traits does not establish richer organization, new capabilities or open-ended evolution. More organisms, more traits, a longer run or generated narration are not substitutes for either question.
+
+Design enabling mechanisms and costs rather than desired outcomes. Resource interactions, signaling, environmental modification or evolvable local behavior are possible research mechanisms, not a commitment to implement them all. Do not direct cells into a predetermined structure, assign a group label to proximity, rescue a favored lineage or trigger a new civilization sprite at a population threshold. Environmental selection can favor some inherited differences without the engine granting particular identities special treatment.
+
+Each research slice must name a concrete player-visible possibility and pass two separate gates: explain the higher-level result through actual local mechanisms and controls, and make the result noticeable and worth investigating in play. Start from observed limitations of the world rather than an indefinite sequence of engine features.
+
+### Jev connects intention to supported conditions
+
+Jev interprets player descriptions and proposes permitted external changes. Typed, validated choices select from mechanics the engine actually implements; unsupported requests remain explicit approximations or refusals. Jev does not generate missing physics or supply intelligence that has evolved inside the inhabitants.
+
+Keep external intervention, mutation, selection, evolution, individual learning and trained local rules distinguishable. Disclose the configured authority and proposer/authorizer for each intervention. The shipped engine's broader council policies must not be described as environment-only; a narrower experimental mode must state its own boundary. LifePot does not currently implement ASAL's visual-search loop. Neither resemblance to living forms nor a model's explanation proves a biological mechanism.
 
 ## Where we stand
 
 - Shipped foundations include ecological simulation, inherited variation, organism/family inspection, bounded reviewed player interventions, recorded replay, saved completed-world records and experiment comparison. Agency is not an unstarted feature.
-- These foundations do not yet establish a compelling general-player experience, professional visual presentation, or repeat-play appeal.
+- PR100 (merged as `344433c`) ships fixed-rule creation/preview for three authored starter ecologies. The current player guide also documents readable resource measurements, recorded family fate at endings, and an edited follow-up comparison, including a same-seed, single-condition fixed-rule path with provenance and limitations. These are useful shipped parts of the journey, not completion of M1.
+- PR101 (merged as `7a06d5a`) ships editable drought, nutrient-bloom and stability request shortcuts, habitat-preserving proposal review, observed change-window feedback and explicit player-condition history in comparisons. Its bounded UI/execution gate includes scripted Slow desktop/mobile sessions with intercepted proposals; it does not establish live Jev interpretation quality, human enjoyment or whole-session professional visual completion.
+- These foundations do not yet establish a compelling general-player experience, professional whole-session visual presentation, or repeat-play appeal.
 - Local, unshipped work connects recorded-moment inspection to reviewed follow-up trials and comparison. Desktop/mobile functional checks include a third trial. This proves flow correctness, not enjoyment.
 - Local, unshipped work adds an explicit bounded fixed-rule longer-observation core. This is not a complete persistent habitat: browser storage, resume experience, compatibility and sustained visual qualification remain gates.
+- A separate local evolution candidate implements costly inherited foraging traits, mutation, accounting, replay/checkpoints and bounded reviewed environmental proposals. Fixed two-run flows and mocked-proposal acceptance have browser evidence, alongside unit checks. This establishes a narrow playable experiment, not compelling emergence, new capabilities, live-provider acceptance or a production-ready replacement for the existing ecology.
 - Current inherited variants are not proof of new ecological species, learned behavior, culture or civilization. Those require additional implemented mechanics and evidence.
 
 ## Foundational track — a spatial artificial-life engine
@@ -51,21 +85,73 @@ Build a bounded end-to-end prototype with a resource-limited spatial environment
 - Demonstrate a readable ordinary-speed playable session. Engine quality, visual comprehension and curiosity are separate acceptance criteria, and all are required.
 - Measure complete populated-world stepping plus rendering, memory, history and checkpoint growth on desktop and mobile. Define supported bounds before enlarging worlds or horizons; do not substitute isolated kernel timings for the workload.
 
-Only advance toward richer behavior, diversification, social organization or culture after this milestone establishes useful dynamics. Record a go/no-go decision and the evidence for extending, replacing or retaining the current engine. This roadmap authorizes none of those runtime changes by itself.
+Only advance toward richer behavior, diversification, social organization or culture after this milestone establishes useful dynamics. Record a go/no-go decision and the evidence for extending, replacing or retaining the current engine. The narrow candidate is a baseline for this decision, not the product's ceiling or a reason to postpone Priority 1. This roadmap authorizes none of those runtime changes by itself.
 
-## Priority 1 — one compelling complete session
+### Next research gate — persistent spatial organization
 
-Make the whole experience work before expanding its duration or feature count.
+The first concrete target is persistent or recurring spatial organization arising from local feeding, depletion, regeneration and movement, such as a resource/population patch or moving feeding front that remains identifiable through organism turnover. Investigate the existing feedback mechanisms first, alongside the gameplay slice. Starting resource clusters, a frozen surviving group or a single attractive frame do not establish self-maintained organization.
 
-- Offer an attractive inhabited starting world before requiring extensive prose setup. Keep a clear create-your-own path and a few genuinely contrasting starter ecologies.
-- Establish the player promise: follow life, investigate changes, and optionally influence conditions. Explain actions in player language rather than exposing internal fallback, graph and policy terminology unnecessarily.
-- Help players find a species, family or situation worth following. Keep its identity and fate connected to the habitat during ordinary-speed play.
-- Make spatial feeding, reproduction, resource pressure and population changes legible. Counts support the scene; they must not substitute for it.
-- Connect existing optional interventions to clear scope, timing and recorded consequences. Preserve explicit review and bounded authority; do not invent causation or guarantee rescue.
-- Make endings a concise account of the world and the player's chosen subject, not just totals and an administrative generation limit.
-- Carry an actual observation into a reviewable next experiment. Show the changed condition and comparison before detailed histories; a third trial must use the second trial's reference rather than stale first-run state.
+Record spatial resource/occupancy trajectories, organism identities and turnover. Test whether the pattern emerges after initialization and persists or recurs beyond the initial arrangement. Define its identification and persistence measure before the comparison; compare with the relevant feedback removed or with a matched spatial control across retained seeds. Report negative results. The target is a research question, not a guarantee that every world forms a pattern.
 
-**Experience gate:** complete ordinary-speed desktop and mobile sessions through a meaningful follow-up, with visible controls and genuine simulation state. Record whether the subject, turning point, optional choice, outcome and next question are intelligible. Functional tests remain necessary but do not close this gate. Use disciplined own play now; external player recruitment is not a prerequisite. Human enjoyment and retention remain unproven until separately evaluated.
+If the existing rules cannot support this target, document that limit and select one bounded local-feedback mechanism from the evidence before implementation. Inherited local action rules or environmental modification remain candidates, not a commitment to both. Do not substitute an unrelated controller feature or another trait counter for the spatial-organization target.
+
+For the selected mechanism:
+
+- Define local information, actions, costs, inheritance where applicable, and interaction rules without naming the desired whole-world outcome in the transition logic. State what is deliberately designed and what is claimed to emerge.
+- Name the player-visible possibility before implementation: what can the player create, notice, influence or learn that was unavailable before? A more expressive genotype or a better benchmark alone does not answer this.
+- Identify the higher-level behavior or organization to measure, its formation and persistence, and its dependence on interactions. Use appropriate mechanism-disabled, shuffled, mutation-disabled or environmental controls, rather than claiming causality from one attractive run.
+- Preserve full histories needed to reproduce the result and retain unsuccessful seeds. Distinguish a behavior found by engineered initial conditions, offline optimization, inherited selection or external intervention. None is automatically evidence of the others.
+- Inspect the real populated scene and its performance on mobile and desktop. Require a recognizable new situation with understandable consequences, not merely a changed trait mean or narration.
+
+Extend, revise or reject the mechanism on this paired scientific/gameplay evidence. No commitment to a neural controller, continuous cellular automaton, GPU engine or new language follows from the article's examples.
+
+## Priority 1 — create, shape and discover a living world
+
+The next product deliverable is one connected gameplay slice: **describe or choose an ecology → review its working interpretation → enter a readable living world → follow something distinctive → optionally influence conditions → recognize the outcome → pursue a different possibility**. Use the richer existing ecology as the product starting point. Keep the separate evolution candidate isolated until its mechanics and experience justify integration; do not replace food webs and creation with a single forager merely because that prototype has cleaner boundaries.
+
+### Immediate authorship
+
+- Open on an attractive inhabited scene with a few contrasting starting ecologies and a prominent describe-your-own path. Start with resource-feeders competing for food, hunters with prey, and recurring scarcity as candidate configurations using supported mechanics. Qualify their actual behavior before adopting them as starters; these names promise conditions, not scripted stories.
+- Make prose creation optional, not an obligatory form. Preview the actual inhabitants, directed feeding relationships and environmental pressures in player language before starting. Preserve the ability to revise an interpretation and expose unsupported intentions before seeding.
+- Keep free fixed-policy exploration useful without model availability. Distinguish a deliberate preset from a degraded interpretation; never silently substitute a seedable fallback for a rejected requested ecology.
+
+- **First authorship range:** supported inhabitants and directed feeding links, resource abundance/distribution, and pressure/variability are separate creative dimensions. Verify that changing each relevant dimension changes the actual initial state or executed relationship, not only interpretation text. This is a bounded ecology creator, not arbitrary rule generation. Expanding that range requires a new implemented capability, independently of better Jev interpretation.
+
+### Discover intentions through play
+
+- Make spatial feeding, movement, reproduction, resource pressure and losses readable at ordinary speed. Counts support the scene; they must not substitute for it.
+- Help players notice a family, a species relationship, a local situation or a recurring spatial pattern worth following. Preserve recognizable identity, location and factual history through inspection and turnover. Do not assume ancestry alone supplies attachment or label a cluster as cooperation.
+- Give the player something understandable to do or investigate before advanced emergence occurs. Teach the meaning of available actions through visible feedback, without requiring raw trait tables or a scientific protocol. Leave quiet observation valid.
+
+### Consequential environmental choices
+
+- Connect existing optional interventions to an observed situation, clear scope, previous/proposed conditions, timing and bounded authority. A choice should expose a tradeoff or uncertainty worth exploring, not always be presented as a beneficial upgrade.
+- Keep the habitat visible while requesting, reviewing and applying a change. Show actual activation and restoration separately from ecological consequences; a temporary condition restores the setting, not the previous organisms or population.
+- Let Jev interpret player intent within the available menu. Never manufacture a biological cause or model rationale absent from evidence. Preserve explicit authorization, finite inference budgets and no automatic population rescue.
+
+**First toolset:** creation exposes supported inhabitants/feeding links, initial food abundance (scarce, balanced or rich), and supported pressure/variability settings. During a run, provide editable request shortcuts for drought, nutrient bloom and stability, alongside the existing free-text request. Drought reduces resource regeneration; nutrient bloom increases it; stability reduces the hazard contribution. Explain those implemented effects rather than implying that stability removes every hazard or that a bloom benefits every inhabitant. These are global environmental requests, not cell brushes or commands to organisms. Jev can return a different supported interpretation or abstain; the preview must show the actual proposed pressure before the player accepts it. Do not claim a shortcut directly applied its label.
+
+Keep the existing six-generation temporary duration, next-boundary activation, previous-pressure restoration and shared limit of eight accepted council/player events for this slice. Preserve the existing request quotas independently of accepted-event counts; failed or dismissed proposals must not enable unbounded inference. No extra action currency, survival score, automatic retry or guaranteed rescue is introduced. Presets and fixed observation work without paid inference; provider qualification is a separately authorized gate.
+
+### A history with a next possibility
+
+- Make endings a concise factual account of the followed subject, important recorded changes and player interventions. Keep the final world inspectable; population totals alone do not settle the player's question.
+- Offer a reviewable branch from the same initial world with a chosen change, or a genuinely contrasting new ecology. Carry the motivating observation into the preview and comparison instead of automatically toggling food abundance. One-condition causal investigations must disclose any other changed configuration or intervention history.
+- Distinguish branching, replay and continuation. Preserve the existing baseline and seed for controlled branches; a third trial must use the second trial's reference rather than stale first-run state. Same-world continuation remains subject to Priority 4's separate contract.
+
+**Experience gate:** complete ordinary-speed desktop and mobile sessions through a meaningful follow-up across the adopted starters, retaining quiet, unsuccessful and extinct runs. Assess what is enjoyable or useful to do before complex life appears; whether players can form intentions, understand choices, recognize consequences and carry knowledge into another world; and what participation offers beyond watching a recording. Use disciplined own play now; external player recruitment is not a prerequisite. Human enjoyment and retention remain unproven until separately evaluated.
+
+For every adopted starter, retain a session record with the actual configuration/seed, selected subject or situation, a player intention, an available action or deliberate decision to observe, visible feedback, the observed outcome, and a specific reason to continue or create differently. A chain with no recognizable feedback or next possibility fails the experience gate even when all controls work. If a starter repeatedly offers indistinguishable play, revise or reject that starter rather than manufacturing dramatic outcomes or adding narration. Mark scripted functional tests and mocked proposals separately from ordinary-speed observation and live Jev evidence. Passing this gate means the defined journey was demonstrated in agent-led evaluation, not that human enjoyment or retention was proved.
+
+**Implementation order:** connect creation and interpretation to the actual scene, integrate readable interactions and optional choices, finish the subject-centered ending/branch, then qualify the complete artifact and deliver a reviewed change. Build on existing renderer, authority, evidence, replay and comparison contracts. Reuse preserved journey work selectively after review; do not bundle unrelated longer-habitat work. Gameplay, visualization and bounded emergence experiments advance together; another standalone helper or engine rewrite is not the next product milestone.
+
+### Delivery sequence and continuity commitment
+
+- **M1 — playable creative ecology:** PR100 ships the fixed-rule starter creation/preview slice. The player guide also documents readable resource measurements, recorded family fate at endings, and an edited follow-up comparison, including a same-seed, single-condition fixed-rule path with provenance and limitations. PR101 adds the first-toolset shortcuts and clear in-context proposal, activation/restoration and comparison feedback, with a separate bounded scripted Slow, fixture-backed UI/execution gate. This is partial M1 progress, not a completed milestone. Still outstanding are broader qualification of the connected experience, separately authorized live-provider semantics and coherent professional whole-session visualization; human enjoyment and retention remain unproven. M1 retains the existing observation bound; a bounded run is an ended observation, not evidence the ecology reached a natural final state. M1 can be delivered before same-world continuation, but does not close the continuity goal.
+- **M2 — the same world continues:** next deliver opt-in, explicitly fixed-policy new worlds with a versioned bounded observation window, exact pause/save/reload/resume and an explicit action to extend observation within a published hard cap. Preserve the full state, IDs, history and any supported authority/event progress; never silently convert a legacy completed run or discard active effects. No new model calls or budget refill occur through continuation. Extinction remains terminal. Unsupported adaptive histories remain inspectable/replayable rather than being relabeled as fixed continuations. Priority 4 defines the engineering gates and is a dependency of M2, not an indefinite deferral.
+- **R1 — spatial organization evidence:** run the bounded research target above alongside M1/M2. Publish a go/no-go assessment identifying any demonstrated organization, controls and failure cases. A negative result does not block independently useful gameplay delivery, but it prevents calling the emergence target achieved; a new mechanism requires a separate scoped decision and review.
+
+Merge readiness for each implementation change requires exact-head review, CI and the applicable native-browser/Worker gates. Keep M1, M2 and R1 evidence distinct; shipping M1 does not imply continuity, emergence or civilization is delivered.
 
 ## Priority 2 — professional whole-session visualization
 
