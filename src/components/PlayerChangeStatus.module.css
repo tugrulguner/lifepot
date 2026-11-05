@@ -1,0 +1,5 @@
+.observation { min-width: 0; }
+.window { color: var(--mp-muted); font-size: .8rem; overflow-wrap: anywhere; }
+.window summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.window p { margin: .4rem 0; }
+.window ul { margin: .3rem 0; padding-left: 1.2rem; }

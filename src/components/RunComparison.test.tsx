@@ -9,6 +9,40 @@ import { createRunEvidence } from "@/game/run-evidence";
 import recorded from "@/game/fixtures/ca7-replay.json";
 import type { EvolutionLedger } from "@/game/decisions";
 afterEach(cleanup);
+it('distinguishes recorded player pressure windows from unchanged starting conditions',()=>{
+ const config=defaultConfig(),before=run(config,241,'adaptive'),after=run(config,241,'adaptive');
+ after.evidence.playerChanges=[{acceptedGeneration:6,activatedAt:7,restoredAt:13,pressure:'drought',previousPressure:'stability'}];
+ render(<RunComparison before={{...before,decisions:[]}} after={{...after,decisions:[]}}/>);
+ expect(screen.getByText('No recorded starting-condition changes.')).toBeInTheDocument();
+ const changes=screen.getByRole('region',{name:'Compared player-directed conditions'});
+ expect(changes).toHaveTextContent('Previous trial: no player changes recorded');
+ expect(changes).toHaveTextContent('This trial: drought');
+ expect(changes).toHaveTextContent('activated at 7');expect(changes).toHaveTextContent('restored at 13');
+ expect(changes).toHaveTextContent('not proof of cause');
+ expect(screen.getByText('No accepted automatic Jev decision records in either trial.')).toBeInTheDocument();
+});
+it('names automatic records separately when both council and player observations exist',()=>{
+ const config=defaultConfig(),before=run(config,241,'adaptive'),after=run(config,241,'adaptive');
+ after.evidence.playerChanges=[{acceptedGeneration:6,activatedAt:7,restoredAt:13,pressure:'drought',previousPressure:'stability'}];
+ const automatic=(recorded.ledger as EvolutionLedger).filter(entry=>entry.source==='jev').slice(0,1);
+ render(<RunComparison before={{...before,decisions:automatic}} after={{...after,decisions:structuredClone(automatic)}}/>);
+ expect(screen.getByText(/Accepted automatic Jev decision records match/)).toBeInTheDocument();
+});
+it('does not invent activation or restoration for a player window not observed to execute',()=>{
+ const config=defaultConfig(),before=run(config,241,'adaptive'),after=run(config,241,'adaptive');
+ after.evidence.playerChanges=[{acceptedGeneration:6,activatedAt:null,restoredAt:null,pressure:'drought',previousPressure:'stability'}];
+ render(<RunComparison before={before} after={after}/>);
+ const changes=screen.getByRole('region',{name:'Compared player-directed conditions'});
+ expect(changes).toHaveTextContent('activation not observed');expect(changes).toHaveTextContent('restoration not observed');
+ expect(changes).not.toHaveTextContent('activated at 7');
+});
+it('does not call recorded player conditions an unchanged fixed control',()=>{
+ const config=defaultConfig(),before=run(config,241),after=run(config,241);
+ after.evidence.playerChanges=[{acceptedGeneration:6,activatedAt:7,restoredAt:13,pressure:'drought',previousPressure:'stability'}];
+ render(<RunComparison before={before} after={after}/>);
+ expect(screen.getByText(/Player-directed exploration/)).toBeInTheDocument();
+ expect(screen.queryByText(/repeat observation/)).not.toBeInTheDocument();
+});
 it("discloses whether accepted Jev decision records differ",()=>{
  const config=defaultConfig(),jev=(recorded.ledger as EvolutionLedger).filter(entry=>entry.source==="jev");
  expect(jev.length).toBeGreaterThan(1);

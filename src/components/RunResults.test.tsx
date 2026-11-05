@@ -100,3 +100,10 @@ it("distinguishes empty worlds and wires replay and inspection actions", () => {
   expect(onReplay).toHaveBeenCalledOnce();
   expect(onInspect).toHaveBeenCalledOnce();
 });
+
+it('keeps player-change observations before raw trajectories, alongside the ending payoff', () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  render(<RunResults state={state} evidence={createRunEvidence(state)} question="" onEdit={vi.fn()} onNew={vi.fn()} onReplay={vi.fn()} onInspect={vi.fn()} interventions={<section aria-label="Intervention observations">Observed change, not proof of cause</section>} />);
+  const observations = screen.getByRole('region', { name: 'Intervention observations' });
+  expect(observations.compareDocumentPosition(screen.getByRole('img', { name: 'Whole-run population history' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
