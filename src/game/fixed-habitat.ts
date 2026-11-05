@@ -1,13 +1,14 @@
-import { createSimulation, DEFAULT_GENERATIONS, ENGINE_VERSION, stepSimulation, type CreateSimulationOptions, type SimulationState } from "./world";
+import { createSimulation, DEFAULT_GENERATIONS, ENGINE_VERSION, getSimulationObservationLimit, MAX_FIXED_HABITAT_GENERATIONS, stepSimulation, type CreateSimulationOptions, type SimulationState } from "./world";
 
-export const MAX_FIXED_HABITAT_GENERATIONS = 1800;
+export { MAX_FIXED_HABITAT_GENERATIONS } from "./world";
 export type FixedHabitatOptions = Omit<CreateSimulationOptions, "engineVersion" | "fixedHabitat"> & { observationLimit?: number };
 
 function validLimit(limit: number): boolean {
   return Number.isInteger(limit) && limit > 0 && limit <= MAX_FIXED_HABITAT_GENERATIONS;
 }
 
-function assertFixedHabitat(state: SimulationState): asserts state is SimulationState & { fixedHabitat: { version: 1; observationLimit: number } } {
+export function assertFixedHabitat(state: SimulationState): asserts state is SimulationState & { fixedHabitat: { version: 1; observationLimit: number } } {
+  getSimulationObservationLimit(state);
   if (!state.fixedHabitat || state.engineVersion !== ENGINE_VERSION || state.fixedHabitat.version !== 1) throw new Error("Unsupported fixed habitat state");
   if (!validLimit(state.fixedHabitat.observationLimit)) throw new Error("Invalid fixed habitat observation limit");
   if (state.activeRuleChange || state.appliedRuleChanges.length || state.maintainedRuleChanges.length) throw new Error("Fixed habitats cannot contain adaptive rule changes");
@@ -20,7 +21,7 @@ export function createFixedHabitat(options: FixedHabitatOptions): SimulationStat
 }
 
 export function getObservationLimit(state: SimulationState): number {
-  return state.fixedHabitat?.observationLimit ?? DEFAULT_GENERATIONS;
+  return getSimulationObservationLimit(state);
 }
 
 export function extendFixedHabitat(state: SimulationState, newLimit: number): SimulationState {

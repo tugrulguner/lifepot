@@ -1,7 +1,7 @@
 import {sha256} from '@noble/hashes/sha2.js';
 import {DEFAULT_GENERATIONS,ENGINE_VERSION,stepSimulation,type SimulationState} from './world';
 import {applyRulePatch} from './rules';
-import {advanceFixedHabitat} from './fixed-habitat';
+import {advanceFixedHabitat,assertFixedHabitat} from './fixed-habitat';
 import {validatePlayerEvents,validatePlayerProposal,type PlayerProposal,type AcceptedPlayerEvent} from './player-proposal';
 import {validateSpeciesDirectives,detectEvolutionTrigger,deterministicEvolutionDecision,observationHash,summarizeEcology,validateEvolutionDecision,type EcologySummary,type EvolutionDecision,type EvolutionLedger} from './decisions';
 import type {SetupAnswers} from './setup';
@@ -43,7 +43,7 @@ export function validateEvolutionLedger(input:unknown):EvolutionLedger{if(!Array
 export function activeDecisionForGeneration(ledger:readonly EvolutionDecision[],generation:number){let active:EvolutionDecision|undefined;for(const d of ledger){if(d.generation>generation)break;active=d;}return active;}
 function exactDecision(state:SimulationState,intent:SetupAnswers,trigger:ReturnType<typeof detectEvolutionTrigger>,candidate:EvolutionDecision){if(!trigger)throw new Error('No trigger');const summary=summarizeEcology(state,intent,trigger);if(candidate.generation!==state.generation||candidate.trigger!==trigger||candidate.observationHash!==observationHash(summary.observation)||candidate.ruleGraphVersion!==state.config.rules?.version)throw new Error('Decision does not match frozen observation or rule graph');validateSpeciesDirectives(candidate,state.config.rules!);return candidate;}
 export function detectDecisionTriggerForRun(state:SimulationState,ledger:readonly EvolutionDecision[],playerEvents:readonly AcceptedPlayerEvent[]=[]){
- if(state.fixedHabitat)return null;
+ if(state.fixedHabitat!==undefined){assertFixedHabitat(state);if(ledger.length||playerEvents.length)throw new Error('Fixed habitats do not accept adaptive ledgers or player events');return null;}
  if(playerInterventionPending(state,playerEvents)||ledger.length+playerEvents.filter(e=>e.acceptedGeneration<=state.generation).length>=8)return null;
  return detectEvolutionTrigger(state,ledger);
 }
@@ -68,6 +68,7 @@ export function stepWithPlayerEvents(state:SimulationState,ledger:readonly Evolu
  return stepSimulation(prepared,activeDecisionForGeneration(ledger,state.generation),ledger,active?{pressure:active.proposal.pressure,power:intensity==='low'?.45:intensity==='medium'?.8:1.2}:undefined);
 }
 export function advanceUntilDecisionTrigger(state:SimulationState,ledger:readonly EvolutionDecision[],maxSteps:number,onStep?:(state:SimulationState)=>void,playerEvents:readonly AcceptedPlayerEvent[]=[]):SimulationState{
+ if(state.fixedHabitat!==undefined){assertFixedHabitat(state);if(ledger.length||playerEvents.length)throw new Error('Fixed habitats do not accept adaptive ledgers or player events');return advanceFixedHabitat(state,Math.max(0,Math.floor(maxSteps)),onStep);}
  let next=state;for(let i=0;i<Math.max(0,Math.floor(maxSteps))&&next.outcome==='running';i++){
   const past=ledger.filter(d=>d.generation<=next.generation),trigger=detectDecisionTriggerForRun(next,past,playerEvents);
   if(trigger&&!past.some(d=>d.generation===next.generation))break;

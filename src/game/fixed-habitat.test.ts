@@ -2,9 +2,25 @@ import { describe, expect, it } from "vitest";
 import { defaultConfig } from "./setup";
 import { createSimulation, runSimulation, stepSimulation, snapshotSimulation } from "./world";
 import { advanceFixedHabitat, createFixedHabitat, extendFixedHabitat, getObservationLimit, MAX_FIXED_HABITAT_GENERATIONS } from "./fixed-habitat";
-import { detectDecisionTriggerForRun, playerProposalAvailability, runFreshWithDecisions, runWithDecisionLedger, stepWithPlayerEvents } from "./runtime";
+import { advanceUntilDecisionTrigger, detectDecisionTriggerForRun, playerProposalAvailability, runFreshWithDecisions, runWithDecisionLedger, stepWithPlayerEvents } from "./runtime";
 
 describe("fixed habitat bounded continuity", () => {
+  it("rejects future adaptive histories before a fixed runner takes any steps", () => {
+    const habitat = createFixedHabitat({ seed: 31, config: defaultConfig() });
+    const before = structuredClone(habitat);
+    // Deliberately unsupported future entry: fixed mode rejects all ledger entries,
+    // not just entries that have reached the current generation.
+    const ledger = [{ generation: 12 } as never];
+    expect(() => detectDecisionTriggerForRun(habitat, ledger)).toThrow(/fixed habitat/i);
+    expect(() => advanceUntilDecisionTrigger(habitat, ledger, 3)).toThrow(/fixed habitat/i);
+    expect(habitat).toStrictEqual(before);
+  });
+  it.each([0, 1801, Number.NaN, Number.POSITIVE_INFINITY, 1.5])("rejects a corrupted observation limit %s at the public stepping boundary", observationLimit => {
+    const state = { ...createFixedHabitat({ seed: 31, config: defaultConfig() }), fixedHabitat: { version: 1 as const, observationLimit } };
+    const before = structuredClone(state);
+    expect(() => stepSimulation(state)).toThrow(/fixed habitat|observation/i);
+    expect(state).toStrictEqual(before);
+  });
   it("opts into a ca8 world with a default 180-generation observation window", () => {
     const habitat = createFixedHabitat({ seed: 41, config: defaultConfig() });
     expect(habitat.engineVersion).toBe("lifepot-ca-8");
@@ -13,14 +29,14 @@ describe("fixed habitat bounded continuity", () => {
     expect("fixedHabitat" in createSimulation({ seed: 41, config: defaultConfig() })).toBe(false);
   });
 
-  it("preserves the full deterministic world when continuing after an explicit extension", () => {
-    const extended = createFixedHabitat({ seed: 41, config: defaultConfig() });
-    const direct = createFixedHabitat({ seed: 41, config: defaultConfig(), observationLimit: 360 });
-    const at180 = advanceFixedHabitat(extended, 180);
-    const continued = advanceFixedHabitat(extendFixedHabitat(at180, 360), 180);
-    const full = advanceFixedHabitat(direct, 360);
-    expect(continued.generation).toBe(360);
-    expect(continued).toEqual(full);
+  it("preserves the full deterministic world across a short explicit observation extension", () => {
+    const extended = createFixedHabitat({ seed: 41, config: defaultConfig(), observationLimit: 10 });
+    const direct = createFixedHabitat({ seed: 41, config: defaultConfig(), observationLimit: 20 });
+    const atBoundary = advanceFixedHabitat(extended, 10);
+    const continued = advanceFixedHabitat(extendFixedHabitat(atBoundary, 20), 10);
+    const full = advanceFixedHabitat(direct, 20);
+    expect(continued.generation).toBe(20);
+    expect(continued).toStrictEqual(full);
   });
 
   it("calls onStep exactly once for every completed simulation step", () => {
