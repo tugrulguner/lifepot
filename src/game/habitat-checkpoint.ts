@@ -11,25 +11,33 @@ const MAX_WIRE_DEPTH = 128, MAX_WIRE_NODES = 1_000_000;
 function checkWire(text: string): void {
   if (text.length > MAX_HABITAT_CHECKPOINT_BYTES || new TextEncoder().encode(text).byteLength > MAX_HABITAT_CHECKPOINT_BYTES) throw new Error("Habitat checkpoint exceeds the 8 MiB size limit");
   let depth = 0, quoted = false, escaped = false, nodes = 0;
-  for (const character of text) {
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
     if (quoted) {
       if (escaped) escaped = false;
       else if (character === "\\") escaped = true;
       else if (character === '"') quoted = false;
-    } else if (character === '"') quoted = true;
-    else if (character === "[" || character === "{") {
+    } else if (character === '"') {
+      quoted = true; nodes += 1;
+    } else if (character === "[" || character === "{") {
       depth += 1; nodes += 1;
       if (depth > MAX_WIRE_DEPTH || nodes > MAX_WIRE_NODES) throw new Error("Habitat checkpoint nesting depth or structure limit exceeded");
     } else if (character === "]" || character === "}") depth -= 1;
+    else if (character === "-" || character >= "0" && character <= "9" || character === "t" || character === "f" || character === "n") {
+      nodes += 1;
+      while (index + 1 < text.length && text[index + 1] !== "," && text[index + 1] !== "]" && text[index + 1] !== "}" && !/\s/.test(text[index + 1])) index += 1;
+    }
+    if (nodes > MAX_WIRE_NODES) throw new Error("Habitat checkpoint nesting depth or structure limit exceeded");
   }
 }
 function checkNodes(value: unknown): void {
-  const pending = [value]; let count = 0;
-  while (pending.length) {
-    const item = pending.pop();
+  let count = 0;
+  function visit(item: unknown, depth: number): void {
+    if (depth > MAX_WIRE_DEPTH) throw new Error("Habitat checkpoint nesting depth limit exceeded");
     if (++count > MAX_WIRE_NODES) throw new Error("Habitat checkpoint structure limit exceeded");
-    if (Array.isArray(item)) for (const child of item) pending.push(child);
+    if (Array.isArray(item)) for (const child of item) visit(child, depth + 1);
   }
+  visit(value, 0);
 }
 type Packed = ["u"] | ["z"] | ["v", null | boolean | number | string] | ["a", Packed[]] | ["o", Array<[string, Packed]>] | ["t", string, string];
 const arrays = { Uint8Array, Uint16Array, Uint32Array, Float32Array };

@@ -1,5 +1,5 @@
 import { deepStrictEqual } from "node:assert";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createSimulation } from "./world";
 import { createFixedHabitat, advanceFixedHabitat } from "./fixed-habitat";
 import { defaultConfig } from "./setup";
@@ -37,6 +37,31 @@ describe("exact fixed habitat checkpoints", () => {
   });
   it("rejects oversized input before parsing it", () => {
     expect(() => decodeHabitatCheckpoint(" ".repeat(8 * 1024 * 1024 + 1))).toThrow(/size|large/i);
+  });
+  it("rejects dense flat wire values before invoking JSON.parse", () => {
+    const text = `{"format":"lifepot-habitat","version":1,"checksum":"","payload":[${Array(1_000_001).fill("0").join(",")}]}`;
+    const parse = vi.spyOn(JSON, "parse");
+    try {
+      expect(() => decodeHabitatCheckpoint(text)).toThrow(/structure|limit/i);
+      expect(parse.mock.calls.length).toBe(0);
+    } finally {
+      parse.mockRestore();
+    }
+  });
+  it("allows dense under-limit wire input to reach the real parser", () => {
+    const text = `{"format":"lifepot-habitat","version":1,"checksum":"","payload":[${Array(100).fill("0").join(",")}]}`;
+    const parse = vi.spyOn(JSON, "parse");
+    try {
+      expect(() => decodeHabitatCheckpoint(text)).toThrow(/integrity|checksum/i);
+      expect(parse).toHaveBeenCalledTimes(1);
+    } finally {
+      parse.mockRestore();
+    }
+  });
+  it("preserves valid checkpoint names with JSON punctuation", () => {
+    const input = { id: "61c539c3-ef4d-4425-a567-803a89d3e099", name: 'pond "quoted" \\\\ [brackets] 1e+2,.-_{}', createdAt: 100, savedAt: 200, parentId: null, ...pausedWorld() };
+    const checkpoint = createHabitatCheckpoint(input);
+    deepStrictEqual(decodeHabitatCheckpoint(encodeHabitatCheckpoint(checkpoint)), checkpoint);
   });
   it("rejects excessive wire nesting before JSON parsing or restoring", () => {
     expect(() => decodeHabitatCheckpoint("[".repeat(1000) + "0" + "]".repeat(1000))).toThrow(/depth|nest/i);
