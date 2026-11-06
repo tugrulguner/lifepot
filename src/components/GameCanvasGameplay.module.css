@@ -45,6 +45,14 @@ main.starterReview { overflow: clip; }
   box-shadow: 0 0.4rem 1.2rem rgb(0 0 0 / 22%);
 }
 
+.mobileMarkKey { display: none; }
+@media (max-width: 1000px) {
+  .shell:global(.simulation-shell) {
+    grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "inspector" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event" "result";
+  }
+  .mobileMarkKey { display: block; grid-area: marks; padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .worldContext :global(.canvas-mark-key) { display: none; }
+}
 .worldContext { display: contents; }
 @media (min-width: 1001px) {
   .worldContext { grid-area: observation; display: flex; flex-direction: column; gap: 12px; align-self: start; min-width: 0; }
@@ -55,7 +63,7 @@ main.starterReview { overflow: clip; }
 }
 @media (max-width: 1000px) {
   .completed:global(.simulation-shell) {
-    grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "outcome" "result" "inspector" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
+    grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "outcome" "result" "inspector" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
   }
 }
 

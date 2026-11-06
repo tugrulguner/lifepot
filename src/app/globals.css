@@ -632,7 +632,7 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .recorded-activity > strong { color: var(--muted); font: 10px/1.4 var(--mono); }
 .recorded-activity > div { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .activity-birth { color: #f1f8ed; }.activity-feeding { color: #ffd65c; }.activity-death { color: #ff8877; }
-.recorded-activity > .canvas-mark-key { flex-basis: 100%; gap: 3px 10px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.canvas-mark-key, .recorded-activity > .canvas-mark-key { display: flex; flex-wrap: wrap; flex-basis: 100%; gap: 3px 10px; color: var(--muted); font-size: 11px; line-height: 1.35; }
 .canvas-mark-key > span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .canvas-mark-key i { font: normal 16px/1 var(--mono); }
 .canvas-mark-key .mark-birth { color: #f1f8ed; }

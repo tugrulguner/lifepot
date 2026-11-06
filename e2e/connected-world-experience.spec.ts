@@ -13,6 +13,12 @@ for (const width of [390, 1280]) test.describe.serial(`${width}px habitat-to-out
     await page.goto('/play');
     await page.getByRole('button', { name: 'Review this world', exact: true }).click();
     await page.getByRole('button', { name: /Seed ecosystem/ }).click();
+    const key = page.getByRole('note', { name: 'Canvas marks', exact: true });
+    await expect(key).toHaveCount(1);
+    await expect(key).toContainText('Marks are sampled');
+    const keyBox = await key.boundingBox(), openingBoard = await page.locator('.life-canvas').boundingBox();
+    if (width <= 1000) expect(keyBox!.y).toBeGreaterThanOrEqual(openingBoard!.y + openingBoard!.height);
+    else expect(keyBox!.x).toBeGreaterThanOrEqual(openingBoard!.x + openingBoard!.width);
     await page.getByRole('button', { name: 'Inspect living organism', exact: true }).first().click();
     family = (await page.getByRole('button', { name: /Follow founder lineage/ }).innerText()).match(/#(\d+)/)![1];
     await page.getByRole('button', { name: 'Pin this family', exact: true }).click();
