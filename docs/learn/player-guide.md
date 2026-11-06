@@ -6,6 +6,8 @@ Species-level strategy and mutation directives influence new offspring through t
 
 Replay is different from a fresh adaptive run: it reuses the same starting configuration, seed and recorded decisions without asking Jev again. Deterministic execution makes that record reproducible; it does not mean the seed predetermines new Jev decisions.
 
+The longer-term goal is a game where simple beginnings and local rules can produce complex structures and behaviors through interactions, inheritance, mutation and changing environments. The current ecology is an early foundation for that investigation. Selection concerns reproductive success in particular conditions; mutation does not anticipate what an organism needs, and increasing complexity is not guaranteed. Social groups, culture and civilizations remain research ambitions, not current game features. See the [roadmap](https://lifepot.modepot.io/project-docs/roadmap) for the goals and evidence gates.
+
 ## Choose a starter or describe your world
 
 The `/play` entry previews Resource competition, Hunters and prey, and Recurring scarcity. Each uses an explicit supported configuration and real generation-0 state, with an inhabited square habitat, resource measurements and species relationships. **Review this world** opens editable conditions; it does not start a run. Starters default to fixed rules and make no setup or runtime model requests unless you explicitly select adaptive policy. Their shared seed makes the configurations inspectable, but their multiple differences are not a controlled one-condition comparison.

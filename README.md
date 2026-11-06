@@ -40,6 +40,12 @@
 
 ## Why LifePot
 
+The goal is an artificial-life game where simple beginnings and relatively simple local rules can give rise to complex structures and behaviors. Explore how interactions, reproduction, inherited variation and changing environments affect what survives and reproduces, and what organization can develop over time. Players can create worlds, observe them and optionally shape supported conditions.
+
+This is a development ambition, not a claim that the current engine demonstrates open-ended evolution. Mutation does not anticipate an organism's needs; selection depends on reproductive success in particular conditions. Greater complexity is not guaranteed. Social groups, culture and possible civilizations are longer-term research directions, not shipped capabilities or scripted levels. The [roadmap](ROADMAP.md) separates these goals from demonstrated results and makes emergent organization and evolution first-class workstreams alongside gameplay and visual quality.
+
+### How the current game supports that investigation
+
 Most generative simulations either hard-code every world or let model prose quietly become behavior. In LifePot, model decisions become validated ecosystem rules—not executable code. LifePot separates the responsibilities:
 
 - **Jev proposes** typed species roles, relationships, environmental conditions, strategies, and bounded rule changes.

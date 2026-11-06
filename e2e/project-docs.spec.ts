@@ -17,7 +17,14 @@ test("public README and roadmap render from exact build sources with revision pr
     await expect(page.getByText(sourcePath, { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Download source Markdown" })).toHaveAttribute("href", `/project-docs/${slug}/markdown`);
     await expect(page.getByRole("link", { name: "View exact source on GitHub" })).toHaveAttribute("href", new RegExp(`/blob/[^/]+/${sourcePath.replace(".", "\\.")}$`));
-    if (slug === "readme") await expect(page.locator(".learn-prose img").first()).toBeVisible();
+    await expect(page.locator(".learn-prose")).toContainText("complex structures and behaviors");
+    await expect(page.locator(".learn-prose")).toContainText("reproductive success");
+    if (slug === "readme") {
+      await expect(page.locator(".learn-prose img").first()).toBeVisible();
+      await expect(page.locator(".learn-prose")).toContainText("not a claim that the current engine demonstrates open-ended evolution");
+    } else {
+      await expect(page.locator(".learn-prose")).toContainText("not a requirement to finish all interface work before simulation research");
+    }
   }
 });
 
