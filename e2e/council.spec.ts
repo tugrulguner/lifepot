@@ -44,7 +44,7 @@ test("exact council replay and restart never call the API", async ({ page }) => 
   await expect(page.getByTestId("generation")).toHaveText("0 / 180");
   await expect(page.getByLabel("Runtime council")).toContainText("No runtime judgment yet");
   await expect(page.getByLabel("Runtime council")).toContainText("runtime_orchestrator", { timeout: 15000 });
-  await expect(page.getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 40000 });
+  await expect(page.getByRole("region", { name: "Run results", exact: true }).getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 40000 });
   await expect(page.getByText("Replay ledger verification failed", { exact: true })).toHaveCount(0);
   expect(calls).toBe(0);
 });

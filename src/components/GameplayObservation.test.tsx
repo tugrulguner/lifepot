@@ -65,6 +65,13 @@ describe("near-board observation summary", () => {
     expect(events).toHaveTextContent("1 death");
     expect(events).not.toHaveTextContent("caused");
   });
+  it("explains sampled canvas marks beside counts without equating feeding with predation", () => {
+    render(<GameplayObservation state={state} evidence={null} followed={null} decision={null} />);
+    const key = within(screen.getByRole('region', { name: 'Recorded activity' })).getByRole('note', { name: 'Canvas marks' });
+    for (const label of ['Birth', 'Feeding', 'Prey capture', 'Death', 'Resources', 'Hazards']) expect(key).toHaveTextContent(label);
+    expect(key).toHaveTextContent('Marks are sampled');
+    expect(key).toHaveTextContent('reduced motion');
+  });
   it("shows every configured species, including extinct configured species with zero", () => {
     const species = state.config.rules!.species;
     state.guild.fill(0);

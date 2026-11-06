@@ -13,6 +13,7 @@ export function getRecordedMoments(evidence:RunEvidence,config:LifeConfig,names:
  };
  for(const event of evidence.lineageExtinction)add(`family:${event.lineage}`,'family');
  for(const event of evidence.firstExtinction)add(`extinction:${event.speciesId}`,'species');
+ if(evidence.followedFamily?.population)add(`family-observation:${evidence.followedFamily.lineage}`,'family');
  add('population','end');
  return moments.sort((a,b)=>a.generation-b.generation||a.id.localeCompare(b.id));
 }

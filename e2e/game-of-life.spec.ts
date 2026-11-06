@@ -227,7 +227,7 @@ test("copied replay opens at generation zero and never calls the judge", async (
   await answerSetupWithKeyboard(page);
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
-  await expect(page.getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByRole("region", { name: "Run results", exact: true }).getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 90_000 });
   await page.getByRole("button", { name: "Copy challenge link" }).click();
   const replayUrl = await page.evaluate(() => navigator.clipboard.readText());
   expect(replayUrl).toContain("#replay=");

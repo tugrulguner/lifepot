@@ -40,6 +40,13 @@ export function describeEvidenceReference(reference:string,evidence:RunEvidence,
   if(!speciesAt||speciesAt.population!==0||!prior||prior.population<=0||last.species.find(item=>item.speciesId===id)?.population!==0)return null;
   return {reference,description:`${identity(id,names)} first observed extinct at generation ${event.generation}.`,generation:event.generation};
  }
+ // This UI observation is distinct from an extinction event and from model choices.
+ const livingFamily=/^family-observation:([1-9]\d*)$/.exec(reference);
+ if(livingFamily){
+  const family=evidence.followedFamily;
+  if(!family||family.lineage!==Number(livingFamily[1])||!Number.isSafeInteger(family.population)||family.population<=0||family.population>last.population)return null;
+  return {reference,description:`Founder lineage #${family.lineage}: ${family.population} living ${family.population===1?'member':'members'} at generation ${last.generation}.`,generation:last.generation};
+ }
  const family=/^family:([1-9]\d*)$/.exec(reference);
  if(family){
   const lineage=Number(family[1]),event=evidence.lineageExtinction.find(item=>item.lineage===lineage);

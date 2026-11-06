@@ -34,7 +34,7 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
   const selectedMomentId = selection?.evidence === evidence ? selection.id : "";
   const moments = onInspectMoment || onEditMoment ? getRecordedMoments(evidence, state.config, speciesNames) : [];
   const chosenMoment = moments.find(moment => moment.id === selectedMomentId)
-    ?? (followedLineage === null ? undefined : moments.find(moment => moment.reference === `family:${followedLineage}`))
+    ?? (followedLineage === null ? undefined : moments.find(moment => moment.reference === `family:${followedLineage}` || moment.reference === `family-observation:${followedLineage}`))
     ?? moments.find(moment => moment.kind === "species")
     ?? moments.at(-1);
   const displayName = (id: string) => { const value = speciesNames[id as SpeciesId]; return typeof value === "string" && value.trim() ? value.trim() : undefined; };

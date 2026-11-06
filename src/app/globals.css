@@ -632,6 +632,14 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .recorded-activity > strong { color: var(--muted); font: 10px/1.4 var(--mono); }
 .recorded-activity > div { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .activity-birth { color: #f1f8ed; }.activity-feeding { color: #ffd65c; }.activity-death { color: #ff8877; }
+.canvas-mark-key, .recorded-activity > .canvas-mark-key { display: flex; flex-wrap: wrap; flex-basis: 100%; gap: 3px 10px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.canvas-mark-key > span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.canvas-mark-key i { font: normal 16px/1 var(--mono); }
+.canvas-mark-key .mark-birth { color: #f1f8ed; }
+.canvas-mark-key .mark-feeding { color: #ffd65c; }
+.canvas-mark-key .mark-death { color: #ff8877; }
+.canvas-mark-key .mark-resource { color: #73caa1; }
+.canvas-mark-key small { flex-basis: 100%; font: inherit; }
 .organism-portrait { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 12px; margin-top: 12px; padding: 12px; background: #020a09; border-radius: 8px; }
 .organism-portrait svg { width: 84px; height: 84px; }
 .organism-portrait p { margin: 6px 0; font-size: 12px; }
