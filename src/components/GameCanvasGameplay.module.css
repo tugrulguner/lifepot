@@ -45,6 +45,16 @@ main.starterReview { overflow: clip; }
   box-shadow: 0 0.4rem 1.2rem rgb(0 0 0 / 22%);
 }
 
+/* Completion retains the original canvas and places its payoff before the observatory. */
+.completed:global(.simulation-shell) {
+  grid-template-areas: "controls controls" "camera-primary observation" "board outcome" "focus-controls outcome" "result result" "inspector observatory" "camera observatory" "focus observatory" "stats observatory" "legend observatory" "status observatory" "event observatory" "decision observatory";
+}
+@media (max-width: 1000px) {
+  .completed:global(.simulation-shell) {
+    grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "outcome" "result" "inspector" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
+  }
+}
+
 /* Keep the real square habitat above the compact mobile/tablet proposal sheet. */
 @media (max-width: 1000px) {
   .proposing :global(.life-canvas) { max-width: max(280px, min(100%, calc(55dvh - 96px))); }

@@ -1,0 +1,23 @@
+.outcome {
+  grid-area: outcome;
+  align-self: start;
+  min-width: 0;
+  padding: 20px;
+  border-top: 2px solid var(--mp-accent);
+  border-bottom: 1px solid var(--mp-border);
+  background: var(--mp-surface);
+  color: var(--mp-ink);
+  overflow-wrap: anywhere;
+}
+.outcome:focus-visible { outline: 2px solid var(--mp-accent); outline-offset: 3px; }
+.outcome h2 { margin: 8px 0; font-size: 24px; line-height: 1.15; letter-spacing: -.025em; }
+.outcome p { font-size: 14px; line-height: 1.5; margin: 10px 0; }
+.outcome .eyebrow { margin: 0; font: 11px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--mp-muted); }
+.family { font-weight: 600; }
+.fact { border-left: 2px solid var(--mp-border); padding-left: 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 16px 12px; }
+.actions button { min-height: 44px; padding: 10px 12px; border: 1px solid var(--mp-control-boundary); border-radius: 5px; background: var(--mp-surface); color: var(--mp-ink); font: 600 13px/1.4 var(--mp-font); cursor: pointer; }
+.actions button:first-child { border-color: var(--mp-accent); background: var(--mp-accent); color: var(--mp-accent-ink); }
+.actions button:focus-visible { outline: 2px solid var(--mp-accent); outline-offset: 3px; }
+.outcome .note { color: var(--mp-muted); font-size: 12px; }
+@media (max-width: 1000px) { .outcome { padding: 16px 12px; } }

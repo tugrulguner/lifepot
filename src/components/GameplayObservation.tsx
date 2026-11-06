@@ -48,6 +48,15 @@ export function GameplayObservation({ state, evidence, followed, decision, names
         const count = state.events.filter(event => event.generation === state.generation && event.kind === kind).length;
         return <span key={kind} className={`activity-${kind}`}><b>{count}</b> {kind}{count === 1 ? "" : "s"}</span>;
       })}</div>
+      <div className="canvas-mark-key" role="note" aria-label="Canvas marks">
+        <span><i className="mark-birth" aria-label="White rays">✳</i> Birth</span>
+        <span><i className="mark-feeding" aria-label="Gold circle">○</i> Feeding</span>
+        <span><i className="mark-feeding" aria-label="Gold diamond">◇</i> Prey capture</span>
+        <span><i className="mark-death" aria-label="Coral cross">×</i> Death</span>
+        <span><i className="mark-resource" aria-label="Green field">■</i> Resources</span>
+        <span><i className="mark-death" aria-label="Coral shading">■</i> Hazards</span>
+        <small>Marks are sampled; no pulses with reduced motion.</small>
+      </div>
     </section>
 
     </>;

@@ -47,6 +47,7 @@ import WorldPreview from "./WorldPreview";
 import gameplayStyles from "./GameCanvasGameplay.module.css";
 import historyStyles from "./ObservedHistory.module.css";
 import { RunResults } from "./RunResults";
+import { WorldOutcome } from "./WorldOutcome";
 import { RecordedMomentViewer } from "./RecordedMomentViewer";
 import { ExperimentReview } from "./ExperimentReview";
 import type { RecordedMoment } from "@/game/recorded-moments";
@@ -427,7 +428,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
       aria-label={`Ecosystem generation ${state.generation}; ${state.stats.population} organisms`}
     />
     <section className="camera-tools camera-primary" aria-label="World camera">
-      <div className="watching-progress" role="group" aria-label="Watching progress"><span>Generation {state.generation} / {state.fixedHabitat ? getObservationLimit(state) : DEFAULT_GENERATIONS} · {state.stats.population} living</span>{showMeasurements && <a href="#live-measurements">Measurements</a>}</div>
+      <div className="watching-progress" role="group" aria-label="Watching progress"><span>{state.outcome !== "running" && <strong>{state.stats.population === 0 ? "World empty" : "Observation complete"} · </strong>}Generation {state.generation} / {state.fixedHabitat ? getObservationLimit(state) : DEFAULT_GENERATIONS} · {state.stats.population} living</span>{showMeasurements && <a href="#live-measurements">Measurements</a>}</div>
       <div className="camera-buttons">
         <button aria-label="Zoom out" disabled={view.zoom <= 1} onClick={() => { zoom(-.5); returnToWorld(); }}>−</button>
         <output aria-label="Camera zoom">{view.zoom}×</output>
@@ -566,8 +567,8 @@ export function GameCanvas() {
     if (!completionSeen.current) {
     completionSeen.current = true;
     if (!replayMode && simulation) gameplayAnalytics.runCompleted(`run-${runId.current}`, { reason: simulation.outcome, generations: simulation.generation, interpretation: analyticsProof.current?.source ?? "fallback" });
-    document.getElementById("run-results")?.focus();
-      document.getElementById("run-results")?.scrollIntoView({ block: "start" });
+    // Completion announces the stopping point without taking the habitat away.
+    document.getElementById("world-outcome")?.focus({ preventScroll: true });
     }
   }, [complete, stage, replayMode, simulation]);
   useLayoutEffect(() => {
@@ -1224,15 +1225,32 @@ export function GameCanvas() {
     document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus({ preventScroll: true });
   };
   const inspectDetails = () => document.getElementById("creature-inspector")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const investigateOutcome = () => {
+    setShowResults(true);
+    requestAnimationFrame(() => {
+      document.getElementById("run-results")?.scrollIntoView({ block: "start" });
+      document.getElementById("run-results")?.focus({ preventScroll: true });
+    });
+  };
+  const reviewOutcome = (moment: RecordedMoment) => {
+    if (!evidence) return;
+    setRecordedMoment(null);
+    setParentWorldId(originWorldId ?? parentWorldId);
+    setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy, focus: moment, question });
+    setConfig(structuredClone(initialConfigRef.current ?? config));
+    setSeed(simulation.seed); setReplayMode(false); setManuallyEdited(false);
+    setStage("review"); window.scrollTo(0, 0);
+  };
   const active = activeDecisionForGeneration(ledger, simulation.generation),
     resources = Math.round(simulation.stats.resources / 2500);
   return (
-    <main className={`simulation-shell${playerBinding ? ` ${gameplayStyles.proposing}` : ""}${simulation.fixedHabitat || originWorldId || parentWorldId ? " ph-no-capture" : ""}`} data-ph-no-capture={simulation.fixedHabitat || originWorldId || parentWorldId ? true : undefined}>
+    <main className={`simulation-shell${complete ? ` ${gameplayStyles.completed}` : ""}${playerBinding ? ` ${gameplayStyles.proposing}` : ""}${simulation.fixedHabitat || originWorldId || parentWorldId ? " ph-no-capture" : ""}`} data-ph-no-capture={simulation.fixedHabitat || originWorldId || parentWorldId ? true : undefined}>
       <section id="play-content" tabIndex={-1} className="run-status" aria-label="Run status"><strong role="status">{complete ? simulation.stats.population === 0 ? "World empty" : "Observation complete" : deciding ? "Waiting for a bounded ecology decision — the world is held still" : paused ? "Paused — inspect life or step one generation" : "Running — watch, inspect, or pause"}</strong><div className="run-context">{isExample ? "Recorded example · The little pond · " : ""}{localWorldName ? `Experiment: ${localWorldName} · ` : ""}{replayMode ? "Exact recorded replay · no inference" : policy === "fixed" ? "Fixed world rules" : "Adaptive ecology"}{question ? ` · Your question: ${question}` : ""}{isExample && <><a href="/play">Create your own world</a>{exampleTips && <><details className="example-tips"><summary>Three ways to explore</summary><ol><li>Pause to look closer.</li><li>Use “Inspect a living organism” to see its age and energy.</li><li>Choose “Follow founder lineage” to highlight its family.</li></ol></details><button type="button" className="example-dismiss" aria-label="Dismiss example tips" onClick={() => setExampleTips(false)}>Dismiss tips</button></>}</>}</div></section>
       {notice && <p className="run-notice" role="status">{notice}</p>}
       {archivedEvidence && <section className="archived-highlights" aria-label="Recorded highlights"><h2>Recorded highlights</h2><p>Validated from this saved replay; these are archived observations, not newly observed replay events.</p>{archivedEvidence.lineageExtinction.length ? <ul>{archivedEvidence.lineageExtinction.map((item, index) => <li key={`${item.lineage}-${item.generation}-${index}`}>Founder family {item.lineage} disappeared at generation {item.generation} (recorded).</li>)}</ul> : <p>No followed-family extinction milestone was recorded in this save.</p>}</section>}
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
       <World key={arrivalRevision} state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onCameraUpdate={setCameraUpdate} onInspect={index => { setSelected(index); setPaused(true); }} />
+      {complete && evidence && <WorldOutcome state={simulation} evidence={evidence} followed={followed} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} onInvestigate={investigateOutcome} onReview={!simulation.fixedHabitat ? reviewOutcome : undefined} />}
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
       <GameplayObservation playerChange={playerEvents.some(e=>e.acceptedGeneration<=simulation.generation&&(!active||active.generation<e.generation+6))?<PlayerChangeStatus events={playerEvents} generation={simulation.generation} outcome={simulation.outcome} evidence={evidence}/>:undefined} inspection={selected === null ? undefined : context => <WatchingOrganism state={simulation} index={selected} followed={followed} onFollow={followLineage} onDetails={inspectDetails} context={context} />} cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} policy={replayMode ? "recorded" : policy} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
       <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={followLineage} onClear={() => setSelected(null)} onPick={inspectLiving} />
@@ -1340,7 +1358,7 @@ export function GameCanvas() {
           </select>
         </label>
         {!simulation.fixedHabitat && <button onClick={() => begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined)}>{replayMode ? "Restart replay" : "Restart trial"}</button>}
-        {complete && <button onClick={() => { setShowResults(true); completionSeen.current = false; queueMicrotask(() => { document.getElementById("run-results")?.scrollIntoView({ block: "start" }); document.getElementById("run-results")?.focus(); }); }}>View results</button>}
+        {complete && <button onClick={investigateOutcome}>View results</button>}
         <button onClick={inspectLiving}>Inspect living organism</button>
         <button onClick={() => document.getElementById("world-observatory")?.scrollIntoView({ behavior: "smooth", block: "start" })}>World observatory</button>
         {!complete&&!replayMode&&policy==='adaptive'&&<button type="button" aria-label="Ask Jev to change this world" disabled={deciding} onClick={openPlayerChange}>Ask Jev</button>}
@@ -1364,14 +1382,7 @@ export function GameCanvas() {
           setRecordedCamera("");
           setRecordedMoment({ moment, replay: completedReplay });
         } : undefined}
-        onEditMoment={!simulation.fixedHabitat ? moment => {
-          setRecordedMoment(null);
-          setParentWorldId(originWorldId ?? parentWorldId);
-          setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy, focus: moment, question });
-          setConfig(structuredClone(initialConfigRef.current ?? config));
-          setSeed(simulation.seed); setReplayMode(false); setManuallyEdited(false);
-          setStage("review"); window.scrollTo(0, 0);
-        } : undefined}
+        onEditMoment={!simulation.fixedHabitat ? reviewOutcome : undefined}
         onReplay={!simulation.fixedHabitat ? () => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); } : undefined}
         onEdit={!simulation.fixedHabitat ? () => { setParentWorldId(originWorldId ?? parentWorldId); setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); } : undefined}
         onNew={() => { setRecordedMoment(null); setLocalWorldName(""); setArchivedEvidence(null); setOriginWorldId(null); setParentWorldId(null); setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setStage("questions"); window.scrollTo(0, 0); }}>
