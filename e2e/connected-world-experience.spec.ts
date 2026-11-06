@@ -17,6 +17,7 @@ for (const width of [390, 1280]) test.describe.serial(`${width}px habitat-to-out
     family = (await page.getByRole('button', { name: /Follow founder lineage/ }).innerText()).match(/#(\d+)/)![1];
     await page.getByRole('button', { name: 'Pin this family', exact: true }).click();
     await page.getByRole('combobox', { name: 'Playback speed' }).selectOption('fast');
+    const originalBoard = await page.locator('.life-canvas').boundingBox();
     await page.getByRole('button', { name: 'Resume', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Run status' })).toContainText('Observation complete', { timeout: 30000 });
     await expect(page.getByTestId('generation')).toHaveText('180 / 180');
@@ -28,6 +29,18 @@ for (const width of [390, 1280]) test.describe.serial(`${width}px habitat-to-out
     const outcome = page.getByRole('region', { name: 'World outcome', exact: true });
     await expect(outcome).toContainText(`Lineage #${family}`);
     await expect(outcome).toContainText('starting conditions');
+    if (width === 1280) expect(bounds!.width, 'completion must retain the habitat scale').toBeGreaterThanOrEqual(originalBoard!.width * .95);
+    const action = page.getByRole('button', { name: 'Investigate this outcome', exact: true });
+    for (const theme of ['light', 'dark']) {
+      await page.getByLabel('Color theme').selectOption(theme);
+      const contrast = await action.evaluate(element => {
+        const style = getComputedStyle(element);
+        const luminance = (color: string) => color.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+        const a = luminance(style.color), b = luminance(style.backgroundColor);
+        return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+      });
+      expect(contrast, `${theme} outcome action contrast`).toBeGreaterThanOrEqual(4.5);
+    }
     expect(requests).toBe(0);
   });
   test('outcome inspection and a related follow-up preserve the world and evidence', async () => {

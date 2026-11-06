@@ -45,9 +45,13 @@ main.starterReview { overflow: clip; }
   box-shadow: 0 0.4rem 1.2rem rgb(0 0 0 / 22%);
 }
 
+.worldContext { display: contents; }
+@media (min-width: 1001px) {
+  .worldContext { grid-area: observation; display: flex; flex-direction: column; gap: 12px; align-self: start; min-width: 0; }
+}
 /* Completion retains the original canvas and places its payoff before the observatory. */
 .completed:global(.simulation-shell) {
-  grid-template-areas: "controls controls" "camera-primary observation" "board outcome" "focus-controls outcome" "result result" "inspector observatory" "camera observatory" "focus observatory" "stats observatory" "legend observatory" "status observatory" "event observatory" "decision observatory";
+  grid-template-areas: "controls controls" "camera-primary observation" "board observation" "focus-controls observation" "result result" "inspector observatory" "camera observatory" "focus observatory" "stats observatory" "legend observatory" "status observatory" "event observatory" "decision observatory";
 }
 @media (max-width: 1000px) {
   .completed:global(.simulation-shell) {
