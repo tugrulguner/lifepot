@@ -44,7 +44,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test
+      # Match CI's qualified concurrency without changing per-test deadlines.
+      - run: npm test -- --maxWorkers=2
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build:cloudflare

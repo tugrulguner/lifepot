@@ -70,7 +70,7 @@ test('a returned Jev proposal is previewed and only explicit acceptance applies 
  await waitFor(()=>expect(screen.getByRole('button',{name:'Accept this change'})).toBeEnabled());
  expect(onAccept).not.toHaveBeenCalled();
  expect(screen.getByRole('region',{name:'Review Jev proposal'})).toHaveTextContent('nutrient bloom');
- expect(screen.getByRole('heading',{name:'Review Jev proposal'})).toHaveFocus();
+ await waitFor(()=>expect(screen.getByRole('heading',{name:'Review Jev proposal'})).toHaveFocus());
  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({request:'More nutrients for a short time',generation:4,config:defaultConfig()});
  fireEvent.click(screen.getByRole('button',{name:'Accept this change'}));
  expect(onAccept).toHaveBeenCalledExactlyOnceWith(proposed);
