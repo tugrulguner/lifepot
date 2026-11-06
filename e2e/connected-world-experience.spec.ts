@@ -64,8 +64,23 @@ for (const width of [390, 1280]) test.describe.serial(`${width}px habitat-to-out
     await page.locator('summary').filter({ hasText: 'Edit world conditions' }).click();
     await page.getByLabel('Resource abundance', { exact: true }).selectOption('rich');
     await page.getByRole('button', { name: /Seed ecosystem/ }).click();
+    // Observe the same live follow-up in two bounded legs. The richer habitat
+    // takes longer on CI; retain the 30-second deadline rather than extending it.
+    await expect.poll(async () => Number.parseInt(await page.getByTestId('generation').innerText()), { timeout: 30000 }).toBeGreaterThanOrEqual(90);
+    await page.getByRole('button', { name: 'Pause', exact: true }).click();
+    const generation = Number.parseInt(await page.getByTestId('generation').innerText());
+    expect(generation).toBeGreaterThanOrEqual(90);
+    expect(generation).toBeLessThan(180);
+    await expect(board).toHaveAttribute('aria-label', new RegExp(`^Ecosystem generation ${generation};`));
+    expect(requests).toBe(0);
+  });
+  test('the same follow-up completes with every generation and its motivating observation', async () => {
+    await expect(page.getByRole('button', { name: 'Resume', exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: 'Resume', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Run status' })).toContainText('Observation complete', { timeout: 30000 });
+    await expect(page.getByTestId('generation')).toHaveText('180 / 180');
     await page.getByRole('button', { name: 'Investigate this outcome', exact: true }).click();
+    expect(await page.locator('.run-results__measurements tbody th').allTextContents()).toEqual(Array.from({ length: 181 }, (_, generation) => String(generation)));
     const comparison = page.getByRole('region', { name: 'Previous trial comparison', exact: true });
     await expect(comparison).toContainText('Same initial seed: 241.');
     await expect(comparison).toContainText('rich');
