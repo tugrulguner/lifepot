@@ -133,7 +133,12 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
     // Native autofocus scrolls asynchronously; assert after the browser has settled.
     await page.waitForTimeout(300);
     await page.locator(".setup-intro summary").click();
-    await expect(page.getByText(/three answers.*Jev.*validated.*deterministic/i)).toBeVisible();
+    const explanation = page.locator(".setup-intro p").first();
+    await expect(explanation).toBeVisible();
+    await expect(explanation).toContainText("In adaptive worlds, Jev responds to the ecology");
+    await expect(explanation).toContainText("not direct control of individual organisms");
+    await expect(explanation).toContainText("Replay reuses recorded decisions without asking Jev again");
+    await expect(explanation).toContainText("the fallback abstains from new intervention");
     await expect(page.getByText(/not a biological forecast/i)).toBeVisible();
     const about = page.getByRole("link", { name: /About LifePot/i });
     await expect(about).toHaveAttribute("href", "https://github.com/tugrulguner/lifepot/tree/main/docs");
