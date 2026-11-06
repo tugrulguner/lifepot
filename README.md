@@ -9,7 +9,7 @@
 <p align="center"><strong>Shape a world and watch life unfold. Organisms interact under local rules; in adaptive worlds, Jev responds to the ecology through bounded environmental changes and evolutionary policies.</strong></p>
 
 <p align="center">
-  An experimental artificial-life sandbox, not a biological forecast. Jev influences the conditions and supported policies of the world—not the actions or fate of individual organisms. Inspect what happened and replay its recorded decisions.
+  An experimental artificial-life sandbox, not a biological forecast. Jev shapes supported world conditions and policies without directly assigning individual actions or guaranteeing survival. Inspect what happened and replay its recorded decisions.
 </p>
 
 <p align="center">
