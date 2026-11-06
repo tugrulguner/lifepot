@@ -3,11 +3,14 @@ import { conditionLabel, conditionValue } from "@/game/condition-labels";
 import { speciesColor } from "@/game/species-colors";
 import type { EvolutionLedger } from "@/game/decisions";
 import type { SpeciesId } from "@/game/rules";
-type Trial = RunComparisonInput & { seed: number | null; policy: "adaptive" | "fixed" | "recorded"; decisions?: EvolutionLedger };
+import { describeEvidenceReference } from "@/game/run-journey";
+import type { RecordedMoment } from "@/game/recorded-moments";
+type Trial = RunComparisonInput & { seed: number | null; policy: "adaptive" | "fixed" | "recorded"; decisions?: EvolutionLedger; focus?: RecordedMoment };
 export function RunComparison({before,after,speciesNames={}}:{before:Trial;after:Trial;speciesNames?:Partial<Record<SpeciesId,string>>}){
  const displayName=(id:string)=>{const value=speciesNames[id as SpeciesId];return typeof value==="string"&&value.trim()?value.trim():undefined;};
  const identity=(id:string)=>displayName(id)?`${displayName(id)} (Species ${id})`:`Species ${id}`;
  const comparison=buildRunComparison(before,after);
+ const focusDescription=before.focus ? describeEvidenceReference(before.focus.reference,before.evidence,before.config,speciesNames)?.description ?? before.focus.description : undefined;
  const horizon=Math.max(1,...comparison.before.map(x=>x.generation),...comparison.after.map(x=>x.generation));
  const conditions=comparison.conditionChanges.length;
  const playerWindows=Boolean(before.evidence.playerChanges?.length||after.evidence.playerChanges?.length);
@@ -18,6 +21,7 @@ export function RunComparison({before,after,speciesNames={}}:{before:Trial;after
  const beforeJev=before.decisions?.filter(entry=>entry.source==="jev"),afterJev=after.decisions?.filter(entry=>entry.source==="jev");
  const decisions=!beforeJev||!afterJev?"Decision record provenance unavailable; no matching-decision claim is supported.":!beforeJev.length&&!afterJev.length?playerWindows?"No accepted automatic Jev decision records in either trial.":"No accepted Jev decision records in either trial.":`Accepted ${playerWindows?"automatic ":""}Jev decision records ${JSON.stringify(beforeJev)===JSON.stringify(afterJev)?"match":"differ"}: ${beforeJev.length} previous; ${afterJev.length} this trial. Records include timing, observations and model metadata; a record difference is not itself proof of a different executed policy or its effect.`;
  return <section className="run-comparison" aria-label="Previous trial comparison"><h3>Compared with your previous trial</h3>
+ {focusDescription && <section aria-label="Observation being investigated"><h4>Previous focus</h4><p>{focusDescription}</p><p>The outcomes below describe each whole trial; they do not establish what caused this observation.</p></section>}
  <p>Final population: {before.evidence.samples.at(-1)?.population} → {after.evidence.samples.at(-1)?.population}. Peak population: {before.evidence.peakPopulation} → {after.evidence.peakPopulation}.</p>
  <h4>{playerWindows?"Changed starting conditions":"Changed conditions"}</h4><ul>{comparison.conditionChanges.length?comparison.conditionChanges.map(change=><li key={change.path}>{conditionLabel(change.path)}: {conditionValue(change.path,change.before)} → {conditionValue(change.path,change.after)}</li>):<li>{playerWindows?"No recorded starting-condition changes.":"No recorded condition changes."}</li>}</ul>
  {playerWindows&&<section aria-label="Compared player-directed conditions"><h4>During observation</h4>{([["Previous trial",before],["This trial",after]] as const).map(([label,trial])=><div key={label}>{trial.evidence.playerChanges?.length?<ul>{trial.evidence.playerChanges.map(change=><li key={change.acceptedGeneration}>{label}: {change.pressure.replaceAll("_"," ")}; accepted at {change.acceptedGeneration}; {change.activatedAt===null?"activation not observed":`activated at ${change.activatedAt}`}; {change.restoredAt===null?"restoration not observed":`restored at ${change.restoredAt}`}.</li>)}</ul>:<p>{label}: no player changes recorded.</p>}</div>)}<p>Recorded temporary conditions are separate from starting-condition edits and automatic Jev decisions; they are not proof of cause.</p></section>}

@@ -1,7 +1,8 @@
 import {z} from 'zod';
 import {DEFAULT_GENERATIONS,ENGINE_VERSION,LEGACY_ENGINE_VERSION,type EngineVersion,createSimulation,snapshotSimulation,stepSimulation,type LifeConfig,type SimulationState} from './world';
 import type {EvolutionLedger} from './decisions';
-import {runWithDecisionLedger,runWithPlayerEvents,validateEvolutionLedger} from './runtime';
+import {detectDecisionTriggerForRun,runWithDecisionLedger,runWithPlayerEvents,stepWithPlayerEvents,validateEvolutionLedger} from './runtime';
+import {createRunEvidence,observeRun,type RunEvidence} from './run-evidence';
 import {playerEventSchema,validatePlayerEvents,type AcceptedPlayerEvent} from './player-proposal';
 import {canonicalAnswers,hashReplayPayload,hashSetupRequest,lifeConfigSchema,setupAnswersSchema,type SetupAnswers} from './setup';
 const base=z.object({version:z.literal(3),engineVersion:z.enum([LEGACY_ENGINE_VERSION,ENGINE_VERSION]),answers:setupAnswersSchema,config:lifeConfigSchema,seed:z.number().int().min(0).max(0xffffffff),requestHash:z.string().regex(/^setup_[a-z0-9]+$/),ledger:z.array(z.unknown()).max(8),contractHash:z.string().regex(/^replay_[a-z0-9]+$/)}).strict();
@@ -33,6 +34,31 @@ function dec(text:string){const b=text.replaceAll('-','+').replaceAll('_','/');c
 export function encodeReplay(input:ReplayData){return enc(JSON.stringify(validate(input).replay))}
 export function decodeReplay(payload:string){try{return validate(JSON.parse(dec(payload))).replay}catch{throw new Error('Invalid or unsupported LifePot replay')}}
 export async function playReplay(input:ReplayData,_interpreter?:(...args:never[])=>unknown){void _interpreter;const {replay,state}=validate(input);return {replay,state,snapshot:snapshotSimulation(state)}}
+export type ReplayInspection={state:SimulationState;evidence:RunEvidence};
+/** Reconstruct one inclusive generation from validated recorded inputs, with only observed run evidence. */
+export function inspectReplayAtGeneration(input:ReplayData,generation:number):ReplayInspection{
+ if(!Number.isInteger(generation)||generation<0||generation>DEFAULT_GENERATIONS)throw new Error('Generation is outside this recording');
+ // Full validation is intentional: future entries must also be canonical, reachable, and executed.
+ const {replay,state:terminal}=validate(input);
+ if(generation>terminal.generation)throw new Error('Generation is outside this recording');
+ let state=createSimulation({seed:replay.seed,config:replay.config,engineVersion:replay.engineVersion});
+ let evidence=createRunEvidence(state),decisionIndex=0,eventIndex=0;
+ const accepted:EvolutionLedger=[],acceptedEvents:AcceptedPlayerEvent[]=[];
+ while(state.generation<generation&&state.outcome==='running'){
+  const trigger=detectDecisionTriggerForRun(state,accepted,acceptedEvents);
+  if(trigger){
+   const decision=replay.ledger[decisionIndex];
+   if(!decision)throw new Error('Invalid replay decision prefix');
+   accepted.push(decision);decisionIndex++;
+  }
+  const events=replay.version===4?replay.playerEvents:[];
+  if(events[eventIndex]?.acceptedGeneration===state.generation){acceptedEvents.push(events[eventIndex]);eventIndex++;}
+  state=stepWithPlayerEvents(state,accepted,acceptedEvents);
+  evidence=observeRun(evidence,state,events);
+ }
+ if(state.generation!==generation)throw new Error('Generation is outside this recording');
+ return {state,evidence};
+}
 // Counterfactual only; supported v3 records retain the original explicit behavior.
 export function replayCounterfactual(input:ReplayData){
  if(input.version!==3)throw new Error('Player-directed recordings are not supported by this counterfactual');

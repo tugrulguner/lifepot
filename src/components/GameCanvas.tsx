@@ -45,7 +45,12 @@ import { WatchingOrganism } from "./WatchingOrganism";
 import { SpeciesFocus } from "./SpeciesFocus";
 import WorldPreview from "./WorldPreview";
 import gameplayStyles from "./GameCanvasGameplay.module.css";
+import historyStyles from "./ObservedHistory.module.css";
 import { RunResults } from "./RunResults";
+import { RecordedMomentViewer } from "./RecordedMomentViewer";
+import { ExperimentReview } from "./ExperimentReview";
+import type { RecordedMoment } from "@/game/recorded-moments";
+import { describeEvidenceReference } from "@/game/run-journey";
 import { MyWorldsPanel } from "./MyWorldsPanel";
 import { createFixedHabitat, extendFixedHabitat, getObservationLimit, advanceFixedHabitat, MAX_FIXED_HABITAT_GENERATIONS } from "@/game/fixed-habitat";
 import { HabitatLibrary } from "./HabitatLibrary";
@@ -284,7 +289,8 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   }
   c.globalAlpha=1;
 }
-function World({ state, selected, followed, focusedSpecies, onInspect, onCameraUpdate }: { state: SimulationState; selected: number | null; followed: number | null; focusedSpecies: SpeciesId | null; onInspect: (index: number) => void; onCameraUpdate: (message: string) => void }) {
+function World({ state, selected, followed, focusedSpecies, onInspect, onCameraUpdate, idPrefix = "world", showMeasurements = true }: { state: SimulationState; selected: number | null; followed: number | null; focusedSpecies: SpeciesId | null; onInspect: (index: number) => void; onCameraUpdate: (message: string) => void; idPrefix?: string; showMeasurements?: boolean }) {
+  const cameraHintId = `${idPrefix}-camera-hint`, cameraOptionsId = `${idPrefix}-camera-options`;
   const ref = useRef<HTMLCanvasElement>(null);
   const [camera, setCamera] = useState<Camera>(NEUTRAL_CAMERA);
   const [target, setTarget] = useState<FollowTarget | null>(null);
@@ -308,7 +314,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
   useEffect(() => onCameraUpdate(cameraUpdate), [cameraUpdate, onCameraUpdate]);
   // Only deliberate panel actions return to the watching view. Engine ticks,
   // target loss, resize and theme changes must preserve later user scrolling.
-  const returnToWorld = () => { window.scrollTo(0, 0); ref.current?.focus({ preventScroll: true }); };
+  const returnToWorld = () => { if (idPrefix === "world") window.scrollTo(0, 0); else ref.current?.closest("dialog")?.scrollTo(0, 0); ref.current?.focus({ preventScroll: true }); };
   const zoom = (delta: number) => { setReleasedNotice(""); if (lost) setTarget(null); setCamera(boundCamera({ ...view, zoom: view.zoom + delta })); };
   const pan = (x: number, y: number) => { setReleasedNotice(""); setTarget(null); setCamera(boundCamera({ ...view, x: view.x + x, y: view.y + y })); };
   const reset = () => { setReleasedNotice(""); setTarget(null); setCamera(NEUTRAL_CAMERA); setDragEnabled(false); };
@@ -421,19 +427,19 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
       aria-label={`Ecosystem generation ${state.generation}; ${state.stats.population} organisms`}
     />
     <section className="camera-tools camera-primary" aria-label="World camera">
-      <div className="watching-progress" role="group" aria-label="Watching progress"><span>Generation {state.generation} / {state.fixedHabitat ? getObservationLimit(state) : DEFAULT_GENERATIONS} · {state.stats.population} living</span><a href="#live-measurements">Measurements</a></div>
+      <div className="watching-progress" role="group" aria-label="Watching progress"><span>Generation {state.generation} / {state.fixedHabitat ? getObservationLimit(state) : DEFAULT_GENERATIONS} · {state.stats.population} living</span>{showMeasurements && <a href="#live-measurements">Measurements</a>}</div>
       <div className="camera-buttons">
         <button aria-label="Zoom out" disabled={view.zoom <= 1} onClick={() => { zoom(-.5); returnToWorld(); }}>−</button>
         <output aria-label="Camera zoom">{view.zoom}×</output>
         <button aria-label="Zoom in" disabled={view.zoom >= 3} onClick={() => { zoom(.5); returnToWorld(); }}>+</button>
         <button aria-label="Close-up view" aria-pressed={view.zoom === 2} title="2× close-up of the current view; simulation unchanged" onClick={() => { zoom(2 - view.zoom); returnToWorld(); }}>Close-up</button>
         <button aria-label="Full world" onClick={() => { reset(); returnToWorld(); }}>Full world</button>
-        <button aria-label="Follow pinned family with camera" aria-describedby="world-camera-hint" title="Follow the pinned family" disabled={!canFollowFamily} onClick={() => { if (followed !== null) { follow({ kind: "family", id: followed }); returnToWorld(); } }}>Follow family</button>
-        <button aria-label="More camera options" onClick={() => { const options = document.getElementById("world-camera-options"); options?.scrollIntoView({ block: "start" }); options?.focus({ preventScroll: true }); }}>Options</button>
+        <button aria-label="Follow pinned family with camera" aria-describedby={cameraHintId} title="Follow the pinned family" disabled={!canFollowFamily} onClick={() => { if (followed !== null) { follow({ kind: "family", id: followed }); returnToWorld(); } }}>Follow family</button>
+        <button aria-label="More camera options" onClick={() => { const options = document.getElementById(cameraOptionsId); options?.scrollIntoView({ block: "start" }); options?.focus({ preventScroll: true }); }}>Options</button>
       </div>
-      <p id="world-camera-hint" className="camera-hint">{canFollowFamily ? `Family #${followed} pinned. Follow family keeps it in view.` : followed !== null ? `Family #${followed} has no living members. Inspect another creature to pin a family.` : "Pause and inspect a creature, then pin its family to follow."}</p>
+      <p id={cameraHintId} className="camera-hint">{canFollowFamily ? `Family #${followed} pinned. Follow family keeps it in view.` : followed !== null ? `Family #${followed} has no living members. Inspect another creature to pin a family.` : "Pause and inspect a creature, then pin its family to follow."}</p>
     </section>
-    <section id="world-camera-options" className="camera-tools camera-options" aria-label="Camera options" tabIndex={-1}>
+    <section id={cameraOptionsId} className="camera-tools camera-options" aria-label="Camera options" tabIndex={-1}>
       <div className="camera-buttons">
         <button aria-pressed={dragEnabled} disabled={view.zoom <= 1} onClick={() => { setDragEnabled(!dragEnabled); returnToWorld(); }}>Drag to pan</button>
         <button aria-label="Follow organism with camera" disabled={selected === null || !state.guild[selected]} onClick={() => { if (selected !== null && state.guild[selected]) { follow({ kind: "organism", id: state.organismId[selected] }); returnToWorld(); } }}>Follow organism</button>
@@ -446,6 +452,10 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
   );
 }
 export function GameCanvas() {
+  const [recordedMoment, setRecordedMoment] = useState<{ moment: RecordedMoment; replay: ReplayData } | null>(null);
+  const [recordedCell, setRecordedCell] = useState<number | null>(null);
+  const [recordedFamily, setRecordedFamily] = useState<number | null>(null);
+  const [recordedCamera, setRecordedCamera] = useState("");
   const [habitatOptIn, setHabitatOptIn] = useState(false);
   const habitatIdentity = useRef<{id: string; createdAt: number; savedAt: number | null; parentId: string | null} | null>(null);
   const [habitatSaving, setHabitatSaving] = useState(false);
@@ -476,7 +486,7 @@ export function GameCanvas() {
   const [fixedBaselineReview, setFixedBaselineReview] = useState(false);
   const [evidence, setEvidence] = useState<RunEvidence | null>(null);
   const evidenceRef = useRef<RunEvidence | null>(null);
-  const [baseline, setBaseline] = useState<{ evidence: RunEvidence; config: LifeConfig; seed: number; decisions: EvolutionLedger; policy: "adaptive" | "fixed" | "recorded" } | null>(null);
+  const [baseline, setBaseline] = useState<{ evidence: RunEvidence; config: LifeConfig; seed: number; decisions: EvolutionLedger; policy: "adaptive" | "fixed" | "recorded"; focus?: RecordedMoment; question?: string } | null>(null);
   const [showResults, setShowResults] = useState(true);
   const [parentWorldId, setParentWorldId] = useState<string | null>(null);
   const [originWorldId, setOriginWorldId] = useState<string | null>(null);
@@ -568,6 +578,7 @@ export function GameCanvas() {
   const begin = useCallback(
     (a: SetupAnswers, c: LifeConfig, s: number, replay?: ReplayData, fixedHabitat = false) => {
       cancelExample();
+      setRecordedMoment(null); setRecordedCell(null); setRecordedFamily(null); setRecordedCamera("");
       const initial = fixedHabitat && !replay ? createFixedHabitat({ seed: s, config: c }) : createSimulation({ seed: s, config: c, engineVersion: replay?.engineVersion }),
         l = replay?.ledger ?? [];
       runId.current++;
@@ -908,6 +919,7 @@ export function GameCanvas() {
   }
   function openSavedHabitat(checkpoint: HabitatCheckpoint) {
     cancelExample();
+    setRecordedMoment(null); setRecordedCell(null); setRecordedFamily(null); setRecordedCamera("");
     setupJourney.current++;
     setInterpreting(false);
     runId.current++;
@@ -1161,6 +1173,7 @@ export function GameCanvas() {
           {proof?.fidelity?.mismatches?.length ? <section aria-label="Food-web contract conflicts"><p>The corrected proposal conflicts with the established food web:</p><ul>{proof.fidelity.mismatches.map((message, index) => <li key={index}>{message}</li>)}</ul></section> : null}
           {proof?.namedIntent && <p>Established organism intent: {proof.namedIntent.species.map(species => `${species.id} — ${species.name} (${species.role})`).join("; ")}.</p>}
           {parentWorldId && <p role="status">Review these saved conditions and choose your changes before seeding a new experiment. Recorded setup provenance is not a new Jev approval.</p>}
+          {baseline && <ExperimentReview reference={baseline} config={config} seed={seed} policy={policy} onChange={next => { setConfig(next); setManuallyEdited(true); }} />}
           <WorldPreview starter={proof?.starter ?? false} config={config} answers={answers} onChange={next => { setConfig(next); setManuallyEdited(true); }} />
           <div className="experiment-intent">
             <label>Your question or prediction (optional)<input aria-label="Your question or prediction (optional)" value={question} maxLength={240} placeholder="What would you like to investigate?" onChange={event => setQuestion(event.target.value)}/></label>
@@ -1343,9 +1356,23 @@ export function GameCanvas() {
       {simulation.fixedHabitat && <HabitatLibrary onOpen={openSavedHabitat} refreshKey={habitatRefreshKey} />}
       {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} followedLineage={followed} question={simulation.fixedHabitat ? "" : question} interventions={!simulation.fixedHabitat ? <PlayerChangeHistory events={playerEvents} generation={simulation.generation} outcome={simulation.outcome} evidence={evidence}/> : undefined} comparison={!simulation.fixedHabitat && baseline ? <RunComparison speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} before={baseline} after={{ evidence, config: initialConfig ?? config, seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }} /> : undefined} speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])}
         onInspect={() => { setShowResults(false); document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus(); }}
+        onInspectMoment={!simulation.fixedHabitat && completedReplay ? moment => {
+          setRecordedCell(null);
+          setRecordedFamily(moment.kind === "family" ? Number(moment.reference.split(":")[1]) : null);
+          setRecordedCamera("");
+          setRecordedMoment({ moment, replay: completedReplay });
+        } : undefined}
+        onEditMoment={!simulation.fixedHabitat ? moment => {
+          setRecordedMoment(null);
+          setParentWorldId(originWorldId ?? parentWorldId);
+          setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy, focus: moment, question });
+          setConfig(structuredClone(initialConfigRef.current ?? config));
+          setSeed(simulation.seed); setReplayMode(false); setManuallyEdited(false);
+          setStage("review"); window.scrollTo(0, 0);
+        } : undefined}
         onReplay={!simulation.fixedHabitat ? () => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); } : undefined}
         onEdit={!simulation.fixedHabitat ? () => { setParentWorldId(originWorldId ?? parentWorldId); setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); } : undefined}
-        onNew={() => { setLocalWorldName(""); setArchivedEvidence(null); setOriginWorldId(null); setParentWorldId(null); setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setStage("questions"); window.scrollTo(0, 0); }}>
+        onNew={() => { setRecordedMoment(null); setLocalWorldName(""); setArchivedEvidence(null); setOriginWorldId(null); setParentWorldId(null); setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setStage("questions"); window.scrollTo(0, 0); }}>
         {!simulation.fixedHabitat && <>
         <button type="button" onClick={() => {
           setParentWorldId(originWorldId ?? parentWorldId);
@@ -1354,7 +1381,13 @@ export function GameCanvas() {
           setSeed(simulation.seed); setPolicy("fixed"); setReplayMode(false);
           setFixedBaselineReview(true); setStage("review"); window.scrollTo(0, 0);
         }}>Review fixed-rule baseline</button>
-        <RunReflectionPanel key={`reflection-${simulation.seed}-${simulation.generation}`} evidence={evidence} config={initialConfig ?? config} onExperiment={experiment => {
+        <RunReflectionPanel key={`reflection-${simulation.seed}-${simulation.generation}`} evidence={evidence} config={initialConfig ?? config} speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} onInspectReference={completedReplay ? reference => {
+          const fact = describeEvidenceReference(reference, evidence, initialConfig ?? config, Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? []));
+          if (!fact || fact.generation === undefined) return;
+          const kind = reference.startsWith("family:") ? "family" : reference.startsWith("species:") || reference.startsWith("extinction:") ? "species" : "end";
+          setRecordedCell(null); setRecordedFamily(kind === "family" ? Number(reference.split(":")[1]) : null); setRecordedCamera("");
+          setRecordedMoment({ moment: { ...fact, id: reference, generation: fact.generation, kind }, replay: completedReplay });
+        } : undefined} onExperiment={experiment => {
           setParentWorldId(originWorldId ?? parentWorldId);
           const next = structuredClone(initialConfigRef.current ?? config);
           for (const change of experiment.changes) {
@@ -1373,6 +1406,11 @@ export function GameCanvas() {
         </>}
       </RunResults>}
       {complete && simulation.outcome !== "running" && showResults && evidence && completedReplay && <MyWorldsPanel current={{ replay: completedReplay, evidence, outcome: simulation.outcome, stopReason: simulation.stats.population === 0 ? "World empty" : "Observation horizon reached", parentId: parentWorldId, policy: replayMode ? recordedPolicy : policy, setup: proof ? { source: proof.source, model: proof.model, namedIntent: proof.namedIntent } : undefined }} onOpen={openSavedWorld} onReview={reviewSavedWorld} onSaved={record => { setOriginWorldId(record.id); setLocalWorldName(record.name); }} />}
+      {recordedMoment && <RecordedMomentViewer key={`${arrivalRevision}-${recordedMoment.moment.id}`} replay={recordedMoment.replay} generation={recordedMoment.moment.generation} label={recordedMoment.moment.description} onClose={() => setRecordedMoment(null)} renderScene={(frame, observations) => <div className={`${historyStyles.historicalScene} ph-no-capture`} data-ph-no-capture="true">
+        <World idPrefix="recorded-world" showMeasurements={false} state={frame} selected={recordedCell} followed={recordedFamily} focusedSpecies={null} onInspect={setRecordedCell} onCameraUpdate={setRecordedCamera} />
+        {recordedCamera && <p role="status">{recordedCamera}</p>}
+        <CreatureInspector historical state={frame} evidence={observations} index={recordedCell} followed={recordedFamily} onFollow={setRecordedFamily} onClear={() => setRecordedCell(null)} onPick={() => { const cell = frame.guild.findIndex(alive => alive !== 0); setRecordedCell(cell < 0 ? null : cell); }} />
+      </div>} />}
       {playerBinding&&<PlayerChangeDialog bindingKey={playerBinding.token} enabled={paused&&!deciding&&!replayMode} config={simulation.config} generation={simulation.generation} onClose={()=>setPlayerBinding(null)} onAccept={acceptPlayerChange}/>}
     </main>
   );

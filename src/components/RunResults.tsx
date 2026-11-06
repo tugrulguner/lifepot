@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
+import { useState } from "react";
+import { getRecordedMoments, type RecordedMoment } from "@/game/recorded-moments";
 import type { SimulationState } from "@/game/world";
 import { GRID_CELLS, getSimulationObservationLimit } from "@/game/world";
 import type { RunEvidence } from "@/game/run-evidence";
 import { speciesColor } from "@/game/species-colors";
 import type { SpeciesId } from "@/game/rules";
+import styles from "./ObservedHistory.module.css";
 
 export type RunResultsProps = {
   state: SimulationState;
@@ -18,13 +21,22 @@ export type RunResultsProps = {
   interventions?: ReactNode;
   speciesNames?: Partial<Record<SpeciesId, string>>;
   followedLineage?: number | null;
+  onInspectMoment?: (moment: RecordedMoment) => void;
+  onEditMoment?: (moment: RecordedMoment) => void;
 };
 
 const WIDTH = 640;
 const HEIGHT = 220;
 const PAD = 32;
 
-export function RunResults({ state, evidence, question, onEdit, onNew, onReplay, onInspect, children, comparison, interventions, speciesNames = {}, followedLineage = null }: RunResultsProps) {
+export function RunResults({ state, evidence, question, onEdit, onNew, onReplay, onInspect, children, comparison, interventions, speciesNames = {}, followedLineage = null, onInspectMoment, onEditMoment }: RunResultsProps) {
+  const [selection, setSelection] = useState<{ evidence: RunEvidence; id: string } | null>(null);
+  const selectedMomentId = selection?.evidence === evidence ? selection.id : "";
+  const moments = onInspectMoment || onEditMoment ? getRecordedMoments(evidence, state.config, speciesNames) : [];
+  const chosenMoment = moments.find(moment => moment.id === selectedMomentId)
+    ?? (followedLineage === null ? undefined : moments.find(moment => moment.reference === `family:${followedLineage}`))
+    ?? moments.find(moment => moment.kind === "species")
+    ?? moments.at(-1);
   const displayName = (id: string) => { const value = speciesNames[id as SpeciesId]; return typeof value === "string" && value.trim() ? value.trim() : undefined; };
   const named = (id: string) => displayName(id) ? `${displayName(id)} (Species ${id})` : `Species ${id}`;
   const namedSpecies = state.config.rules!.species.filter(rule => displayName(rule.id)).map(rule => named(rule.id)).join(", ");
@@ -51,7 +63,12 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
     </header>
     {followedLineage !== null && <p className="followed-lineage-outcome" role="status" aria-label="Followed lineage outcome">{followedLiving > 0 ? `Lineage #${followedLineage} · ${followedLiving} living ${followedLiving === 1 ? "member" : "members"} at final observation` : followedExtinction ? `Lineage #${followedLineage} · no living members at final observation; first observed extinct at generation ${followedExtinction.generation}` : `Lineage #${followedLineage} · no living members at final observation; extinction time unknown from retained observations`}</p>}
     {question.trim() && <p><strong>Your question:</strong> {question}</p>}
-    <nav aria-label="Run actions"><button type="button" onClick={onInspect}>Inspect final world</button>{onReplay && <button type="button" onClick={onReplay}>Replay this run</button>}{onEdit && <button type="button" onClick={onEdit}>Edit this world</button>}<button type="button" onClick={onNew}>New world</button></nav>
+    <nav aria-label="Run actions"><button type="button" onClick={onInspect}>Inspect final world</button>{onReplay && <button type="button" onClick={onReplay}>Replay this run</button>}{(onEdit || (onEditMoment && chosenMoment)) && <button type="button" onClick={() => chosenMoment && onEditMoment ? onEditMoment(chosenMoment) : onEdit?.()}>Edit this world</button>}<button type="button" onClick={onNew}>New world</button></nav>
+    {chosenMoment && <section className={`${styles.panel} observed-history__moment`} aria-label="Investigate a recorded moment">
+      <label>Recorded moment to investigate<select aria-label="Recorded moment to investigate" value={chosenMoment.id} onChange={event => setSelection({ evidence, id: event.target.value })}>{moments.map(moment => <option key={moment.id} value={moment.id}>{moment.description}</option>)}</select></label>
+      {onInspectMoment && <button type="button" onClick={() => onInspectMoment(chosenMoment)}>Inspect recorded moment</button>}
+      <p>Edit this world to review a new trial from the starting conditions. This is not a continuation from this moment.</p>
+    </section>}
     {last && <ul aria-label="Observed outcomes">
       <li>Peak population: {evidence.peakPopulation}</li>
       {configured.map(rule => <li key={rule.id}>{rule.role} {displayName(rule.id) ? <><strong>{displayName(rule.id)}</strong> · </> : ""}species {rule.id}: {last.species.find(item => item.speciesId === rule.id)?.population ?? 0} at final observation</li>)}
