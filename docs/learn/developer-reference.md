@@ -2,6 +2,8 @@
 
 This guide describes the implementation in this repository, not a supported external SDK. LifePot's supported interface is the web game. `/api/judge` is an internal application endpoint; its request shapes are implementation contracts, not a public service promise.
 
+Jev's adaptive decisions and reproducible execution are separate responsibilities. Runtime decisions can select supported environmental pressures and scheduled rule changes, plus species-level strategies, mutation targets and mutation tempos. `birth` in `src/game/world.ts` applies strategy and mutation directives to offspring; the model has no direct cell-edit or individual-action interface. A fresh adaptive run obtains new decisions at bounded triggers, while replay executes the recorded ledger without inference. Fixed-rule worlds do not request runtime decisions, and runtime fallback abstains from new intervention.
+
 ## Quick local verification
 
 With Node/npm installed, run the real project checks:

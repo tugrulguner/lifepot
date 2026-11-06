@@ -1,15 +1,15 @@
 # LifePot
 
 <p align="center">
-  <img src="lifepot.png?v=wordmark-accent-1" alt="LifePot — deterministic artificial life with replayable evolution" width="600">
+  <img src="lifepot.png?v=adaptive-life-1" alt="LifePot — artificial life in a changing world" width="600">
 </p>
 
 <p align="center">Part of <a href="https://modepot.io/">ModePot</a>. &nbsp; <a href="https://lifepot.modepot.io/">Project website</a> &nbsp; <a href="https://tugrul.modepot.io/">Created by Tugrul Guner</a></p>
 
-<p align="center"><strong>Three answers shape your world. Jev proposes ecology; LifePot turns validated rules into deterministic artificial life you can inspect and replay.</strong></p>
+<p align="center"><strong>Shape a world and watch life unfold. Organisms interact under local rules; in adaptive worlds, Jev responds to the ecology through bounded environmental changes and evolutionary policies.</strong></p>
 
 <p align="center">
-  An experimental game, not a biological forecast. Jev proposes ecology, and model decisions become validated ecosystem rules—not executable code; the same world can be inspected and replayed.
+  An experimental artificial-life sandbox, not a biological forecast. Jev shapes supported world conditions and policies without directly assigning individual actions or guaranteeing survival. Inspect what happened and replay its recorded decisions.
 </p>
 
 <p align="center">
@@ -40,12 +40,16 @@
 
 ## Why LifePot
 
-Most generative simulations either hard-code every world or let model prose quietly become behavior. LifePot separates the two:
+Most generative simulations either hard-code every world or let model prose quietly become behavior. In LifePot, model decisions become validated ecosystem rules—not executable code. LifePot separates the responsibilities:
 
 - **Jev proposes** typed species roles, relationships, environmental conditions, strategies, and bounded rule changes.
 - **LifePot validates** every proposal against finite schemas and ecosystem invariants.
 - **Deterministic code executes** movement, feeding, resources, hazards, reproduction, mutation, death, and rule activation.
 - **The ledger preserves** the decisions needed to inspect and replay a run without inference.
+
+Adaptive does not mean arbitrary: Jev can select supported environmental pressures, species strategies, mutation targets and mutation tempos. The engine applies species directives at birth; Jev does not edit an individual cell, steer its movement or guarantee its survival. Fixed-rule starters make no setup or runtime model requests unless you explicitly select adaptive policy. When runtime inference is unavailable or rejected, the fallback abstains from new intervention.
+
+Reproducibility is an engineering property, not the premise of the living world: the same configuration, seed, engine version and recorded decisions reproduce a run. A fresh adaptive run asks Jev for new decisions at supported ecological checkpoints; those decisions are not determined by the seed alone.
 
 A world is not an arbitrary script. It is a validated graph:
 

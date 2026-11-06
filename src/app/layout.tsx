@@ -4,7 +4,7 @@ import "./globals.css";
 
 const siteUrl = "https://lifepot.modepot.io";
 const title = "LifePot — Artificial life shaped by your world";
-const description = "Shape a deterministic artificial-life world. Jev proposes typed ecology, LifePot validates it, and replayable code runs the simulation.";
+const description = "Explore artificial life. Jev proposes bounded environmental changes and evolutionary policies in adaptive worlds, without directly controlling organisms.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -19,13 +19,13 @@ export const metadata: Metadata = {
     siteName: "LifePot",
     title,
     description,
-    images: [{ url: "/lifepot-lockup.png?v=wordmark-accent-1", width: 1200, height: 900, alt: "LifePot: bounded artificial life and replayable evolution" }],
+    images: [{ url: "/lifepot-lockup.png?v=adaptive-life-1", width: 1200, height: 900, alt: "LifePot: bounded artificial life and replayable evolution" }],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: [{ url: "/lifepot-lockup.png?v=wordmark-accent-1", width: 1200, height: 900, alt: "LifePot: bounded artificial life and replayable evolution" }],
+    images: [{ url: "/lifepot-lockup.png?v=adaptive-life-1", width: 1200, height: 900, alt: "LifePot: bounded artificial life and replayable evolution" }],
   },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
   icons: { icon: "/lifepot-mark.svg" },
