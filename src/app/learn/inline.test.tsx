@@ -27,8 +27,8 @@ describe("guide inline Markdown", () => {
       if (block.kind === "table") return <table key={index}><tbody>{(JSON.parse(block.text) as string[]).map((row, rowIndex) => <tr key={rowIndex}>{row.split("|").slice(1, -1).map((cell, cellIndex) => <td key={cellIndex}>{renderInline(cell)}</td>)}</tr>)}</tbody></table>;
       return <p key={index}>{renderInline(block.text)}</p>;
     })}</>);
-    expect(document.querySelectorAll("strong")).toHaveLength(29);
-    for (const label of ["Review this world", "Describe your own world", "Measurements", "Close-up", "Full world", "Follow family", "Options"]) {
+    expect(document.querySelectorAll("strong")).toHaveLength(40);
+    for (const label of ["Review this world", "Describe your own world", "Measurements", "Close-up", "Full world", "Follow family", "Options", "Pause and save habitat", "Open paused habitat", "1,800 generations", "Import habitat backup"]) {
       expect([...document.querySelectorAll("strong")].some(node => node.textContent === label)).toBe(true);
     }
     expect(document.querySelector("pre code")).toBeInTheDocument();

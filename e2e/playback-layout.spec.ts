@@ -9,7 +9,7 @@ for (const { width, gutter } of [{ width: 375, gutter: 0 }, { width: 390, gutter
     }
     await page.clock.install();
     await page.clock.pauseAt(new Date(Date.now() + 1000));
-    await page.locator('input[type="file"]').setInputFiles("e2e/fixtures/my-worlds/pond-notebook.json");
+    await page.getByLabel("Import a LifePot world export", { exact: true }).setInputFiles("e2e/fixtures/my-worlds/pond-notebook.json");
     await page.getByRole("button", { name: "Reopen and replay" }).click();
     if (gutter) {
       await expect.poll(() => page.evaluate(() => ({ innerWidth, contentWidth: document.querySelector(".simulation-shell")!.clientWidth }))).toEqual({ innerWidth: 390, contentWidth: 375 });

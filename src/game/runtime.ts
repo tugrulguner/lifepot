@@ -1,6 +1,7 @@
 import {sha256} from '@noble/hashes/sha2.js';
 import {DEFAULT_GENERATIONS,ENGINE_VERSION,stepSimulation,type SimulationState} from './world';
 import {applyRulePatch} from './rules';
+import {advanceFixedHabitat,assertFixedHabitat} from './fixed-habitat';
 import {validatePlayerEvents,validatePlayerProposal,type PlayerProposal,type AcceptedPlayerEvent} from './player-proposal';
 import {validateSpeciesDirectives,detectEvolutionTrigger,deterministicEvolutionDecision,observationHash,summarizeEcology,validateEvolutionDecision,type EcologySummary,type EvolutionDecision,type EvolutionLedger} from './decisions';
 import type {SetupAnswers} from './setup';
@@ -21,6 +22,7 @@ export function playerInterventionPending(state:SimulationState,events:readonly 
 function pendingAdaptivePatch(state:SimulationState,ledger:readonly EvolutionDecision[]){return Boolean(state.activeRuleChange)||ledger.some(d=>d.generation<=state.generation&&d.scheduledRuleChange&&!state.appliedRuleChanges.includes(d.generation))}
 export function playerProposalAvailability(input:Pick<AuthorityInput,'state'|'ledger'|'playerEvents'>):string|null{
  const {state,ledger,playerEvents=[]}=input;
+ if(state.fixedHabitat)return 'Fixed habitats do not support player proposals.';
  if(state.outcome!=='running'||state.generation>=DEFAULT_GENERATIONS)return 'This world has finished.';
  if(state.engineVersion!==ENGINE_VERSION)return 'Older engines are replay-only for player changes.';
  if(ledger.length+playerEvents.length>=8)return 'All eight shared decision slots are used.';
@@ -41,12 +43,14 @@ export function validateEvolutionLedger(input:unknown):EvolutionLedger{if(!Array
 export function activeDecisionForGeneration(ledger:readonly EvolutionDecision[],generation:number){let active:EvolutionDecision|undefined;for(const d of ledger){if(d.generation>generation)break;active=d;}return active;}
 function exactDecision(state:SimulationState,intent:SetupAnswers,trigger:ReturnType<typeof detectEvolutionTrigger>,candidate:EvolutionDecision){if(!trigger)throw new Error('No trigger');const summary=summarizeEcology(state,intent,trigger);if(candidate.generation!==state.generation||candidate.trigger!==trigger||candidate.observationHash!==observationHash(summary.observation)||candidate.ruleGraphVersion!==state.config.rules?.version)throw new Error('Decision does not match frozen observation or rule graph');validateSpeciesDirectives(candidate,state.config.rules!);return candidate;}
 export function detectDecisionTriggerForRun(state:SimulationState,ledger:readonly EvolutionDecision[],playerEvents:readonly AcceptedPlayerEvent[]=[]){
+ if(state.fixedHabitat!==undefined){assertFixedHabitat(state);if(ledger.length||playerEvents.length)throw new Error('Fixed habitats do not accept adaptive ledgers or player events');return null;}
  if(playerInterventionPending(state,playerEvents)||ledger.length+playerEvents.filter(e=>e.acceptedGeneration<=state.generation).length>=8)return null;
  return detectEvolutionTrigger(state,ledger);
 }
 // New player events enter as explicit inputs, never forged ecological decisions.
 // Old recordings call stepSimulation without an override and remain unchanged.
 export function stepWithPlayerEvents(state:SimulationState,ledger:readonly EvolutionDecision[],input:readonly AcceptedPlayerEvent[]):SimulationState{
+ if(state.fixedHabitat&&(input.length||ledger.length))throw new Error('Fixed habitats do not accept player events or adaptive ledgers');
  if(!input.length)return stepSimulation(state,activeDecisionForGeneration(ledger,state.generation),ledger);
  const events=validatePlayerEvents(input);
  if(state.engineVersion!==ENGINE_VERSION||events.length+ledger.length>8)throw new Error('Invalid player event engine or shared budget');
@@ -64,6 +68,7 @@ export function stepWithPlayerEvents(state:SimulationState,ledger:readonly Evolu
  return stepSimulation(prepared,activeDecisionForGeneration(ledger,state.generation),ledger,active?{pressure:active.proposal.pressure,power:intensity==='low'?.45:intensity==='medium'?.8:1.2}:undefined);
 }
 export function advanceUntilDecisionTrigger(state:SimulationState,ledger:readonly EvolutionDecision[],maxSteps:number,onStep?:(state:SimulationState)=>void,playerEvents:readonly AcceptedPlayerEvent[]=[]):SimulationState{
+ if(state.fixedHabitat!==undefined){assertFixedHabitat(state);if(ledger.length||playerEvents.length)throw new Error('Fixed habitats do not accept adaptive ledgers or player events');return advanceFixedHabitat(state,Math.max(0,Math.floor(maxSteps)),onStep);}
  let next=state;for(let i=0;i<Math.max(0,Math.floor(maxSteps))&&next.outcome==='running';i++){
   const past=ledger.filter(d=>d.generation<=next.generation),trigger=detectDecisionTriggerForRun(next,past,playerEvents);
   if(trigger&&!past.some(d=>d.generation===next.generation))break;
@@ -71,9 +76,10 @@ export function advanceUntilDecisionTrigger(state:SimulationState,ledger:readonl
  }return next;
 }
 export const advanceUntilDecisionEpoch=advanceUntilDecisionTrigger;
-export async function runFreshWithDecisions(initial:SimulationState,intent:SetupAnswers,decide:EvolutionDecider,generations=DEFAULT_GENERATIONS):Promise<{state:SimulationState;ledger:EvolutionLedger}>{let state=initial;const ledger:EvolutionLedger=[];const target=Math.min(DEFAULT_GENERATIONS,state.generation+Math.max(0,Math.floor(generations)));while(state.generation<target&&state.outcome==='running'){const trigger=detectEvolutionTrigger(state,ledger);if(trigger){const summary=summarizeEcology(state,intent,trigger);let decision:EvolutionDecision;try{decision=exactDecision(state,intent,trigger,validateEvolutionDecision(await decide(summary)));}catch{decision=deterministicEvolutionDecision(summary);}ledger.push(decision);}state=stepSimulation(state,activeDecisionForGeneration(ledger,state.generation),ledger);}return{state,ledger};}
-export function runWithDecisionLedger(initial:SimulationState,input:unknown,generations=DEFAULT_GENERATIONS,intent:SetupAnswers={world:'replay',threat:'replay',reward:'replay'}):SimulationState{const ledger=validateEvolutionLedger(input);let state=initial,index=0;const accepted:EvolutionLedger=[];const target=Math.min(DEFAULT_GENERATIONS,state.generation+Math.max(0,Math.floor(generations)));while(state.generation<target&&state.outcome==='running'){const trigger=detectEvolutionTrigger(state,accepted);if(trigger){const decision=ledger[index];if(!decision)throw new Error(`Replay is missing ${trigger} decision at generation ${state.generation}`);exactDecision(state,intent,trigger,decision);accepted.push(decision);index++;}else if(ledger[index]?.generation===state.generation)throw new Error('Replay decision is reordered or has no canonical trigger');state=stepSimulation(state,activeDecisionForGeneration(accepted,state.generation),accepted);}if(index!==ledger.length)throw new Error('Replay contains unreachable or reordered decisions');return state;}
+export async function runFreshWithDecisions(initial:SimulationState,intent:SetupAnswers,decide:EvolutionDecider,generations=DEFAULT_GENERATIONS):Promise<{state:SimulationState;ledger:EvolutionLedger}>{if(initial.fixedHabitat)return{state:advanceFixedHabitat(initial,Math.max(0,Math.floor(generations))),ledger:[]};let state=initial;const ledger:EvolutionLedger=[];const target=Math.min(DEFAULT_GENERATIONS,state.generation+Math.max(0,Math.floor(generations)));while(state.generation<target&&state.outcome==='running'){const trigger=detectEvolutionTrigger(state,ledger);if(trigger){const summary=summarizeEcology(state,intent,trigger);let decision:EvolutionDecision;try{decision=exactDecision(state,intent,trigger,validateEvolutionDecision(await decide(summary)));}catch{decision=deterministicEvolutionDecision(summary);}ledger.push(decision);}state=stepSimulation(state,activeDecisionForGeneration(ledger,state.generation),ledger);}return{state,ledger};}
+export function runWithDecisionLedger(initial:SimulationState,input:unknown,generations=DEFAULT_GENERATIONS,intent:SetupAnswers={world:'replay',threat:'replay',reward:'replay'}):SimulationState{if(initial.fixedHabitat){if(Array.isArray(input)&&input.length)throw new Error('Fixed habitats do not accept adaptive replay ledgers');const ledger=validateEvolutionLedger(input);if(ledger.length)throw new Error('Fixed habitats do not accept adaptive replay ledgers');return advanceFixedHabitat(initial,Math.max(0,Math.floor(generations)));}const ledger=validateEvolutionLedger(input);let state=initial,index=0;const accepted:EvolutionLedger=[];const target=Math.min(DEFAULT_GENERATIONS,state.generation+Math.max(0,Math.floor(generations)));while(state.generation<target&&state.outcome==='running'){const trigger=detectEvolutionTrigger(state,accepted);if(trigger){const decision=ledger[index];if(!decision)throw new Error(`Replay is missing ${trigger} decision at generation ${state.generation}`);exactDecision(state,intent,trigger,decision);accepted.push(decision);index++;}else if(ledger[index]?.generation===state.generation)throw new Error('Replay decision is reordered or has no canonical trigger');state=stepSimulation(state,activeDecisionForGeneration(accepted,state.generation),accepted);}if(index!==ledger.length)throw new Error('Replay contains unreachable or reordered decisions');return state;}
 export function runWithPlayerEvents(initial:SimulationState,input:unknown,eventInput:unknown,intent:SetupAnswers):SimulationState{
+ if(initial.fixedHabitat)throw new Error('Fixed habitats do not accept player-event replay');
  const ledger=validateEvolutionLedger(input),events=validatePlayerEvents(eventInput);if(!events.length||ledger.length+events.length>8)throw new Error('Invalid player replay budget');
  let state=initial,index=0,eventIndex=0;const accepted:EvolutionLedger=[],acceptedEvents:AcceptedPlayerEvent[]=[];
  while(state.outcome==='running'&&state.generation<DEFAULT_GENERATIONS){

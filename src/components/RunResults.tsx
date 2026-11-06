@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { SimulationState } from "@/game/world";
-import { GRID_CELLS } from "@/game/world";
+import { GRID_CELLS, getSimulationObservationLimit } from "@/game/world";
 import type { RunEvidence } from "@/game/run-evidence";
 import { speciesColor } from "@/game/species-colors";
 import type { SpeciesId } from "@/game/rules";
@@ -9,9 +9,9 @@ export type RunResultsProps = {
   state: SimulationState;
   evidence: RunEvidence;
   question: string;
-  onEdit: () => void;
+  onEdit?: () => void;
   onNew: () => void;
-  onReplay: () => void;
+  onReplay?: () => void;
   onInspect: () => void;
   children?: ReactNode;
   comparison?: ReactNode;
@@ -35,7 +35,8 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
   const followedLiving = followedLineage === null ? 0 : state.guild.reduce((count, alive, cell) => count + (alive && state.lineage[cell] === followedLineage ? 1 : 0), 0);
   const followedExtinction = followedLineage === null ? undefined : evidence.lineageExtinction.find(item => item.lineage === followedLineage);
   const empty = state.stats.population === 0;
-  const limitReached = state.generation >= 180;
+  const observationLimit = getSimulationObservationLimit(state);
+  const limitReached = state.generation >= observationLimit;
   const max = Math.max(1, ...history.map(sample => Math.max(sample.population, sample.resources / GRID_CELLS)));
   const point = (value: number, index: number) => `${PAD + (history.length < 2 ? 0 : index / (history.length - 1) * (WIDTH - PAD * 2))},${HEIGHT - PAD - value / max * (HEIGHT - PAD * 2)}`;
   const populationPoints = history.map((item, index) => point(item.population, index)).join(" ");
@@ -45,12 +46,12 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
   return <section className="run-results" aria-label="Run results" id="run-results" tabIndex={-1}>
     <header><h2 id="run-results-title">{empty ? "No organisms remain" : "Observation complete"}</h2>
       <p>{empty ? (foundedSpecies.size ? `No organisms remain at generation ${state.generation}.` : "No organisms remain because no species were seeded in this world.") : `Observed through generation ${last?.generation ?? state.generation}: ${last?.population ?? 0} organisms remain.`}</p>
-      <p>{empty ? "No organisms remain" : limitReached ? "Reached the 180-generation observation limit" : "Observation stopped before the 180-generation limit."}</p>
+      <p>{empty ? "No organisms remain" : limitReached ? `Reached the ${observationLimit}-generation observation limit` : `Observation stopped before the ${observationLimit}-generation limit.`}</p>
       <p>This is a toy model, not biological proof; it is an observation, not a universal survival score.</p>
     </header>
     {followedLineage !== null && <p className="followed-lineage-outcome" role="status" aria-label="Followed lineage outcome">{followedLiving > 0 ? `Lineage #${followedLineage} · ${followedLiving} living ${followedLiving === 1 ? "member" : "members"} at final observation` : followedExtinction ? `Lineage #${followedLineage} · no living members at final observation; first observed extinct at generation ${followedExtinction.generation}` : `Lineage #${followedLineage} · no living members at final observation; extinction time unknown from retained observations`}</p>}
     {question.trim() && <p><strong>Your question:</strong> {question}</p>}
-    <nav aria-label="Run actions"><button type="button" onClick={onInspect}>Inspect final world</button><button type="button" onClick={onReplay}>Replay this run</button><button type="button" onClick={onEdit}>Edit this world</button><button type="button" onClick={onNew}>New world</button></nav>
+    <nav aria-label="Run actions"><button type="button" onClick={onInspect}>Inspect final world</button>{onReplay && <button type="button" onClick={onReplay}>Replay this run</button>}{onEdit && <button type="button" onClick={onEdit}>Edit this world</button>}<button type="button" onClick={onNew}>New world</button></nav>
     {last && <ul aria-label="Observed outcomes">
       <li>Peak population: {evidence.peakPopulation}</li>
       {configured.map(rule => <li key={rule.id}>{rule.role} {displayName(rule.id) ? <><strong>{displayName(rule.id)}</strong> · </> : ""}species {rule.id}: {last.species.find(item => item.speciesId === rule.id)?.population ?? 0} at final observation</li>)}

@@ -62,9 +62,19 @@ Camera panel actions return you to the board once and focus it for keyboard cont
 
 Camera changes do not alter rules, organisms, random state or replay outcomes. Pause and theme changes preserve the view; restarting or replaying starts at full-world view. Exported result images continue to show the full world rather than the camera crop.
 
+## Keep a fixed habitat on this device
+
+For a new world, choose **Fixed world rules**, then explicitly select **Enable same-world save and continuation** before seeding. This creates a separate fixed habitat with a 180-generation observation window. Ordinary trials and previously completed or adaptive worlds are not converted.
+
+**Pause and save habitat** pauses the world and saves its exact current state on this device. Give it a recognizable habitat name. From **Saved habitats**, **Open paused habitat** restores the saved generation, organisms, random state, full recorded observations and followed family without reseeding. Nothing evolves while the page is closed, and reopening never resumes playback automatically. Use **Resume** or **Step** deliberately. Save again to retain subsequent changes; unsaved progress is not recovered after closing or reloading.
+
+In **Keep this habitat**, explicitly extend the observation window by 180 generations at a time, up to the hard cap of **1,800 generations**. Extension preserves the world and leaves it paused; save the extended window if you want to keep it. Extinction remains terminal: extending observation cannot restore lost organisms. This mode makes no runtime model calls, supplies no new inference budget, and does not offer the ordinary trial's replay, model reflection or edited-trial actions.
+
+Browser storage can be cleared or evicted. **Export habitat** downloads the last saved checkpoint as a portable backup; save current progress first. **Import habitat backup** validates and adds a backup without opening or advancing it. A duplicate identity is rejected rather than overwriting a newer local save. Conflicting saves from another tab, unavailable storage and quota failures leave the existing save intact; the current world remains paused. The checksum detects accidental corruption, not authenticated history. Backups include retained species names and setup provenance, but omit private questions and setup prose. No account, server upload or cross-device sync is involved.
+
 ## Read outcomes without overclaiming
 
-A simulation can finish as `extinct`, `surviving`, or `thriving`. Extinction means the simulated population reached zero; `thriving` is an engine-defined end state, not a biological judgment. Runs stop at generation 180 at the latest. The world may end earlier if it becomes extinct. If you pinned a founder family, the ending retains its actual living-member count or recorded extinction generation; an unrecorded extinction time stays unknown.
+A simulation can finish as `extinct`, `surviving`, or `thriving`. Extinction means the simulated population reached zero; `thriving` is an engine-defined end state, not a biological judgment. Ordinary trials stop at generation 180 at the latest; opted-in fixed habitats stop at their explicitly chosen observation limit. The world may end earlier if it becomes extinct. If you pinned a founder family, the ending retains its actual living-member count or recorded extinction generation; an unrecorded extinction time stays unknown.
 
 Resources regenerate and can be depleted; organisms feed, move, reproduce, mutate, age, and die according to engine rules. Fitness weights influence bounded mechanics; they do not promise that the named priority wins. Mutation can be neutral or harmful. The engine does not rescue a population to make a better story.
 
