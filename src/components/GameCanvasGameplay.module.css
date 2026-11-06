@@ -1,3 +1,21 @@
+/* Explicit persistence controls own a row; never cover the habitat. */
+.habitatContinuity {
+  grid-column: 1 / -1;
+  padding: 1rem;
+  border: 1px solid var(--mp-border);
+  border-radius: .5rem;
+  background: var(--mp-surface);
+  color: var(--mp-ink);
+  overflow-wrap: anywhere;
+}
+.habitatContinuity input, .habitatContinuity button, .habitatChoice {
+  min-height: 44px;
+}
+.habitatContinuity input { display: block; width: min(100%, 32rem); padding: .5rem; }
+.habitatContinuity button { margin: .25rem; padding: .5rem 1rem; }
+.habitatChoice { display: flex; align-items: center; gap: .75rem; }
+.habitatChoice input { width: 1.25rem; height: 1.25rem; }
+
 /* Clip the decorative horizontal overflow without creating a sticky scroll container. */
 main.starterReview { overflow: clip; }
 
