@@ -1,23 +1,17 @@
 import { test, expect, type Page } from '@playwright/test';
 
 async function finishTrial(page: Page) {
-  const step = page.getByRole('button', { name: 'Step one generation', exact: true });
-  const control = await step.elementHandle();
-  if (!control) throw new Error('Missing actual step control');
-  for (let ticks = 0; ticks < 180;) {
-    const action = await control.evaluate(button => {
-      if (!button.isConnected) return 'complete';
-      if (!(button instanceof HTMLButtonElement)) throw new Error('Invalid step control');
-      if (button.disabled) return 'waiting';
-      button.click();
-      return 'stepped';
-    });
-    if (action === 'complete') break;
-    if (action === 'waiting') await expect(step).toBeEnabled();
-    else ticks++;
-  }
-  await expect(page.getByRole('region', { name: 'Run results', exact: true })).toBeVisible();
+  // Functional acceptance uses the real Fast control, not injected state or a
+  // test clock. Ordinary Slow playback is qualified separately. Batching the
+  // engine's normal ticks avoids a browser round trip and redraw for every tick.
+  await expect(page.getByRole('button', { name: 'Step one generation', exact: true })).toBeEnabled();
+  await page.getByLabel('Playback speed', { exact: true }).selectOption('fast');
+  await page.getByRole('button', { name: 'Resume', exact: true }).click();
+  await page.getByRole('region', { name: 'Run results', exact: true }).waitFor();
   await expect(page.getByTestId('generation')).toHaveText('180 / 180');
+  // Fast playback must still retain every intermediate engine generation.
+  expect(await page.locator('.run-results__measurements tbody th').allTextContents())
+    .toEqual(Array.from({ length: 181 }, (_, generation) => String(generation)));
 }
 
 for (const width of [390, 1280]) test.describe.serial(`observed-history journey at ${width}px`, () => {
@@ -31,7 +25,7 @@ for (const width of [390, 1280]) test.describe.serial(`observed-history journey 
   });
   test.afterAll(async () => { await page?.close(); });
 
-  test('inspect a real recorded scene and return to the unchanged completed world', async ({}, testInfo) => {
+  test('follow a founder through a real completed baseline', async () => {
     await page.goto('/play');
     await page.getByRole('button', { name: 'Explore deterministic preset', exact: true }).click();
     await page.getByLabel('World policy', { exact: true }).selectOption('fixed');
@@ -43,6 +37,13 @@ for (const width of [390, 1280]) test.describe.serial(`observed-history journey 
     await inspector.getByRole('button', { name: 'Inspect a living organism', exact: true }).click();
     await inspector.getByRole('button', { name: /^Follow founder lineage #/ }).click();
     await finishTrial(page);
+    await expect(page.getByRole('status', { name: 'Followed lineage outcome' })).toBeVisible();
+    expect(errors).toEqual([]); expect(inference).toEqual([]);
+  });
+
+  // Keep the actual completed world across serial legs; reconstruction and
+  // native dialog behavior have their own unchanged 30-second test budget.
+  test('inspect a real recorded scene and return to the unchanged completed world', async ({}, testInfo) => {
     const outcomes = page.getByRole('list', { name: 'Observed outcomes', exact: true });
     const before = await outcomes.innerText();
     const familyOutcome = await page.getByRole('status', { name: 'Followed lineage outcome' }).innerText();
