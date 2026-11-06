@@ -80,6 +80,10 @@ Resources regenerate and can be depleted; organisms feed, move, reproduce, mutat
 
 ## Replay and its limits
 
+At an ordinary trial's ending, choose a Recorded moment to investigate: a retained family loss, species extinction or final population observation. Inspect recorded moment reconstructs that generation from the validated recording without model calls. The labeled historical scene uses the real habitat renderer; its organism inspection, family pin and camera are separate from the completed world. Close or press Escape to return to the same ending. This is inspection, not travel back in time or continuation from an earlier generation. Fixed-habitat checkpoints retain their separate save/extend controls and do not offer this replay-based action.
+
+With a moment selected, Edit this world carries its factual observation into Review your next experiment. Choose a supported condition and review the actual differences before seeding. A follow-up begins from initial conditions with the same seed, not from the historical frame; it does not rescue the old organisms. Its comparison retains the motivating observation alongside whole-trial outcomes. A third trial uses the immediately preceding trial as its reference. Population changes and temporal sequence alone do not establish cause.
+
 A replay carries the engine version, canonical answers, validated config, unsigned 32-bit seed, setup hash, ordered decision ledger, and contract hash. Replay validation re-runs the deterministic engine against that ledger. It does not call the interpretation model. Modified, incomplete, reordered, unreachable, unsupported, or tampered replay data is rejected rather than “best effort” played.
 
 Replay compatibility is versioned: a replay recorded for another engine version may be unsupported. A valid replay establishes reproducibility under its recorded engine contract; it does not prove the model's ecological explanation is true.

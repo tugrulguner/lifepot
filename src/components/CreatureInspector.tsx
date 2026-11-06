@@ -5,12 +5,12 @@ import OrganismArtwork from "./OrganismArtwork";
 
 import type { RunEvidence } from "@/game/run-evidence";
 
-type Props = { evidence?: RunEvidence | null; state: SimulationState; index: number | null; followed: number | null; onFollow: (lineage: number | null) => void; onClear: () => void; onPick: () => void };
-export function CreatureInspector({ state, evidence, index, followed, onFollow, onClear, onPick }: Props) {
+type Props = { historical?: boolean; evidence?: RunEvidence | null; state: SimulationState; index: number | null; followed: number | null; onFollow: (lineage: number | null) => void; onClear: () => void; onPick: () => void };
+export function CreatureInspector({ state, evidence, index, followed, onFollow, onClear, onPick, historical = false }: Props) {
   const cell = index === null ? null : inspectCell(state, index);
   const living = lineageCells(state, followed);
   const family = cell?.occupied ? lineageCells(state, cell.lineage) : [];
-  return <section id="creature-inspector" className="creature-inspector" aria-label="Creature inspector">
+  return <section id={historical ? "recorded-creature-inspector" : "creature-inspector"} className="creature-inspector" aria-label={historical ? "Historical creature inspector" : "Creature inspector"}>
     <header><div><p className="eyebrow">FIELD NOTES</p><h2>Meet an organism</h2></div><button onClick={onPick}>Inspect a living organism</button></header>
     {evidence && <section className="extinction-milestones" aria-label="Observed extinction milestones" aria-live="polite" aria-relevant="additions">
       {(evidence.firstExtinction.length > 0 || evidence.lineageExtinction.length > 0) && <><h3>Observed extinction milestones</h3>
@@ -19,7 +19,7 @@ export function CreatureInspector({ state, evidence, index, followed, onFollow, 
         {evidence.lineageExtinction.map(item => <li key={`lineage-${item.lineage}`}>Founder lineage #{item.lineage} first observed extinct at generation {item.generation}</li>)}
       </ul></>}
     </section>}
-    {!cell ? <p>Tap a creature to pause and inspect it. Pin its founder lineage, then resume to watch its family spread or disappear. Resuming clears the cell inspection; your lineage pin stays.</p> : <>
+    {!cell ? <p>{historical ? "Inspect a creature in this recorded frame. A family pin here highlights only this historical scene; it does not change your current world." : "Tap a creature to pause and inspect it. Pin its founder lineage, then resume to watch its family spread or disappear. Resuming clears the cell inspection; your lineage pin stays."}</p> : <>
       {cell.occupied && <div className="organism-portrait">
         <svg viewBox="0 0 100 100" role="img" aria-label={`${cell.species?.role ?? "unknown"} role symbol`}>
           <circle cx="50" cy="50" r="44" fill="none" stroke={followed === cell.lineage ? "#ffd36a" : "#496b57"} strokeDasharray={followed === cell.lineage ? "5 4" : undefined}/>

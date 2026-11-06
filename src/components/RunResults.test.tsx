@@ -107,3 +107,35 @@ it('keeps player-change observations before raw trajectories, alongside the endi
   const observations = screen.getByRole('region', { name: 'Intervention observations' });
   expect(observations.compareDocumentPosition(screen.getByRole('img', { name: 'Whole-run population history' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
+
+it('offers recorded observations only when an inspect or review callback is supplied', () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  const evidence = createRunEvidence(state);
+  const { rerender } = render(<RunResults state={state} evidence={evidence} question="" onNew={vi.fn()} onInspect={vi.fn()} />);
+  expect(screen.queryByLabelText('Recorded moment to investigate')).not.toBeInTheDocument();
+  rerender(<RunResults state={state} evidence={evidence} question="" onNew={vi.fn()} onInspect={vi.fn()} onInspectMoment={vi.fn()} />);
+  expect(screen.getByLabelText('Recorded moment to investigate')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Inspect recorded moment' })).toBeInTheDocument();
+});
+
+it('routes the legacy Edit this world action through the selected recorded moment', () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  const evidence = { ...createRunEvidence(state), lineageExtinction: [{ lineage: 24, generation: 0 }] };
+  const onEditMoment = vi.fn();
+  render(<RunResults state={state} evidence={evidence} followedLineage={24} question="" onNew={vi.fn()} onInspect={vi.fn()} onEditMoment={onEditMoment} />);
+  const picker = screen.getByLabelText('Recorded moment to investigate');
+  expect(picker).toHaveValue('family:24');
+  fireEvent.change(picker, { target: { value: 'population' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit this world' }));
+  expect(onEditMoment).toHaveBeenCalledWith(expect.objectContaining({ id: 'population', reference: 'population' }));
+});
+
+it('resets the chosen recorded moment when a different trial is supplied', () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  const evidence = { ...createRunEvidence(state), lineageExtinction: [{ lineage: 24, generation: 0 }] };
+  const { rerender } = render(<RunResults state={state} evidence={evidence} followedLineage={24} question="" onNew={vi.fn()} onInspect={vi.fn()} onInspectMoment={vi.fn()} />);
+  const picker = screen.getByLabelText('Recorded moment to investigate');
+  fireEvent.change(picker, { target: { value: 'population' } });
+  rerender(<RunResults state={state} evidence={{ ...evidence, peakPopulation: evidence.peakPopulation + 1 }} followedLineage={24} question="" onNew={vi.fn()} onInspect={vi.fn()} onInspectMoment={vi.fn()} />);
+  expect(screen.getByLabelText('Recorded moment to investigate')).toHaveValue('family:24');
+});

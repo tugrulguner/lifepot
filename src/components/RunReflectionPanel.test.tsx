@@ -36,3 +36,14 @@ it("reports a failed reflection without manufacturing an explanation", async()=>
  await waitFor(()=>expect(screen.getByRole("status")).toHaveTextContent("Jev reflection unavailable"));
  expect(screen.queryByRole("button",{name:"Review suggested experiment"})).not.toBeInTheDocument();
 });
+
+it("renders evidence references as readable facts rather than raw identifiers", async () => {
+ const state=createSimulation({seed:7,config:defaultConfig()});
+ const result={observations:[{text:"Observed population",evidenceRefs:["population"]}],nextExperiment:{title:"Try scarce resources",rationale:"Compare trials",evidenceRefs:["population"],changes:[{path:"environment.abundance",value:"scarce"}]},caveat:"Exploratory only"};
+ vi.stubGlobal("fetch",vi.fn().mockResolvedValue({ok:true,json:async()=>result}));
+ render(<RunReflectionPanel evidence={createRunEvidence(state)} config={state.config} onExperiment={vi.fn()}/>);
+ fireEvent.click(screen.getByRole("button",{name:"Ask Jev about this run"}));
+ await screen.findByText("Observed population");
+ expect(screen.getAllByText(/Population: 26 at generation 0; 26 at generation 0/)).toHaveLength(2);
+ expect(document.querySelectorAll(".evidence-references code")).toHaveLength(0);
+});
