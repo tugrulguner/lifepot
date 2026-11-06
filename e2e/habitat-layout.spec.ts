@@ -24,6 +24,29 @@ for (const viewport of [{ width: 1280, height: 633 }, { width: 390, height: 850 
     const continuity = page.getByRole("region", { name: "Habitat continuity" });
     const color = await continuity.evaluate(node => getComputedStyle(node).color);
     await expect(shelf).toHaveCSS("color", color);
+    const extension = page.getByRole("button", { name: /^Extend observation/ });
+    await expect(extension).toBeEnabled();
+    const contrast = await extension.evaluate(node => {
+      const style = getComputedStyle(node);
+      const canvas = document.createElement("canvas"); canvas.width = canvas.height = 1;
+      const context = canvas.getContext("2d")!;
+      const luminance = (color: string) => {
+        context.clearRect(0, 0, 1, 1); context.fillStyle = color; context.fillRect(0, 0, 1, 1);
+        const pixel = context.getImageData(0, 0, 1, 1).data;
+        if (pixel[3] !== 255) throw new Error(`Expected opaque control color: ${color}`);
+        const linear = Array.from(pixel.slice(0, 3), channel => { const value = channel / 255; return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4; });
+        return .2126 * linear[0] + .7152 * linear[1] + .0722 * linear[2];
+      };
+      const foreground = luminance(style.color), background = luminance(style.backgroundColor);
+      return { foreground: style.color, background: style.backgroundColor, ratio: (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05) };
+    });
+    await extension.screenshot({ path: testInfo.outputPath(`extension-${theme}.png`) });
+    const expectedBackground = await continuity.evaluate(node => {
+      const probe = document.createElement("span"); probe.style.backgroundColor = "var(--mp-raised)"; node.append(probe);
+      const color = getComputedStyle(probe).backgroundColor; probe.remove(); return color;
+    });
+    await expect(extension).toHaveCSS("background-color", expectedBackground);
+    expect(contrast.ratio, JSON.stringify(contrast)).toBeGreaterThanOrEqual(4.5);
     for (const button of [page.getByRole("button", { name: "Pause and save habitat" }), page.getByRole("button", { name: /^Extend observation/ }), shelf.getByRole("button", { name: "Import habitat backup" })]) {
       await button.scrollIntoViewIfNeeded();
       const bounds = await button.boundingBox();
