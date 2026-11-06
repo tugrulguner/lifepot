@@ -22,8 +22,10 @@ test("uses HTML routes as canonical and keeps Markdown as an alternate represent
   expect((await docsMetadata({ params: Promise.resolve({ slug: "readme" }) })).alternates).toEqual({ canonical: "/project-docs/readme", types: { "text/markdown": "/project-docs/readme/markdown" } });
 });
 test("describes safe Jev integration and artificial-life limits", () => {
-  expect(metadata.description).toContain("Jev proposes typed ecology");
-  expect(metadata.description).toContain("LifePot validates it");
+  expect(metadata.description).toContain("Jev proposes bounded environmental changes");
+  expect(metadata.description).toContain("evolutionary policies in adaptive worlds");
+  expect(metadata.description).toContain("without directly controlling organisms");
+  expect(metadata.description).not.toMatch(/deterministic artificial[- ]life/i);
 });
 
 test("states the supported interface boundary accurately for agents", () => {

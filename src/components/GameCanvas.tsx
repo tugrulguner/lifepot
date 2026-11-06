@@ -1115,10 +1115,12 @@ export function GameCanvas() {
             <details className="setup-intro">
               <summary>How LifePot works · guides & credits</summary>
               <p>
-                Three answers shape your world. Jev proposes ecology, LifePot turns
-                validated rules into a deterministic artificial-life simulation
-                you can inspect and replay. A deterministic fallback is available
-                when Jev is not.
+                Three answers shape your world. In adaptive worlds, Jev responds
+                to the ecology through supported environmental changes and
+                evolutionary policies, not direct control of individual organisms.
+                Replay reuses recorded decisions without asking Jev again.
+                If runtime inference is unavailable, the fallback abstains
+                from new intervention.
               </p>
               <p className="setup-boundary">
                 An experimental game, not a biological forecast.{' '}

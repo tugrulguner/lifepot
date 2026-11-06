@@ -1,8 +1,8 @@
 # LifePot
 
-> LifePot is an open-source artificial-life game and educational experiment. Describe a world and fitness priorities, then explore a cellular ecosystem in a deterministic 50×50 simulation.
+> LifePot is an open-source artificial-life game and educational experiment. Shape a world, observe its organisms, and explore how the ecology changes.
 
-Jev proposes typed ecology choices; LifePot validates them; deterministic code executes them. Replaying a challenge uses its recorded choices and makes no model call.
+In adaptive worlds, Jev responds to ecological observations through supported environmental changes, species strategies and mutation policies. LifePot validates each decision; the engine applies local interactions and offspring directives without giving Jev direct control of individual organisms. Replaying a challenge uses its recorded choices and makes no model call.
 
 ## Play and inspect
 
@@ -32,7 +32,9 @@ Jev proposes typed ecology choices; LifePot validates them; deterministic code e
 
 ## Architecture and boundaries
 
-- The world is a deterministic 50×50 cellular simulation after the initial choices are accepted.
+- The world is a 50×50 cellular simulation. In adaptive mode, Jev can make new bounded decisions as the ecology develops.
+- Fixed-rule starters make no model requests unless adaptive policy is explicitly selected. Runtime fallback abstains from new intervention.
+- The same configuration, seed, engine version and recorded decisions reproduce a run; the seed alone does not predetermine new Jev decisions.
 - Model output is typed data, never executable code.
 - LifePot validates proposed choices before the simulation runs.
 - Replays use recorded choices and make no model call.

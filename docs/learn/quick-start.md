@@ -20,7 +20,7 @@ New worlds start at **Slow**, targeting one generation per second; the landing e
 
 Watch population, resources and the generation counter. Pause before selecting a living organism in the Creature Inspector. Follow its family to examine lineage context, or use the World Observatory for aggregate measurements. Resume to watch what changes. Selection observes the world; it does not change its rules.
 
-The deterministic engine owns movement, feeding, reproduction, mutation and death. Jev can propose only bounded, validated choices. A fallback or abstention is not a live model decision. The run ends at extinction or its observation horizon; completion is not proof that your idea succeeded.
+Local simulation rules govern movement, feeding, reproduction, mutation and death. In adaptive worlds, Jev can respond to the ecology with validated environmental changes, species strategies and mutation policies, not direct control of individual organisms. A fallback or abstention is not a live model decision. The run ends at extinction or its observation horizon; completion is not proof that your idea succeeded.
 
 ## Try a second experiment
 

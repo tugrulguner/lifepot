@@ -1,6 +1,10 @@
 # Player guide: shape a world, read its history
 
-LifePot is a bounded artificial-life game. Describe an environment, review the proposed ecology, then watch a deterministic simulation. The model may propose typed choices; it cannot write rules or control organisms. Extinction is a valid outcome, and this is not a biological forecast.
+LifePot is an artificial-life sandbox. Describe an environment, review its ecology, then watch organisms interact, reproduce and change. In adaptive worlds, Jev responds to ecological observations through supported changes to environmental conditions, species strategies and mutation policies. LifePot validates each decision; Jev does not directly control individual organisms. Extinction is a valid outcome, and this is not a biological forecast.
+
+Species-level strategy and mutation directives influence new offspring through the engine's birth mechanics; they do not rewrite existing individual cells or promise beneficial mutations. Fixed-rule worlds run without runtime Jev decisions. If runtime inference is unavailable or rejected, the labeled fallback abstains from a new intervention.
+
+Replay is different from a fresh adaptive run: it reuses the same starting configuration, seed and recorded decisions without asking Jev again. Deterministic execution makes that record reproducible; it does not mean the seed predetermines new Jev decisions.
 
 ## Choose a starter or describe your world
 

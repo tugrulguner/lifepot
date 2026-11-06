@@ -3,9 +3,19 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it } from "vitest";
 import { HomeOverview } from "./HomeOverview";
 function overview() { const root = document.createElement("div"); root.innerHTML = renderToStaticMarkup(<HomeOverview />); return root; }
+it("explains adaptive ecology without calling life deterministic or promising individual control", () => {
+  const root = overview();
+  expect(root.innerHTML).not.toMatch(/deterministic artificial[- ]life/i);
+  const mechanism = root.querySelector(".overview-mechanism")!.textContent!;
+  expect(mechanism).toContain("In adaptive worlds, Jev");
+  expect(mechanism).toContain("mutation policies");
+  expect(mechanism).toContain("not direct control of individual organisms");
+  expect(mechanism).toContain("Fixed-rule starters");
+  expect(mechanism).toContain("recorded decisions");
+});
 it("keeps canonical artwork in the family hero and creator/family attribution immediately after aligned actions", () => {
   const root = overview();
-  expect(root.querySelector('.overview-hero img[src="/lifepot-lockup.png?v=wordmark-accent-1"]')).not.toBeNull();
+  expect(root.querySelector('.overview-hero img[src="/lifepot-lockup.png?v=adaptive-life-1"]')).not.toBeNull();
   const actions = root.querySelector(".overview-actions")!;
   expect(actions.querySelector('.overview-primary[href="/play"]')).not.toBeNull();
   expect(actions.querySelector('.overview-secondary[href="/learn"]')).not.toBeNull();

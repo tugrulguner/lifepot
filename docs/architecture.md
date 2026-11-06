@@ -1,6 +1,8 @@
 # Architecture
 
-LifePot separates model interpretation from deterministic simulation. The boundary is deliberate: Jev may choose among declared options, but only application code mutates the world.
+LifePot combines adaptive ecological decisions with reproducible local simulation. In adaptive worlds, Jev observes the ecology and chooses among supported environmental changes, species strategies and mutation policies. LifePot validates each decision; only the engine updates world state. Jev has no direct cell-edit or individual-action interface.
+
+Species directives affect offspring through the engine's birth mechanics, rather than rewriting existing organisms. Fixed-rule worlds do not request runtime decisions. Recorded replay uses the same initial conditions, seed and decision ledger without inference; a fresh adaptive run obtains new Jev decisions rather than deriving them from the seed.
 
 ![LifePot execution architecture](assets/lifepot-architecture.png)
 
@@ -24,7 +26,7 @@ No response field is evaluated as source code.
 | Setup contract | `src/game/setup.ts` | Canonical answers, request/replay hashes, setup schemas, deterministic fallback |
 | Rule graph | `src/game/rules.ts` | Finite vocabularies, graph invariants, rule patches, activation conditions |
 | Model boundary | `src/app/api/judge/` | HTTP schemas, TypeSafe client calls, fallback selection, quota enforcement |
-| Ecological decisions | `src/game/decisions.ts` | Frozen observations, triggers, evidence schemas, deterministic decisions |
+| Ecological decisions | `src/game/decisions.ts` | Frozen observations, triggers, evidence schemas, fallback abstention |
 | Runtime orchestration | `src/game/runtime.ts` | Trigger pauses, exact-decision binding, ledger ordering and cooldown |
 | Simulation | `src/game/world.ts` | Cellular mechanics, deterministic random stream, graph execution, outcomes |
 | Replay | `src/game/replay.ts` | Contract validation, encoding, tamper detection, inference-free playback |
@@ -49,7 +51,7 @@ Validation also requires a viable basal-energy path. Scheduled patches can chang
 At a trigger:
 
 1. LifePot freezes and hashes the observation.
-2. Jev or the deterministic fallback proposes a typed decision.
+2. Jev proposes a typed decision. If inference is unavailable or rejected, the labeled runtime fallback abstains from new intervention.
 3. Validation checks probability coverage, selected maxima, trigger, generation, observation hash, graph version, and scheduled-change evidence.
 4. The accepted decision is appended to the ordered ledger.
 5. Deterministic stepping resumes and applies only the bounded mechanics encoded by the decision.
