@@ -11,27 +11,32 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --init --shm-size=1g
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      - name: Trust this mounted checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --test scripts/prepare-playwright-mirrors.test.mjs scripts/dependency-compat.test.mjs
+      - run: node --test scripts/prepare-playwright-mirrors.test.mjs scripts/dependency-compat.test.mjs scripts/playwright-ci.test.mjs
       # Match the bounded local gate without weakening any per-test deadline.
       - run: npm test -- --maxWorkers=2
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build:cloudflare
-      - name: Prepare official Ubuntu mirrors for browser dependencies
-        run: sudo --preserve-env=GITHUB_ACTIONS "$(command -v node)" scripts/prepare-playwright-mirrors.mjs
-      - run: npx playwright install --with-deps chromium
       - run: npm run test:cloudflare
 
   browser:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --init --shm-size=1g
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -39,6 +44,8 @@ jobs:
         shard: [1, 2]
     steps:
       - uses: actions/checkout@v7
+      - name: Trust this mounted checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: 22
@@ -46,9 +53,6 @@ jobs:
       - run: npm ci
       # Test discovery imports embedded guides before Playwright starts Next.js.
       - run: npm run predev
-      - name: Prepare official Ubuntu mirrors for browser dependencies
-        run: sudo --preserve-env=GITHUB_ACTIONS "$(command -v node)" scripts/prepare-playwright-mirrors.mjs
-      - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e -- --shard="$PLAYWRIGHT_SHARD/2"
         env:
           PLAYWRIGHT_SHARD: ${{ matrix.shard }}
