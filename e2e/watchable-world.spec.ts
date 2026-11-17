@@ -23,17 +23,27 @@ test("mobile watch view keeps the habitat and camera controls useful as real ext
   await step.click({ trial: true });
   const stepControl = await step.elementHandle();
   if (!stepControl) throw new Error("Missing step control");
+  const cameraBoard = page.locator("canvas.life-canvas");
+  let checkedLoss = false;
   for (let generation = initial; generation < 90; generation++) {
+    const wasFollowing = await cameraBoard.getAttribute("data-camera-follow");
+    const priorView = await cameraBoard.evaluate(c => [c.getAttribute("data-camera-zoom"), c.getAttribute("data-camera-x"), c.getAttribute("data-camera-y")]);
     await stepControl.evaluate(button => {
       if (!(button instanceof HTMLButtonElement) || !button.isConnected || button.disabled) throw new Error("Step control became unavailable");
       button.click();
     });
+    await expect(page.getByTestId("generation")).toHaveText(`${generation + 1} / 180`);
+    if (wasFollowing === "family" && await cameraBoard.getAttribute("data-camera-follow") === "none") {
+      expect(await cameraBoard.evaluate(c => [c.getAttribute("data-camera-zoom"), c.getAttribute("data-camera-x"), c.getAttribute("data-camera-y")])).toEqual(priorView);
+      checkedLoss = true;
+    }
   }
+  expect(checkedLoss).toBe(true);
   await expect(page.getByTestId("generation")).toHaveText("90 / 180");
   const matchedGeneration = await page.getByTestId("generation").textContent();
   await expect(page.locator("[aria-label='Latest retained extinction']")).toBeVisible();
   await expect(page.locator("[aria-label='Latest retained extinction']")).toContainText("extinct");
-  await expect(page.locator("[aria-label='Camera update']")).toContainText("Full world restored.");
+  await expect(page.locator("[aria-label='Camera update']")).toContainText("Last camera position retained.");
   const canvas = page.locator("canvas.life-canvas");
   const tools = page.getByRole("region", { name: "World camera", exact: true });
   await page.screenshot({ path: testInfo.outputPath(`watching-growing-notices-${matchedGeneration?.replaceAll(" / ", "-")}.png`), fullPage: true });

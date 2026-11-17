@@ -559,7 +559,7 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .simulation-shell .observatory-tabs button[aria-selected="true"]::after { background: var(--acid); }
 .simulation-shell .observatory-header p { color: var(--acid); }
 .simulation-shell .world-observatory { background: rgba(2, 13, 11, .97); }
-.simulation-shell .life-canvas { background: var(--ink); }
+.simulation-shell .life-canvas { background: #dce3df; }
 
 @media (min-width: 1001px) {
   .simulation-shell .life-canvas { width: min(100%, 70svh, calc(100svh - 252px)); height: auto; }
@@ -972,6 +972,9 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
   .camera-primary .camera-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .camera-primary output { min-width: 24px; text-align: center; }
+.simulation-shell .world-overview { grid-area:board; align-self:start; justify-self:end; z-index:2; display:flex; flex-direction:column; gap:.25rem; margin:.4rem; padding:.3rem; max-width:112px; pointer-events:none; background:var(--panel); border:1px solid var(--line); border-radius:4px; color:var(--muted); font-size:.65rem; }
+.simulation-shell .world-overview canvas { width:clamp(64px, 12vw, 104px); height:auto; aspect-ratio:1; border:1px solid var(--line); border-radius:4px; }
+@media (max-width:520px) { .simulation-shell .world-overview canvas { width:64px; } }
 .camera-options { scroll-margin-top: 80px; }
 @media(max-width: 1000px) {
   .simulation-shell { grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "inspector" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event" "result"; row-gap: 8px; }

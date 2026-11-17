@@ -24,6 +24,13 @@ async function expectWatchingView(page: Page) {
   })).toBe(true);
 }
 import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
+
+async function screenshot(page: Page, testInfo: import("@playwright/test").TestInfo, filename: string) {
+  const directory = process.env.LIFEPOT_EVIDENCE_DIR ?? testInfo.outputDir;
+  await mkdir(directory, { recursive: true });
+  await page.screenshot({ path: join(directory, filename) });
+}
 
 for (const width of [1280, 390]) test(`camera transforms inspection and follows identities at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 850 });
@@ -84,7 +91,7 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   expect(await page.evaluate(() => scrollY)).toBe(deliberateScroll);
   await board.scrollIntoViewIfNeeded();
   await mkdir(testInfo.outputDir, { recursive: true });
-  await page.screenshot({ path: testInfo.outputPath(`camera-running-${width}.png`) });
+  await screenshot(page, testInfo, `camera-running-${width}.png`);
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.getByRole("region", { name: "Camera options", exact: true }).getByRole("button", { name: "Stop camera follow" }).click();
   await expect(board).toHaveAttribute("data-camera-follow", "none");
@@ -98,7 +105,7 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   await page.mouse.move(b.x + b.width / 2 + 40, b.y + b.height / 2 + 20, { steps: 6 });
   await page.mouse.up();
   await expect(board).not.toHaveAttribute("data-camera-x", afterKeyboard!);
-  await page.screenshot({ path: testInfo.outputPath(`camera-paused-${width}.png`) });
+  await screenshot(page, testInfo, `camera-paused-${width}.png`);
   await camera.getByRole("button", { name: "Full world" }).click();
   await expect(board).toHaveAttribute("data-camera-zoom", "1");
   await expect(board).toHaveAttribute("data-camera-x", "0");
@@ -140,9 +147,9 @@ for (const width of [1280, 390]) test.describe.serial(`linked camera completion 
     await expect(page.getByRole("status", { name: "Camera update" })).toBeVisible();
     await expectWatchingView(page);
     await expect(board).toHaveAttribute("data-camera-follow", "none");
-    await expect(board).toHaveAttribute("data-camera-zoom", "1");
+    await expect(board).toHaveAttribute("data-camera-zoom", "2");
     await page.getByRole("button", { name: "Zoom in", exact: true }).click();
-    await expect(board).toHaveAttribute("data-camera-zoom", "1.5");
+    await expect(board).toHaveAttribute("data-camera-zoom", "2.5");
     await page.getByRole("button", { name: "Pause", exact: true }).click();
     await page.emulateMedia({ reducedMotion: "reduce" });
     await completeWithRealSteps(page);

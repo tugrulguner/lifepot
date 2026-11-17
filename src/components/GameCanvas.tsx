@@ -66,13 +66,13 @@ import { createRunEvidence, followRunLineage, observeRun, type RunEvidence } fro
 import type { SpeciesId } from "@/game/rules";
 import { FamilyHeader } from "./FamilyHeader";
 import { cellAtPoint } from "@/game/inspection";
-import { boundCamera, followCamera, NEUTRAL_CAMERA, screenToWorld, type Camera, type FollowTarget } from "@/game/camera";
+import { boundCamera, cameraViewportRects, followCamera, NEUTRAL_CAMERA, screenToWorld, type Camera, type FollowTarget } from "@/game/camera";
 import { selectEventEffects, traceEventMark, updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
 import { WorldObservatory } from "./WorldObservatory";
 import { CanvasMarkKey, GameplayObservation } from "./GameplayObservation";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
 import { setupFidelitySchema, setupFailureSchema, setupNamedIntentSchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity, type SetupFailure, type SetupNamedIntent } from "@/game/setup-review";
-import { speciesColor } from "@/game/species-colors";
+import { roleColor } from "@/game/world-presentation";
 import { organismSprite, paintOrganism } from "@/game/organism-glyphs";
 import OrganismArtwork from "./OrganismArtwork";
 import { gameplayAnalytics } from "@/app/gameplay-analytics";
@@ -158,7 +158,7 @@ function seedFromHash(hash: string) {
 function title(v: string) {
   return v.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
 }
-function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: number | null, followed: number | null, effects: TimedOrganismEvent[] = [], now = 0, focusedSpecies: SpeciesId | null = null, camera: Camera = NEUTRAL_CAMERA) {
+function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: number | null, followed: number | null, effects: TimedOrganismEvent[] = [], now = 0, focusedSpecies: SpeciesId | null = null, camera: Camera = NEUTRAL_CAMERA, showHazards = true) {
   const rect = canvas.getBoundingClientRect(),
     dpr = Math.min(devicePixelRatio || 1, 2);
   // Detached or hidden boards have no drawable interior; resize will repaint.
@@ -168,8 +168,9 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   const c = canvas.getContext("2d");
   if (!c) return;
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
-  // The ecosystem remains a dark, low-glare observation surface in either site theme.
-  c.fillStyle = getComputedStyle(canvas).getPropertyValue("--mp-canvas").trim() || "#020a09";
+  // Calm, cool-neutral material field; all habitat variation below is measured
+  // from this world's current resource and hazard arrays.
+  c.fillStyle = "#dce3df";
   c.fillRect(0, 0, rect.width, rect.height);
   if (camera.zoom !== 1) {
     c.beginPath(); c.rect(18, 18, rect.width - 36, rect.height - 36); c.clip();
@@ -183,7 +184,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   // A quiet coordinate lattice gives the board a readable habitat map without
   // suggesting routes or terrain the simulation does not encode.
   c.save();
-  c.strokeStyle = "rgba(141, 190, 163, .025)";
+  c.strokeStyle = "rgba(53, 91, 80, .055)";
   c.lineWidth = 0.5;
   c.beginPath();
   for (let cell = 0; cell <= GRID_SIZE; cell += 5) {
@@ -204,15 +205,17 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       }
       const resource = resources / (25 * 255), hazard = hazards / (25 * 255);
       const x = pad + (col + 2.5) * cw, y = pad + (row + 2.5) * ch;
-      if (resource > .08) {
+      if (resource > .02) {
+        c.fillStyle = `rgba(34, 137, 116, ${resource * .13})`;
+        c.fillRect(pad + col * cw, pad + row * ch, cw * 5, ch * 5);
         const glow = c.createRadialGradient(x, y, 0, x, y, Math.max(cw, ch) * 4);
-        glow.addColorStop(0, `rgba(117, 210, 142, ${resource * .16})`);
-        glow.addColorStop(1, "rgba(117, 210, 142, 0)");
+        glow.addColorStop(0, `rgba(56, 174, 135, ${resource * .18})`);
+        glow.addColorStop(1, "rgba(56, 174, 135, 0)");
         c.fillStyle = glow;
         c.fillRect(x - cw * 4, y - ch * 4, cw * 8, ch * 8);
       }
-      if (hazard > .025) {
-        c.fillStyle = `rgba(255, 128, 109, ${hazard * .10})`;
+      if (showHazards && hazard > .025) {
+        c.fillStyle = `rgba(232, 91, 82, ${hazard * .12})`;
         c.fillRect(pad + col * cw, pad + row * ch, cw * 5, ch * 5);
       }
     }
@@ -225,11 +228,11 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
     if (r > .08) {
       c.globalAlpha = .06 + r * .14;
-      c.fillStyle = "#83d99a";
+      c.fillStyle = "rgba(27, 166, 155, .18)";
       c.beginPath(); c.arc(cx, cy, Math.min(cw, ch) * (.08 + r * .12), 0, Math.PI * 2); c.fill();
     }
     const hazard = state.hazards[i] / 255;
-    if (hazard > .025) {
+    if (showHazards && hazard > .025) {
       c.globalAlpha = .08 + hazard * .18;
       c.strokeStyle = "#ff806d"; c.lineWidth = Math.min(cw, ch) * .08;
       const d = Math.min(cw, ch) * .18;
@@ -249,7 +252,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     // This changes paint only; the selected cell and lineage pin keep their authority.
     c.globalAlpha = focusedSpecies && state.config.rules?.species[state.ruleSpecies[i] - 1]?.id !== focusedSpecies && i !== selected && state.lineage[i] !== followed ? contextAlpha : 1;
     const x = i % GRID_SIZE, y = Math.floor(i / GRID_SIZE), species = state.config.rules?.species[state.ruleSpecies[i] - 1];
-    const pitch = Math.min(cw, ch), color = speciesColor(species?.id ?? "");
+    const pitch = Math.min(cw, ch), color = roleColor(species?.role, species?.id ?? "");
     const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
     const sprite = organismSprite(species?.role, color, pitch, dpr * camera.zoom, camera.zoom);
     if (sprite) c.drawImage(sprite, cx - pitch / 2, cy - pitch / 2, pitch, pitch);
@@ -293,6 +296,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
 function World({ state, selected, followed, focusedSpecies, onInspect, onCameraUpdate, idPrefix = "world", showMeasurements = true }: { state: SimulationState; selected: number | null; followed: number | null; focusedSpecies: SpeciesId | null; onInspect: (index: number) => void; onCameraUpdate: (message: string) => void; idPrefix?: string; showMeasurements?: boolean }) {
   const cameraHintId = `${idPrefix}-camera-hint`, cameraOptionsId = `${idPrefix}-camera-options`;
   const ref = useRef<HTMLCanvasElement>(null);
+  const overviewRef = useRef<HTMLCanvasElement>(null);
   const [camera, setCamera] = useState<Camera>(NEUTRAL_CAMERA);
   const [target, setTarget] = useState<FollowTarget | null>(null);
   const [releasedNotice, setReleasedNotice] = useState("");
@@ -304,14 +308,17 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
     setReleasedNotice("Family pin changed. Full world restored.");
   }
   const [dragEnabled, setDragEnabled] = useState(false);
+  const [showHazards, setShowHazards] = useState(true);
   const drag = useRef<{ id: number; x: number; y: number; start: Camera; moved: boolean } | null>(null);
   const suppressClick = useRef(false);
   const validTarget = target?.kind === "family" && target.id !== followed ? null : target;
   const tracked = validTarget ? followCamera(camera, state, validTarget) : null;
-  const view = target ? tracked ?? NEUTRAL_CAMERA : camera;
+  const [lastTrackedView, setLastTrackedView] = useState<Camera | null>(null);
+  if (tracked && (!lastTrackedView || tracked.zoom !== lastTrackedView.zoom || tracked.x !== lastTrackedView.x || tracked.y !== lastTrackedView.y)) setLastTrackedView(tracked);
+  const view = target ? tracked ?? lastTrackedView ?? NEUTRAL_CAMERA : camera;
   const lost = !!target && !tracked;
   const canFollowFamily = followed !== null && state.lineage.some((id, i) => id === followed && !!state.guild[i]);
-  const cameraUpdate = lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Full world restored.` : "Family pin changed. Full world restored." : releasedNotice;
+  const cameraUpdate = lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Last camera position retained.` : "Family pin changed. Full world restored." : releasedNotice;
   useEffect(() => onCameraUpdate(cameraUpdate), [cameraUpdate, onCameraUpdate]);
   // Only deliberate panel actions return to the watching view. Engine ticks,
   // target loss, resize and theme changes must preserve later user scrolling.
@@ -349,6 +356,35 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
     return () => { observer.disconnect(); window.removeEventListener("resize", fit); };
   }, []);
   useEffect(() => {
+    const canvas = overviewRef.current, context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+    const scale = canvas.width / GRID_SIZE;
+    context.fillStyle = "#dce3df";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < state.resources.length; i++) {
+      const x = i % GRID_SIZE * scale, y = Math.floor(i / GRID_SIZE) * scale;
+      const resource = state.resources[i] / 255, hazard = state.hazards[i] / 255;
+      if (resource > 0) {
+        context.fillStyle = `rgba(27, 126, 101, ${resource * .48})`;
+        context.fillRect(x, y, scale, scale);
+      }
+      if (showHazards && hazard > 0) {
+        context.fillStyle = `rgba(213, 77, 70, ${hazard * .5})`;
+        context.fillRect(x, y, scale, scale);
+      }
+      if (!state.guild[i]) continue;
+      const species = state.config.rules?.species[state.ruleSpecies[i] - 1];
+      context.beginPath(); context.arc(x + scale / 2, y + scale / 2, scale * .31, 0, Math.PI * 2);
+      context.fillStyle = roleColor(species?.role, species?.id ?? ""); context.fill();
+      if (i === selected) {
+        context.strokeStyle = "#9b302b"; context.lineWidth = Math.max(1.4, scale * .2);
+        context.beginPath(); context.arc(x + scale / 2, y + scale / 2, scale * .44, 0, Math.PI * 2); context.stroke();
+      }
+    }
+    context.strokeStyle = "#173e3a"; context.lineWidth = Math.max(1.1, scale * .15);
+    for (const rect of cameraViewportRects(view)) context.strokeRect(rect.x * scale + .5, rect.y * scale + .5, rect.width * scale - 1, rect.height * scale - 1);
+  }, [state, view, selected, showHazards]);
+  useEffect(() => {
     if (!ref.current) return;
     const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(last.current!==state){
@@ -365,15 +401,16 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
       last.current=state;
     }
     let frame=0;
-    const paint=()=>{const now=performance.now();effects.current=updateEventEffects(effects.current,[],now,reduced);if(ref.current)draw(ref.current,state,validTarget?.kind === "organism" && tracked ? state.organismId.findIndex(id => id === validTarget.id) : selected,followed,effects.current,now,focusedSpecies,view);if(effects.current.length)frame=requestAnimationFrame(paint);};
+    const paint=()=>{const now=performance.now();effects.current=updateEventEffects(effects.current,[],now,reduced);if(ref.current)draw(ref.current,state,validTarget?.kind === "organism" && tracked ? state.organismId.findIndex(id => id === validTarget.id) : selected,followed,effects.current,now,focusedSpecies,view,showHazards);if(effects.current.length)frame=requestAnimationFrame(paint);};
     paint();
     const o = new ResizeObserver(paint);o.observe(ref.current);
     const themeObserver = new MutationObserver(() => paint());
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => {o.disconnect();themeObserver.disconnect();cancelAnimationFrame(frame);};
-  }, [state, selected, followed, focusedSpecies, view, validTarget, tracked]);
+  }, [state, selected, followed, focusedSpecies, view, validTarget, tracked, showHazards]);
   return (
     <>
+    <aside className="world-overview" aria-label="World overview"><canvas ref={overviewRef} width={GRID_SIZE} height={GRID_SIZE} aria-hidden="true" /><span>Overview · current camera extent</span></aside>
     <canvas
       ref={ref}
       className="life-canvas"
@@ -442,11 +479,12 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
     </section>
     <section id={cameraOptionsId} className="camera-tools camera-options" aria-label="Camera options" tabIndex={-1}>
       <div className="camera-buttons">
+        <button aria-pressed={showHazards} onClick={() => setShowHazards(!showHazards)}>Hazard shading</button>
         <button aria-pressed={dragEnabled} disabled={view.zoom <= 1} onClick={() => { setDragEnabled(!dragEnabled); returnToWorld(); }}>Drag to pan</button>
         <button aria-label="Follow organism with camera" disabled={selected === null || !state.guild[selected]} onClick={() => { if (selected !== null && state.guild[selected]) { follow({ kind: "organism", id: state.organismId[selected] }); returnToWorld(); } }}>Follow organism</button>
         {target && <button onClick={() => { setReleasedNotice(""); setCamera(view); setTarget(null); returnToWorld(); }}>Stop camera follow</button>}
       </div>
-      <p role="status">{lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Full world restored.` : "Family pin changed. Full world restored." : tracked ? `Camera follows ${validTarget!.kind} #${validTarget!.id}${validTarget!.kind === "family" ? " through its oldest living member" : ""}.` : releasedNotice || "Camera is free. Zoom and drag to explore; the simulation is unchanged."}</p>
+      <p role="status">{lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Last camera position retained.` : "Family pin changed. Full world restored." : tracked ? `Camera follows ${validTarget!.kind} #${validTarget!.id}${validTarget!.kind === "family" ? " through its oldest living member" : ""}.` : releasedNotice || "Camera is free. Zoom and drag to explore; the simulation is unchanged."}</p>
       <details><summary>Camera controls</summary><p>Mouse: drag while zoomed. Touch: enable Drag to pan; turn it off to scroll the page over the board. Tap without dragging to inspect. Keyboard on the board: +/− zoom, Shift+arrows pan, 0 restores the full world. Following tracks identity through movement. At a wrapping edge the camera moves to the other side; family following switches to the oldest surviving member.</p></details>
     </section>
     </>
@@ -1338,8 +1376,9 @@ export function GameCanvas() {
       </aside>
       <div className="legend">
         <span><i className="resource-key" />Resource field</span>
-        {simulation.config.rules!.species.map(species => <span key={species.id}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={speciesColor(species.id)} /></svg><i style={{ backgroundColor: speciesColor(species.id) }} />Species {species.id} · {title(species.role)}</span>)}
-        <span>Green field = resources · coral shading = hazards · cell detail at 2× zoom</span>
+        {simulation.config.rules!.species.map(species => <span key={species.id}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={roleColor(species.role, species.id)} /></svg><i style={{ backgroundColor: roleColor(species.role, species.id) }} />Species {species.id} · {title(species.role)}</span>)}
+        <span>Teal = producer, grazer, or scavenger · coral = hunter or omnivore</span>
+        <span>coral shading = hazards (when Hazard shading is enabled) · cell detail at 2× zoom</span>
         <span>White ring = selected · dashed gold ring = followed family</span>
         <span>White rays/dot = birth · gold circle = feeding · gold diamond = prey capture · red cross = death · marks show event locations; pulses are sampled</span>
       </div>

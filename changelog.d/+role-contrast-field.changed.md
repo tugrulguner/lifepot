@@ -1,0 +1,1 @@
+The live canvas now uses a cool-neutral field with resource and hazard cues derived from the current world, and teal/coral organism contrast derived from each configured trophic role. Existing simulation, identity selection, follow, replay, and species-palette contracts remain unchanged.

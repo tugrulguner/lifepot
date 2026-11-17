@@ -78,7 +78,7 @@ test("theme controls and layout fit narrow screens and follow live OS Auto chang
   }
 });
 
- test("paused ecosystem canvas remains game-dark across shell themes without advancing", async ({ page }) => {
+ test("paused ecosystem canvas remains cool-neutral across shell themes without advancing", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/play");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
@@ -93,15 +93,15 @@ test("theme controls and layout fit narrow screens and follow live OS Auto chang
     const data = el.getContext("2d")!.getImageData(2, 2, 1, 1).data;
     return Array.from(data).slice(0, 3).join(",");
   });
-  expect(await pixel()).toBe("2,10,9");
+  expect(await pixel()).toBe("220,227,223");
   const theme = page.getByRole("combobox", { name: "Color theme" });
   await theme.selectOption("dark");
-  await expect.poll(pixel).toBe("2,10,9");
+  await expect.poll(pixel).toBe("220,227,223");
   await expect(page.getByTestId("generation")).toHaveText(before ?? "");
   await expect(page.getByLabel("Live ecosystem statistics")).toHaveText(population ?? "");
   await theme.selectOption("auto");
   await page.emulateMedia({ colorScheme: "dark" });
-  await expect.poll(pixel).toBe("2,10,9");
+  await expect.poll(pixel).toBe("220,227,223");
   await expect(page.getByTestId("generation")).toHaveText(before ?? "");
   await expect(page.getByLabel("Live ecosystem statistics")).toHaveText(population ?? "");
 });

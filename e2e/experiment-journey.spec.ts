@@ -60,7 +60,7 @@ for (const width of [390, 1280]) test.describe.serial(`observed-history journey 
     await expect(dialog).toContainText('historical');
     await expect(dialog.getByRole('img', { name: /Ecosystem generation \d+; \d+ organisms/ })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath('historical-initial.png') });
-    const sceneBounds = await dialog.locator('canvas').boundingBox(), dialogBounds = await dialog.boundingBox();
+    const sceneBounds = await dialog.locator('canvas.life-canvas').boundingBox(), dialogBounds = await dialog.boundingBox();
     expect(sceneBounds).not.toBeNull(); expect(dialogBounds).not.toBeNull();
     expect(sceneBounds!.width).toBeGreaterThanOrEqual(dialogBounds!.width * 0.7);
     expect(sceneBounds!.height).toBeGreaterThanOrEqual(200);

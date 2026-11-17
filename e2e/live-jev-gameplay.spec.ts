@@ -58,7 +58,7 @@ test.describe("live Jev setup and gameplay", () => {
   const question = "PRIVATE live review prediction";
   await page.getByLabel("Your question or prediction (optional)").fill(question);
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  const canvas = page.locator("canvas").first();
+  const canvas = page.locator("canvas.life-canvas").first();
   await expect(canvas).toBeVisible();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.getByRole("button", { name: "Inspect a living organism", exact: true }).click();
