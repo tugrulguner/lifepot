@@ -23,22 +23,40 @@ test("mobile watch view keeps the habitat and camera controls useful as real ext
   await step.click({ trial: true });
   const stepControl = await step.elementHandle();
   if (!stepControl) throw new Error("Missing step control");
-  const cameraBoard = page.locator("canvas.life-canvas");
-  let checkedLoss = false;
-  for (let generation = initial; generation < 90; generation++) {
-    const wasFollowing = checkedLoss ? null : await cameraBoard.getAttribute("data-camera-follow");
-    const priorView = checkedLoss ? [] : await cameraBoard.evaluate(c => [c.getAttribute("data-camera-zoom"), c.getAttribute("data-camera-x"), c.getAttribute("data-camera-y")]);
-    await stepControl.evaluate(button => {
+  // Keep native stepping and each rendered-generation check in the browser,
+  // avoiding a protocol round trip and assertion polling delay on every tick.
+  const observed = await stepControl.evaluate(async (button, initialGeneration) => {
+    const board = () => {
+      const canvas = document.querySelector("canvas.life-canvas");
+      if (!canvas) throw new Error("Missing habitat canvas");
+      return canvas;
+    };
+    const view = () => ["zoom", "x", "y"].map(key => board().getAttribute(`data-camera-${key}`));
+    const progress: string[] = [];
+    const losses: { before: (string | null)[]; after: (string | null)[] }[] = [];
+    for (let generation = initialGeneration; generation < 90; generation++) {
+      const wasFollowing = board().getAttribute("data-camera-follow");
+      const priorView = view();
       if (!(button instanceof HTMLButtonElement) || !button.isConnected || button.disabled) throw new Error("Step control became unavailable");
       button.click();
-    });
-    await expect(page.getByTestId("generation")).toHaveText(`${generation + 1} / 180`);
-    if (wasFollowing === "family" && await cameraBoard.getAttribute("data-camera-follow") === "none") {
-      expect(await cameraBoard.evaluate(c => [c.getAttribute("data-camera-zoom"), c.getAttribute("data-camera-x"), c.getAttribute("data-camera-y")])).toEqual(priorView);
-      checkedLoss = true;
+      const expected = `${generation + 1} / 180`;
+      const deadline = performance.now() + 5000;
+      let rendered: string | null | undefined;
+      do {
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+        rendered = document.querySelector('[data-testid="generation"]')?.textContent;
+        if (performance.now() > deadline) throw new Error(`Generation did not settle: expected ${expected}, received ${rendered}`);
+      } while (rendered !== expected);
+      progress.push(rendered);
+      if (wasFollowing === "family" && board().getAttribute("data-camera-follow") === "none") {
+        losses.push({ before: priorView, after: view() });
+      }
     }
-  }
-  expect(checkedLoss).toBe(true);
+    return { progress, losses };
+  }, initial);
+  expect(observed.progress).toEqual(Array.from({ length: 90 - initial }, (_, index) => `${initial + index + 1} / 180`));
+  expect(observed.losses.length).toBeGreaterThan(0);
+  for (const loss of observed.losses) expect(loss.after).toEqual(loss.before);
   await expect(page.getByTestId("generation")).toHaveText("90 / 180");
   const matchedGeneration = await page.getByTestId("generation").textContent();
   await expect(page.locator("[aria-label='Latest retained extinction']")).toBeVisible();
