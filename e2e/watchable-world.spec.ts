@@ -26,8 +26,8 @@ test("mobile watch view keeps the habitat and camera controls useful as real ext
   const cameraBoard = page.locator("canvas.life-canvas");
   let checkedLoss = false;
   for (let generation = initial; generation < 90; generation++) {
-    const wasFollowing = await cameraBoard.getAttribute("data-camera-follow");
-    const priorView = await cameraBoard.evaluate(c => [c.getAttribute("data-camera-zoom"), c.getAttribute("data-camera-x"), c.getAttribute("data-camera-y")]);
+    const wasFollowing = checkedLoss ? null : await cameraBoard.getAttribute("data-camera-follow");
+    const priorView = checkedLoss ? [] : await cameraBoard.evaluate(c => [c.getAttribute("data-camera-zoom"), c.getAttribute("data-camera-x"), c.getAttribute("data-camera-y")]);
     await stepControl.evaluate(button => {
       if (!(button instanceof HTMLButtonElement) || !button.isConnected || button.disabled) throw new Error("Step control became unavailable");
       button.click();
