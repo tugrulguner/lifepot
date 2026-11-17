@@ -5,7 +5,7 @@ import type { EvolutionLedger } from "@/game/decisions";
 import { buildWorldReport } from "@/game/observatory";
 import type { SimulationState } from "@/game/world";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
-import { speciesColor } from "@/game/species-colors";
+import { roleColor } from "@/game/world-presentation";
 import { relationshipLabel, triggerLabel } from "@/game/visuals";
 
 type Tab = "overview" | "lineages" | "environment" | "timeline";
@@ -72,14 +72,14 @@ export function WorldObservatory({ state, ledger, replay = false }: { state: Sim
         </section>
         <section className="observatory-section">
           <div className="observatory-section-title"><span>Living ecology</span><b>{report.species.filter((row) => row.population).length} active</b></div>
-          <div className="species-list">{report.species.map((species) => <div className="species-row" key={species.id}><i data-species={species.id} style={{ backgroundColor: speciesColor(species.id) }}/><div><strong>Species {species.id}</strong><small>{title(species.role)} · {species.lineages} lineages</small></div><b>{species.population}</b></div>)}</div>
+          <div className="species-list">{report.species.map((species) => <div className="species-row" key={species.id}><i data-species={species.id} style={{ backgroundColor: roleColor(species.role, species.id) }}/><div><strong>Species {species.id}</strong><small>{title(species.role)} · {species.lineages} lineages</small></div><b>{species.population}</b></div>)}</div>
         </section>
       </>}
 
       {tab === "lineages" && <section className="observatory-section is-flush">
         <div className="observatory-section-title"><span>Heritable phenotype</span><b>population means</b></div>
         {report.species.map((species) => <article className="lineage-card" key={species.id}>
-          <header><div><strong><i className="species-swatch" style={{ backgroundColor: speciesColor(species.id) }}/>Species {species.id}</strong><span>{title(species.role)}</span></div><b>{species.population} alive</b></header>
+          <header><div><strong><i className="species-swatch" style={{ backgroundColor: roleColor(species.role, species.id) }}/>Species {species.id}</strong><span>{title(species.role)}</span></div><b>{species.population} alive</b></header>
           <dl><div><dt>Mean energy</dt><dd>{species.meanEnergy}</dd></div><div><dt>Descendant generation</dt><dd>{species.meanGeneration}</dd></div><div><dt>Living lineages</dt><dd>{species.lineages}</dd></div></dl>
           <div className="trait-stack">{Object.entries(species.traits).map(([trait, value]) => <div key={trait}><span>{title(trait)}</span><i><b style={{ width: `${value * 100}%` }}/></i><em>{Math.round(value * 100)}</em></div>)}</div>
         </article>)}

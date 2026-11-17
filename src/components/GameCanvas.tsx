@@ -410,7 +410,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
   }, [state, selected, followed, focusedSpecies, view, validTarget, tracked, showHazards]);
   return (
     <>
-    <aside className="world-overview" aria-label="World overview"><canvas ref={overviewRef} width={GRID_SIZE} height={GRID_SIZE} aria-hidden="true" /><span>Overview · current camera extent</span></aside>
+    <aside className="world-overview" aria-label="World overview"><canvas ref={overviewRef} width={GRID_SIZE} height={GRID_SIZE} aria-hidden="true" /><span>Overview</span></aside>
     <canvas
       ref={ref}
       className="life-canvas"

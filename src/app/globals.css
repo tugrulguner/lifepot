@@ -972,9 +972,16 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
   .camera-primary .camera-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .camera-primary output { min-width: 24px; text-align: center; }
-.simulation-shell .world-overview { grid-area:board; align-self:start; justify-self:end; z-index:2; display:flex; flex-direction:column; gap:.25rem; margin:.4rem; padding:.3rem; max-width:112px; pointer-events:none; background:var(--panel); border:1px solid var(--line); border-radius:4px; color:var(--muted); font-size:.65rem; }
-.simulation-shell .world-overview canvas { width:clamp(64px, 12vw, 104px); height:auto; aspect-ratio:1; border:1px solid var(--line); border-radius:4px; }
-@media (max-width:520px) { .simulation-shell .world-overview canvas { width:64px; } }
+.simulation-shell .world-overview { grid-area:observation; z-index:2; align-self:start; justify-self:end; display:flex; flex-direction:column; align-items:center; gap:.2rem; margin:0; padding:.25rem; width:76px; background:var(--panel); border:1px solid var(--line); border-radius:4px; color:var(--muted); font-size:.6rem; text-align:center; }
+.simulation-shell .gameplay-observation .configured-species-counts { padding-right:88px; min-height:64px; }
+.simulation-shell .world-overview canvas { width:48px; height:auto; aspect-ratio:1; border:1px solid var(--line); border-radius:4px; }
+@media(max-width:370px) {
+  .simulation-shell .world-overview { width:44px; }
+  .simulation-shell .world-overview canvas { width:32px; }
+  .simulation-shell .world-overview span { display:none; }
+  .simulation-shell .gameplay-observation .configured-species-counts { padding-right:52px; min-height:0; }
+}
+
 .camera-options { scroll-margin-top: 80px; }
 @media(max-width: 1000px) {
   .simulation-shell { grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "inspector" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event" "result"; row-gap: 8px; }
