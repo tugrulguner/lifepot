@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type TestInfo } from "@playwright/test";
-import { speciesColor } from "../src/game/species-colors";
+import { roleColor } from "../src/game/world-presentation";
 
 const viewports = [
   { width: 1280, height: 850 }, { width: 1280, height: 633 },
@@ -48,7 +48,7 @@ test.describe("built gameplay world legend acceptance", () => {
         expect(row.id).toMatch(/^[A-Z]$/);
         expect(row.path).toBeTruthy();
         expect(row.path).toContain("M");
-        expect(row.fill).toBe(speciesColor(row.id!));
+        expect(row.fill).toBe(roleColor(row.role, row.id!));
       }
       const watching = await page.evaluate(() => {
         const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();

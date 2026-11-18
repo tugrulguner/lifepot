@@ -164,7 +164,7 @@ test("mobile gameplay exposes direct inspector and observatory access beside sim
   await page.screenshot({ path: evidenceFile(testInfo, "mobile-observatory-390.png") });
 });
 
-test("running game keeps its intended dark canvas and semantic game colors under shell themes", async ({ page }, testInfo) => {
+test("running game keeps its cool-neutral habitat field and semantic role colors under shell themes", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1280, height: 850 });
   await page.emulateMedia({ colorScheme: "light" });
   let modelCalls = 0;
@@ -223,7 +223,7 @@ test("running game keeps its intended dark canvas and semantic game colors under
     await theme.selectOption(mode);
     await settle(page);
     const pixels = await snapshot();
-    expect(pixels.backdrop, `${mode}/${os} canvas backdrop`).toEqual([2, 10, 9]);
+    expect(pixels.backdrop, `${mode}/${os} canvas backdrop`).toEqual([220, 227, 223]);
     expect(pixels.varied).toBeGreaterThan(100);
     expect(pixels.organisms.filter(rgb => rgb[0] > 80 || rgb[1] > 110 || rgb[2] > 90).length, `${mode}/${os} populated organism/resource colors`).toBeGreaterThan(20);
     await expect(page.getByTestId("generation")).toHaveText(pausedGeneration ?? "");

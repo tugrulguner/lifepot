@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { SimulationState } from "@/game/world";
 import { inspectCell, lineageCells } from "@/game/inspection";
 import OrganismArtwork from "./OrganismArtwork";
-import { speciesColor } from "@/game/species-colors";
+import { roleColor } from "@/game/world-presentation";
 
 type Props = {
   state: SimulationState;
@@ -20,7 +20,7 @@ export function WatchingOrganism({ state, index, followed, onFollow, onDetails, 
   return <section className="watching-organism" aria-label="Watching organism">
     <div className="watching-organism-subject">
       {cell.occupied && <svg viewBox="0 0 100 100" aria-hidden="true">
-        <OrganismArtwork role={cell.species?.role} color={speciesColor(cell.species?.id ?? "")} />
+        <OrganismArtwork role={cell.species?.role} color={roleColor(cell.species?.role, cell.species?.id ?? "")} />
       </svg>}
       <div>
         <strong>{cell.occupied ? `Species ${cell.species?.id ?? "?"} · ${cell.species?.role ?? "organism"}` : "Empty cell"}</strong>

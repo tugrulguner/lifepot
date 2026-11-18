@@ -125,7 +125,7 @@ test("skip navigation enters Learn, review, and paused-world content without inf
     await reachSkip();
     await expect(page.locator("#play-content")).toBeFocused();
     await page.keyboard.press("Tab");
-    await expect(page.locator("canvas")).toBeFocused();
+    await expect(page.locator("canvas.life-canvas")).toBeFocused();
   }
   expect(judgeCalls).toBe(0);
 });

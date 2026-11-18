@@ -5,7 +5,7 @@ import type { SetupAnswers } from "@/game/setup";
 import type { LifeConfig } from "@/game/world";
 import { PAIR_INTERACTIONS, TROPHIC_ROLES } from "@/game/rules";
 import { relationshipLabel } from "@/game/visuals";
-import { speciesColor } from "@/game/species-colors";
+import { roleColor } from "@/game/world-presentation";
 
 export type WorldPreviewProps = { config: LifeConfig; answers: SetupAnswers; onChange: (config: LifeConfig) => void; starter?: boolean };
 const human = (value: string) => value.replaceAll("_", " ");
@@ -17,7 +17,7 @@ export default function WorldPreview({ config, answers, onChange, starter = fals
   return <section className="world-preview" aria-label={starter ? "Starter world conditions" : "Interpreted world preview"}>
     <h2>{starter ? "Starting habitat" : "Your world, interpreted"}</h2>
     <p>{preview.founders}. Each count is the configured starting estimate, not a guarantee about later populations.</p>
-    <ul className="world-preview-species" aria-label="Species">{preview.species.map(item => <li key={item.id}><i style={{ background: speciesColor(item.id) }}/><strong>Species {item.id}</strong><span>{human(item.role)} · {item.count} founders</span></li>)}</ul>
+    <ul className="world-preview-species" aria-label="Species">{preview.species.map(item => <li key={item.id}><i style={{ background: roleColor(item.role, item.id) }}/><strong>Species {item.id}</strong><span>{human(item.role)} · {item.count} founders</span></li>)}</ul>
     <h3>How species relate</h3><ul>{preview.relationships.map((item) => <li key={item.pair}>{item.description}</li>)}</ul>
     <h3>Conditions</h3><ul>{preview.environment.map((item) => <li key={item}>{item}</li>)}</ul>
     {preview.warnings.map((warning) => <p role="alert" key={warning}>{warning}</p>)}

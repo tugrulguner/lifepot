@@ -3,7 +3,7 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { createSimulation, GRID_SIZE } from "@/game/world";
 import { createStarterWorld, STARTER_WORLDS, type StarterId, type StarterWorld } from "@/game/starter-worlds";
-import { speciesColor } from "@/game/species-colors";
+import { roleColor } from "@/game/world-presentation";
 import OrganismArtwork from "./OrganismArtwork";
 import styles from "./StarterWorldPicker.module.css";
 
@@ -41,7 +41,7 @@ export default function StarterWorldPicker({ customMode = false, onChoose, onDes
   const organisms = Array.from(simulation.guild).flatMap((alive, index) => {
     if (!alive) return [];
     const species = selected.config.rules!.species[simulation.ruleSpecies[index] - 1];
-    return [{ index, role: species?.role, color: speciesColor(species?.id ?? "") }];
+    return [{ index, role: species?.role, color: roleColor(species?.role, species?.id ?? "") }];
   });
 
   function select(id: StarterId) {

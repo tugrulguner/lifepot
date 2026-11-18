@@ -6,6 +6,18 @@ export function boundCamera(camera: Camera): Camera {
   const zoom = clampZoom(camera.zoom), limit = (zoom - 1) / 2;
   return { zoom, x: Math.max(-limit, Math.min(limit, camera.x)) || 0, y: Math.max(-limit, Math.min(limit, camera.y)) || 0 };
 }
+export type WorldRect = { x: number; y: number; width: number; height: number };
+export function cameraViewportRects(camera: Camera): WorldRect[] {
+  const zoom = clampZoom(camera.zoom), span = GRID_SIZE / zoom;
+  const center = (offset: number) => GRID_SIZE / 2 - offset / zoom * GRID_SIZE;
+  const split = (mid: number): Array<[number, number]> => {
+    if (span >= GRID_SIZE) return [[0, GRID_SIZE]];
+    const start = ((mid - span / 2) % GRID_SIZE + GRID_SIZE) % GRID_SIZE;
+    const first = Math.min(span, GRID_SIZE - start);
+    return first < span ? [[start, first], [0, span - first]] : [[start, span]];
+  };
+  return split(center(camera.x)).flatMap(([x, width]) => split(center(camera.y)).map(([y, height]) => ({ x, y, width, height })));
+}
 export function followCamera(camera: Camera, state: SimulationState, target: FollowTarget): Camera | null {
   // Follow the oldest living member of a pinned family, not a misleading mean
   // across the toroidal seam. Switch only when that member disappears.

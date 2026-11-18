@@ -559,7 +559,7 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .simulation-shell .observatory-tabs button[aria-selected="true"]::after { background: var(--acid); }
 .simulation-shell .observatory-header p { color: var(--acid); }
 .simulation-shell .world-observatory { background: rgba(2, 13, 11, .97); }
-.simulation-shell .life-canvas { background: var(--ink); }
+.simulation-shell .life-canvas { background: #dce3df; }
 
 @media (min-width: 1001px) {
   .simulation-shell .life-canvas { width: min(100%, 70svh, calc(100svh - 252px)); height: auto; }
@@ -972,6 +972,16 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
   .camera-primary .camera-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .camera-primary output { min-width: 24px; text-align: center; }
+.simulation-shell .world-overview { grid-area:observation; z-index:2; align-self:start; justify-self:end; display:flex; flex-direction:column; align-items:center; gap:.2rem; margin:0; padding:.25rem; width:76px; background:var(--panel); border:1px solid var(--line); border-radius:4px; color:var(--muted); font-size:.6rem; text-align:center; }
+.simulation-shell .gameplay-observation .configured-species-counts { padding-right:88px; min-height:64px; }
+.simulation-shell .world-overview canvas { width:48px; height:auto; aspect-ratio:1; border:1px solid var(--line); border-radius:4px; }
+@media(max-width:600px) {
+  .simulation-shell .world-overview { width:44px; }
+  .simulation-shell .world-overview canvas { width:32px; }
+  .simulation-shell .world-overview span { display:none; }
+  .simulation-shell .gameplay-observation .configured-species-counts { padding-right:52px; min-height:0; }
+}
+
 .camera-options { scroll-margin-top: 80px; }
 @media(max-width: 1000px) {
   .simulation-shell { grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "inspector" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event" "result"; row-gap: 8px; }

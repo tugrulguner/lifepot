@@ -4,8 +4,30 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 afterEach(cleanup);
 import WorldPreview from "./WorldPreview";
 import { defaultConfig } from "@/game/setup";
+import { roleColor } from "@/game/world-presentation";
 
 describe("WorldPreview", () => {
+  it("colors each preview species by role and keeps same-role identities distinct", () => {
+    const config = defaultConfig();
+    config.rules!.species = [
+      { id: "A", role: "hunter", selfInteraction: "territorial" },
+      { id: "B", role: "producer", selfInteraction: "cooperative" },
+      { id: "C", role: "hunter", selfInteraction: "territorial" },
+    ];
+    config.rules!.interactions = [
+      { pair: "A:B", mode: "neutral" }, { pair: "A:C", mode: "competition" }, { pair: "B:C", mode: "a_consumes_b" },
+    ];
+    render(<WorldPreview config={config} answers={{ world: "world", threat: "threat", reward: "reward" }} onChange={() => {}} />);
+    const swatches = [...document.querySelectorAll<HTMLLIElement>(".world-preview-species li")];
+    const rendered = (row: HTMLLIElement) => row.querySelector("i")!.style.background;
+    const color = (value: string) => { const probe = document.createElement("i"); probe.style.background = value; return probe.style.background; };
+    expect(swatches.map(rendered)).toEqual([
+      color(roleColor("hunter", "A")), color(roleColor("producer", "B")), color(roleColor("hunter", "C")),
+    ]);
+    expect(rendered(swatches[0]!)).not.toBe(rendered(swatches[1]!));
+    expect(rendered(swatches[0]!)).not.toBe(rendered(swatches[2]!));
+  });
+
   it("uses neutral review language for designed starter worlds", () => {
     render(<WorldPreview starter config={defaultConfig()} answers={{ world: "starter", threat: "starter", reward: "starter" }} onChange={() => {}} />);
     expect(screen.getByRole("heading", { name: "Starting habitat" })).toBeTruthy();

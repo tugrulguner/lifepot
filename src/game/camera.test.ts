@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { clampZoom, screenToWorld, worldToScreen, boundCamera, followCamera, type Camera } from "./camera";
+import { clampZoom, screenToWorld, worldToScreen, boundCamera, followCamera, cameraViewportRects, type Camera } from "./camera";
 import { createSimulation } from "./world";
 import { defaultConfig } from "./setup";
+
+it("describes a zoomed viewport on both sides of the toroidal seam", () => {
+  expect(cameraViewportRects({ zoom: 2, x: 0.98, y: 0 })).toEqual([
+    { x: 38, y: 12.5, width: 12, height: 25 },
+    { x: 0, y: 12.5, width: 13, height: 25 },
+  ]);
+  expect(cameraViewportRects({ zoom: 1, x: 0, y: 0 })).toEqual([
+    { x: 0, y: 0, width: 50, height: 50 },
+  ]);
+});
 
 it("bounds normalized panning without exposing empty habitat", () => {
   expect(boundCamera({ zoom: 2, x: 4, y: -4 })).toEqual({ zoom: 2, x: .5, y: -.5 });

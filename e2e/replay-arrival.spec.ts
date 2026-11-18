@@ -15,7 +15,7 @@ test("replay arrival positions the board once and later ticks preserve deliberat
   const replay = createReplay({ answers, config, seed: 17, requestHash: hashSetupRequest(answers), ledger });
   const token = encodeReplay(replay);
   await page.goto(`/#replay=${encodeURIComponent(token)}`);
-  const canvas = page.locator("canvas").first();
+  const canvas = page.locator("canvas.life-canvas").first();
   await expect(canvas).toBeVisible();
   await expect(page.getByText(/Exact recorded replay/)).toBeVisible();
   await expect.poll(() => canvas.evaluate((element) => element.getBoundingClientRect().top)).toBeGreaterThanOrEqual(0);

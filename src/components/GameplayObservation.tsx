@@ -3,7 +3,7 @@ import type { RunEvidence } from "@/game/run-evidence";
 import type { EvolutionDecision } from "@/game/decisions";
 import { GRID_CELLS, type SimulationState } from "@/game/world";
 import { ruleTimingLabel, selectedChangeLabel, conciseChangeLabel } from "@/game/council-display";
-import { speciesColor } from "@/game/species-colors";
+import { roleColor } from "@/game/world-presentation";
 import OrganismArtwork from "./OrganismArtwork";
 
 export function CanvasMarkKey() {
@@ -47,7 +47,7 @@ export function GameplayObservation({ state, evidence, followed, decision, names
       const current = latestSample?.species.find(item => item.speciesId === species.id);
       const delta = previous && current?.population === count ? count - previous.population : null;
       const interval = recentSample ? state.generation - recentSample.generation : 0;
-      return <span key={species.id} aria-label={`Species ${species.id} count`}><svg className="species-legend-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={speciesColor(species.id)} /></svg><span className="species-identity"><span className="species-name">{names?.[species.id] ?? species.role}</span><span className="species-id"> · {species.id}</span>{names?.[species.id] && <small className="species-role">{species.role}</small>}</span> <b>{count}</b>
+      return <span key={species.id} aria-label={`Species ${species.id} count`}><svg className="species-legend-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={roleColor(species.role, species.id)} /></svg><span className="species-identity"><span className="species-name">{names?.[species.id] ?? species.role}</span><span className="species-id"> · {species.id}</span>{names?.[species.id] && <small className="species-role">{species.role}</small>}</span> <b>{count}</b>
         {delta !== null && <span className="species-recent-change" role="img" aria-label={`Species ${species.id} population: ${previous!.population} to ${count}, generations ${recentSample!.generation}–${state.generation}. Recorded change, not a prediction.`} title={`Recorded population change over ${interval} ${interval === 1 ? "generation" : "generations"}; not a prediction or explanation.`}>{delta > 0 ? "↑" : delta < 0 ? "↓" : "→"}{Math.abs(delta)} /{interval}g</span>}
       </span>;
     })}

@@ -1,5 +1,5 @@
 import type { SimulationState } from "./world";
-import { speciesColor } from "./species-colors";
+import { roleColor } from "./world-presentation";
 import { paintOrganism } from "./organism-glyphs";
 
 export const RESULT_IMAGE_WIDTH = 1600;
@@ -66,7 +66,7 @@ export function drawResultImage(ctx: CanvasRenderingContext2D, model: ResultImag
     const cell = model.cells[i], x = bx + (i % model.boardSize) * cellSize, y = by + Math.floor(i / model.boardSize) * cellSize;
     if (cell.resource) { ctx.fillStyle = `rgba(55, 190, 133, ${Math.min(.65, .08 + cell.resource / 400)})`; ctx.fillRect(x, y, cellSize, cellSize); }
     if (cell.guild) {
-      const color = cell.species ? speciesColor(cell.species as import("./rules").SpeciesId) : (cell.guild === 1 ? "#65d6a0" : "#ff8b72");
+      const color = roleColor(cell.role, cell.species ?? "");
       paintOrganism(ctx, cell.role, color, x + cellSize / 2, y + cellSize / 2, cellSize);
     }
   }
