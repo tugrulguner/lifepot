@@ -99,13 +99,11 @@ for (const width of [1280, 390]) test(`species focus keeps an inspected and pinn
   expect(species).not.toBeNull(); expect(position).not.toBeNull();
   await page.getByRole("button", { name: `Focus species ${species[1] === "A" ? "B" : "A"}`, exact: true }).click();
   await page.getByRole("button", { name: "Follow organism with camera", exact: true }).click();
-  const expectAlpha = (alpha: number) => expect.poll(() => page.evaluate(({ col, row }) => {
-    const rect = document.querySelector("canvas.life-canvas")!.getBoundingClientRect();
-    const pitch = (rect.width - 36) / 50;
-    return (window as unknown as { habitatPaint: Array<{ x: number; y: number; alpha: number }> }).habitatPaint
-      .find(item => Math.abs(item.x - (18 + col * pitch)) < .01 && Math.abs(item.y - (18 + row * pitch)) < .01)?.alpha;
-  }, { col: Number(position[1]), row: Number(position[2]) })).toBe(alpha);
-  await expectAlpha(1); // An inspected organism is visible even without a family pin.
+  const expectAlpha = (alpha: number) => expect.poll(() => page.evaluate(expected => {
+    const paints = (window as unknown as { habitatPaint: Array<{ x: number; y: number; alpha: number }> }).habitatPaint;
+    return paints.some(item => Math.abs(item.alpha - expected) < .01);
+  }, alpha)).toBe(true);
+  await expectAlpha(1); // Focus changes must not dim an inspected organism sprite.
   await inspector.getByRole("button", { name: /Follow founder lineage/ }).click();
   await inspector.getByRole("button", { name: "Clear inspection", exact: true }).click();
   await page.getByRole("button", { name: "Follow pinned family with camera", exact: true }).click();

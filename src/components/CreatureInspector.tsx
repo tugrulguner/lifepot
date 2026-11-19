@@ -23,7 +23,7 @@ export function CreatureInspector({ state, evidence, index, followed, onFollow, 
       {cell.occupied && <div className="organism-portrait">
         <svg viewBox="0 0 100 100" role="img" aria-label={`${cell.species?.role ?? "unknown"} role symbol`}>
           <circle cx="50" cy="50" r="44" fill="none" stroke={followed === cell.lineage ? "#ffd36a" : "#496b57"} strokeDasharray={followed === cell.lineage ? "5 4" : undefined}/>
-          <OrganismArtwork role={cell.species?.role} color={roleColor(cell.species?.role, cell.species?.id ?? "")} />
+          <OrganismArtwork variant={state.organismId[cell.index]} role={cell.species?.role} color={roleColor(cell.species?.role, cell.species?.id ?? "")} />
         </svg>
         <div><strong>Organism #{state.organismId[index!]}</strong><p>Symbol shows feeding role, not biological anatomy.</p><meter aria-label="Organism energy" min={0} max={255} value={cell.energy}/></div>
       </div>}

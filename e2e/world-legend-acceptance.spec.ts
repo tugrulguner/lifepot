@@ -38,18 +38,34 @@ test.describe("built gameplay world legend acceptance", () => {
         const id = text.match(/· ([A-Z])/)?.[1];
         return {
           role, id, text,
-          path: row.querySelector("svg > g > path:not([fill=none])")?.getAttribute("d"),
-          fill: row.querySelector("svg > g > path:not([fill=none])")?.getAttribute("fill"),
+          svg: row.querySelector("svg.species-legend-glyph")?.outerHTML,
         };
       }));
       expect(roles.length).toBeGreaterThan(1);
       for (const row of roles) {
         expect(row.role).toBeTruthy();
         expect(row.id).toMatch(/^[A-Z]$/);
-        expect(row.path).toBeTruthy();
-        expect(row.path).toContain("M");
-        expect(row.fill).toBe(roleColor(row.role, row.id!));
+        const expected = roleColor(row.role, row.id!);
+        const expectedRgb = expected.match(/[0-9a-f]{2}/gi)!.map(channel => parseInt(channel, 16));
+        const png = await legend.locator(`span[aria-label="Species ${row.id} count"] svg`).screenshot();
+        const decoded = await page.evaluate(async ({ base64, expected }) => {
+          const image = new Image(); image.src = `data:image/png;base64,${base64}`; await image.decode();
+          const canvas = document.createElement("canvas"); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+          const context = canvas.getContext("2d", { willReadFrequently: true })!; context.drawImage(image, 0, 0);
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+          let opaque = 0, matching = 0;
+          for (let i = 0; i < pixels.length; i += 4) if (pixels[i + 3] > 200) {
+            opaque++;
+            if (Math.max(Math.abs(pixels[i]-expected[0]),Math.abs(pixels[i+1]-expected[1]),Math.abs(pixels[i+2]-expected[2])) <= 45) matching++;
+          }
+          return { opaque, matching };
+        }, { base64: png.toString("base64"), expected: expectedRgb });
+        expect(decoded.opaque, `${row.role} ${row.id} decoded glyph has meaningful pixels`).toBeGreaterThan(20);
+        expect(decoded.matching, `${row.role} ${row.id} glyph pixels match approved role palette`).toBeGreaterThan(10);
+        expect(row.text).toContain(row.role!);
+        expect(row.text).toContain(row.id!);
       }
+      expect(new Set(roles.map(row => roleColor(row.role, row.id!))).size).toBeGreaterThan(1);
       const watching = await page.evaluate(() => {
         const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
         const legendRect = document.querySelector(".configured-species-counts")!.getBoundingClientRect();

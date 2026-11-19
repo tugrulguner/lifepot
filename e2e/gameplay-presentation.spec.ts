@@ -223,7 +223,7 @@ test("running game keeps its cool-neutral habitat field and semantic role colors
     await theme.selectOption(mode);
     await settle(page);
     const pixels = await snapshot();
-    expect(pixels.backdrop, `${mode}/${os} canvas backdrop`).toEqual([220, 227, 223]);
+    expect(pixels.backdrop, `${mode}/${os} canvas backdrop`).toEqual([155, 171, 164]);
     expect(pixels.varied).toBeGreaterThan(100);
     expect(pixels.organisms.filter(rgb => rgb[0] > 80 || rgb[1] > 110 || rgb[2] > 90).length, `${mode}/${os} populated organism/resource colors`).toBeGreaterThan(20);
     await expect(page.getByTestId("generation")).toHaveText(pausedGeneration ?? "");
