@@ -67,6 +67,7 @@ import type { SpeciesId } from "@/game/rules";
 import { FamilyHeader } from "./FamilyHeader";
 import { cellAtPoint } from "@/game/inspection";
 import { boundCamera, cameraViewportRects, followCamera, NEUTRAL_CAMERA, screenToWorld, type Camera, type FollowTarget } from "@/game/camera";
+import { visualProgress, spriteCullExtent, crossedWorldEdge } from "@/game/visual-transition";
 import { selectEventEffects, traceEventMark, updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
 import { WorldObservatory } from "./WorldObservatory";
 import { CanvasMarkKey, GameplayObservation } from "./GameplayObservation";
@@ -159,7 +160,7 @@ function seedFromHash(hash: string) {
 function title(v: string) {
   return v.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
 }
-function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: number | null, followed: number | null, effects: TimedOrganismEvent[] = [], now = 0, focusedSpecies: SpeciesId | null = null, camera: Camera = NEUTRAL_CAMERA, showHazards = true, previous: ReadonlyMap<number, readonly [number, number]> = new Map(), progress = 1) {
+function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: number | null, followed: number | null, effects: TimedOrganismEvent[] = [], now = 0, focusedSpecies: SpeciesId | null = null, camera: Camera = NEUTRAL_CAMERA, showHazards = true, previous: ReadonlyMap<number, readonly [number, number]> = new Map(), progress = 1, eventProgress = progress) {
   const rect = canvas.getBoundingClientRect(),
     dpr = Math.min(devicePixelRatio || 1, 2);
   // Detached or hidden boards have no drawable interior; resize will repaint.
@@ -205,9 +206,9 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     const px = old ? old[0] + dx * progress : x + .5, py = old ? old[1] + dy * progress : y + .5;
     const cx = pad + px * cw, cy = pad + py * ch;
     const angle = Math.hypot(dx, dy) > .02 ? Math.atan2(dy, dx) : id % 11 * .57, size = pitch * 1.18;
-    const event = progress < 1 ? transitionEvents.get(id) : undefined;
-    const pulse = event === "feeding" ? Math.sin(Math.PI * progress) * .09 : 0;
-    const birthScale = event === "birth" ? .65 + .35 * Math.sin(progress * Math.PI / 2) : 1;
+    const event = eventProgress < 1 ? transitionEvents.get(id) : undefined;
+    const pulse = event === "feeding" ? Math.sin(Math.PI * eventProgress) * .09 : 0;
+    const birthScale = event === "birth" ? .65 + .35 * Math.sin(eventProgress * Math.PI / 2) : 1;
     const sprite = microscopicSprite(species?.role, color, id % 12, pitch, dpr * camera.zoom) ?? organismSprite(species?.role, color, pitch, dpr * camera.zoom, camera.zoom);
     for (const ox of [-50, 0, 50]) for (const oy of [-50, 0, 50]) {
       // Reject only copies whose rotated sprite bounds cannot touch the clipped
@@ -215,7 +216,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       const copyX = cx + ox * cw, copyY = cy + oy * ch;
       const screenX = (1 - camera.zoom) * rect.width / 2 + camera.x * (rect.width - 36) + camera.zoom * copyX;
       const screenY = (1 - camera.zoom) * rect.height / 2 + camera.y * (rect.height - 36) + camera.zoom * copyY;
-      const extent = size * camera.zoom * Math.SQRT1_2 / 2;
+      const extent = spriteCullExtent(size, camera.zoom);
       if (screenX + extent < pad || screenX - extent > rect.width - pad || screenY + extent < pad || screenY - extent > rect.height - pad) continue;
       c.save(); c.translate(copyX, copyY); c.rotate(angle);
       c.scale(birthScale * (1 + pulse), birthScale * (1 - pulse * .4));
@@ -245,23 +246,41 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
     }
   }
   // Approved transient glints/rings are tied to native event locations only.
-  if (progress < 1) {
+  if (eventProgress < 1) {
     const pitch = Math.min(cw, ch);
+    const projectPoint = (point: readonly [number, number]) => {
+      const centerX = 25 - 50 * camera.x / camera.zoom, centerY = 25 - 50 * camera.y / camera.zoom;
+      const near = (value: number, center: number) => center + ((value - center + 75) % 50) - 25;
+      return [pad + near(point[0], centerX) * cw, pad + near(point[1], centerY) * ch];
+    };
     c.save();
     for (const event of state.events) {
-      const x = pad + (event.at % GRID_SIZE + .5) * cw, y = pad + (Math.floor(event.at / GRID_SIZE) + .5) * ch;
+      const [x, y] = projectPoint([event.at % GRID_SIZE + .5, Math.floor(event.at / GRID_SIZE) + .5]);
       if (event.kind === "feeding" && event.source === "resource") {
-        c.globalAlpha = Math.sin(Math.PI * progress) * Math.min(.9, .25 + event.energy / 24);
+        c.globalAlpha = Math.sin(Math.PI * eventProgress) * Math.min(.9, .25 + event.energy / 24);
         c.fillStyle = "#f7e6a5";
         for (let j = 0; j < 3; j++) {
-          const angle = event.organismId * .71 + j * Math.PI * 2 / 3, radius = pitch * (.65 - progress * .42);
+          const angle = event.organismId * .71 + j * Math.PI * 2 / 3, radius = pitch * (.65 - eventProgress * .42);
           c.beginPath(); c.arc(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius, Math.max(.65 / camera.zoom, Math.min(2 / camera.zoom, pitch * .045)), 0, Math.PI * 2); c.fill();
         }
       }
-      c.globalAlpha = (1 - progress) * .55;
+      c.globalAlpha = (1 - eventProgress) * .55;
       c.strokeStyle = event.kind === "death" ? "#9d625a" : event.kind === "birth" ? "#487f64" : "#b9953c";
       c.lineWidth = 1 / camera.zoom;
-      c.beginPath(); c.arc(x, y, pitch * (.34 + progress * .18), 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.arc(x, y, pitch * (.34 + eventProgress * .18), 0, Math.PI * 2); c.stroke();
+    }
+    // Recorded crossings mark both endpoints, as in the approved HTML.
+    c.globalAlpha = 1 - eventProgress;
+    c.strokeStyle = "#356abd";
+    c.lineWidth = 2 / camera.zoom;
+    for (let i = 0; i < state.guild.length; i++) {
+      if (!state.guild[i]) continue;
+      const from = previous.get(state.organismId[i]), to: readonly [number, number] = [i % GRID_SIZE + .5, Math.floor(i / GRID_SIZE) + .5];
+      if (!from || !crossedWorldEdge(from, to)) continue;
+      for (const point of [from, to]) {
+        const [x, y] = projectPoint(point);
+        c.strokeRect(x - pitch * .36, y - pitch * .36, pitch * .72, pitch * .72);
+      }
     }
     c.restore();
   }
@@ -394,7 +413,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
       last.current=state;
     }
     let frame=0, disposed=false;
-    const paint=()=>{if(disposed)return;cancelAnimationFrame(frame);frame=0;const now=performance.now();effects.current=updateEventEffects(effects.current,[],now,reduced);if(ref.current)draw(ref.current,state,validTarget?.kind === "organism" && tracked ? state.organismId.findIndex(id => id === validTarget.id) : selected,followed,effects.current,now,focusedSpecies,view,showHazards,previousPositions.current,Math.min(1,Math.max(0,(now-transitionStart.current)/450)));if(effects.current.length || now-transitionStart.current<450)frame=requestAnimationFrame(paint);};
+    const paint=()=>{if(disposed)return;cancelAnimationFrame(frame);frame=0;const now=performance.now();effects.current=updateEventEffects(effects.current,[],now,reduced);if(ref.current)draw(ref.current,state,validTarget?.kind === "organism" && tracked ? state.organismId.findIndex(id => id === validTarget.id) : selected,followed,effects.current,now,focusedSpecies,view,showHazards,previousPositions.current,visualProgress(now-transitionStart.current).movement,visualProgress(now-transitionStart.current).event);if(effects.current.length || now-transitionStart.current<450)frame=requestAnimationFrame(paint);};
     paint();
     const o = new ResizeObserver(paint);o.observe(ref.current);
     const themeObserver = new MutationObserver(() => paint());
@@ -462,7 +481,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
       <div className="camera-buttons">
         <button aria-label="Zoom out" disabled={view.zoom <= 1} onClick={() => { zoom(-.5); returnToWorld(); }}>−</button>
         <output aria-label="Camera zoom">{view.zoom}×</output>
-        <button aria-label="Zoom in" disabled={view.zoom >= 3} onClick={() => { zoom(.5); returnToWorld(); }}>+</button>
+        <button aria-label="Zoom in" disabled={view.zoom >= 10} onClick={() => { zoom(.5); returnToWorld(); }}>+</button>
         <button aria-label="Close-up view" aria-pressed={view.zoom === 2} title="2× close-up of the current view; simulation unchanged" onClick={() => { zoom(2 - view.zoom); returnToWorld(); }}>Close-up</button>
         <button aria-label="Full world" onClick={() => { reset(); returnToWorld(); }}>Full world</button>
         <button aria-label="Follow pinned family with camera" aria-describedby={cameraHintId} title="Follow the pinned family" disabled={!canFollowFamily} onClick={() => { if (followed !== null) { follow({ kind: "family", id: followed }); returnToWorld(); } }}>Follow family</button>
@@ -472,6 +491,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
     </section>
     <section id={cameraOptionsId} className="camera-tools camera-options" aria-label="Camera options" tabIndex={-1}>
       <div className="camera-buttons">
+        {[2, 5, 10].map(magnification => <button key={magnification} aria-label={`${magnification}× magnification`} aria-pressed={view.zoom === magnification} onClick={() => { zoom(magnification - view.zoom); returnToWorld(); }}>{magnification}×</button>)}
         <button aria-pressed={showHazards} onClick={() => setShowHazards(!showHazards)}>Hazard shading</button>
         <button aria-pressed={dragEnabled} disabled={view.zoom <= 1} onClick={() => { setDragEnabled(!dragEnabled); returnToWorld(); }}>Drag to pan</button>
         <button aria-label="Follow organism with camera" disabled={selected === null || !state.guild[selected]} onClick={() => { if (selected !== null && state.guild[selected]) { follow({ kind: "organism", id: state.organismId[selected] }); returnToWorld(); } }}>Follow organism</button>

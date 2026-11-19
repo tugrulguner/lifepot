@@ -34,7 +34,7 @@ export function followCamera(camera: Camera, state: SimulationState, target: Fol
 export type Size = { width: number; height: number };
 export type Point = { x: number; y: number };
 export const NEUTRAL_CAMERA: Camera = { zoom: 1, x: 0, y: 0 };
-export function clampZoom(zoom: number) { return Math.max(1, Math.min(3, zoom)); }
+export function clampZoom(zoom: number) { return Math.max(1, Math.min(10, zoom)); }
 export function worldToScreen(point: Point, camera: Camera, size: Size): Point {
   return { x: size.width / 2 + camera.x + (point.x - size.width / 2) * camera.zoom, y: size.height / 2 + camera.y + (point.y - size.height / 2) * camera.zoom };
 }
