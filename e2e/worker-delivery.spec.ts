@@ -7,6 +7,7 @@ test("all prepared routes and client-navigation payloads retain their exact buil
   const routes = JSON.parse(await readFile(".open-next/delivery-manifest.json", "utf8")) as Record<string, { asset: string; rsc?: string; segments?: Record<string, string>; headers: Record<string, string> }>;
   expect(routes["/"]).toBeDefined();
   expect(routes["/play"]).toBeDefined();
+  expect(routes["/experiment"]).toBeDefined();
   expect(routes["/project-docs/readme"]).toBeDefined();
   for (const [path, route] of Object.entries(routes)) {
     const variants: { asset: string; headers: Record<string, string> }[] = [{ asset: route.asset, headers: {} }, ...(route.rsc ? [{ asset: route.rsc, headers: { RSC: "1" } }] : []), ...Object.entries(route.segments ?? {}).map(([segment, asset]) => ({ asset, headers: { RSC: "1", "Next-Router-Segment-Prefetch": segment } }))];
@@ -33,8 +34,11 @@ test("prepared RSC supports real client navigation from overview through docs to
   await page.evaluate(() => { Object.assign(window, { deliveryNavigationSentinel: "same-document" }); });
   await page.locator(".overview-actions").getByRole("link", { name: "Documentation", exact: true }).click();
   await expect(page.getByRole("heading", { name: "LifePot documentation", exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "Play the game", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Explore deterministic preset", exact: true })).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { deliveryNavigationSentinel?: string }).deliveryNavigationSentinel)).toBe("same-document");
+  await page.getByRole("link", { name: "Play the game", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Whole world", exact: true })).toBeVisible();
+  // The approved observatory is a standalone HTML document, not an RSC page.
+  expect(await page.evaluate(() => (window as unknown as { deliveryNavigationSentinel?: string }).deliveryNavigationSentinel)).toBeUndefined();
   expect(errors).toEqual([]);
 });

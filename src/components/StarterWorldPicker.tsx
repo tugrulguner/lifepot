@@ -63,7 +63,7 @@ export default function StarterWorldPicker({ customMode = false, onChoose, onDes
             <rect width="500" height="500" fill="var(--mp-canvas)" />
             {resourceCells.map(({ value, index }) => <circle key={`resource-${index}`} cx={(index % GRID_SIZE + .5) * 10} cy={(Math.floor(index / GRID_SIZE) + .5) * 10} r={.6 + value / 255} fill="#71ca8b" opacity={.2 + value / 255 * .5} />)}
             {hazardCells.map(({ value, index }) => <rect key={`hazard-${index}`} x={index % GRID_SIZE * 10} y={Math.floor(index / GRID_SIZE) * 10} width="10" height="10" fill="#ee856b" opacity={.06 + value / 255 * .22} />)}
-            {hydrated && organisms.map(({ index, role, color }) => <svg key={`organism-${index}`} x={(index % GRID_SIZE + .12) * 10} y={(Math.floor(index / GRID_SIZE) + .12) * 10} width="7.6" height="7.6" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={role} color={color} /></svg>)}
+            {hydrated && organisms.map(({ index, role, color }) => <svg key={`organism-${index}`} x={(index % GRID_SIZE + .12) * 10} y={(Math.floor(index / GRID_SIZE) + .12) * 10} width="7.6" height="7.6" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork variant={simulation.organismId[index]} role={role} color={color} /></svg>)}
           </svg>
           <details className={styles.summary} aria-label={`${selected.title} habitat summary`}>
             <summary><strong>Generation 0 · {simulation.stats.population} organisms</strong> · details</summary>

@@ -19,7 +19,7 @@ for (const width of [320, 390, 1280]) {
       await page.route('**/api/player-proposal', route => route.fulfill({ json: { outcome: 'proposed', proposal } }));
       await page.clock.install({ time: new Date('2026-10-26T02:00:00Z') });
       await page.clock.pauseAt(new Date('2026-10-26T02:00:01Z'));
-      await page.goto('/play');
+      await page.goto('/experiment');
       await page.getByRole('button', { name: 'Explore deterministic preset' }).click();
       await page.getByRole('button', { name: /Seed ecosystem/ }).click();
       const opener = page.getByRole('button', { name: 'Ask Jev to change this world' });

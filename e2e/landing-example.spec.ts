@@ -5,7 +5,7 @@ for (const width of [1280, 390]) test(`example enters the recorded world without
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   let inference = 0;
   await page.route("**/api/{judge,reflect}", route => { inference++; return route.abort(); });
-  await page.goto("/play#example");
+  await page.goto("/experiment#example");
   await expect(page.getByRole("region", { name: "Run status", exact: true })).toContainText("Recorded example");
   const bounds = await page.locator("canvas.life-canvas").boundingBox();
   expect(bounds && bounds.y >= 64 && bounds.y + bounds.height <= 850).toBe(true);

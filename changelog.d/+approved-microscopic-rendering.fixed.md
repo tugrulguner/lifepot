@@ -1,0 +1,1 @@
+Restore the approved microscopic organism sprites, identity-variant portraits, and camera-sampled resource/hazard texture in the playable habitat, retaining the existing simulation and inspection controls.

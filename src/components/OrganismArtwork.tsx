@@ -1,16 +1,21 @@
-import { useId } from "react";
+import { useId, useSyncExternalStore } from "react";
+import { microscopicPortrait } from "@/game/microscopic-renderer";
+const subscribe = () => () => {};
 import { ORGANISM_STYLE, organismAccentPath, organismHighlightPath, organismPath } from "@/game/organism-glyphs";
 
 export interface OrganismArtworkProps {
   role?: string;
+  variant?: number;
   color: string;
   cx?: number;
   cy?: number;
   radius?: number;
 }
 
-export default function OrganismArtwork({ role, color, cx = 50, cy = 50, radius = 36 }: OrganismArtworkProps) {
+export default function OrganismArtwork({ role, color, variant = 0, cx = 50, cy = 50, radius = 36 }: OrganismArtworkProps) {
   const clipId = `organism-clip-${useId().replace(/:/g, "")}`, gradientId = `${clipId}-shade`;
+  const portrait = useSyncExternalStore(subscribe, () => microscopicPortrait(role, color, variant), () => "");
+  if (portrait) return <image aria-hidden="true" href={portrait} x={cx-radius*4/3} y={cy-radius*4/3} width={radius*8/3} height={radius*8/3} />;
   const body = organismPath(role, cx, cy, radius), pitch = radius / ORGANISM_STYLE.radius;
   return <g aria-hidden="true">
     <defs>

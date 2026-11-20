@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function startFollowing(page: Page) {
   await page.setViewportSize({ width: 390, height: 850 });
   await page.route("**/api/judge", route => route.abort());
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByLabel("Import a LifePot world export", { exact: true }).setInputFiles("e2e/fixtures/my-worlds/pond-notebook.json");
   await page.getByRole("button", { name: "Reopen and replay", exact: true }).click();
   await page.getByRole("button", { name: "Pause", exact: true }).click();

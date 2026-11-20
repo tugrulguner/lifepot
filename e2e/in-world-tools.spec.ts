@@ -7,7 +7,7 @@ for(const [width,height] of [[320,568],[320,844],[390,844],[768,844],[1280,844]]
  await page.route('**/api/judge',r=>r.fulfill({json:deterministicEvolutionDecision(r.request().postDataJSON().summary)}));
  await page.route('**/api/player-proposal',r=>{requests.push(r.request().postDataJSON());return r.fulfill({json:{outcome:'proposed',proposal:{version:1,source:'jev',model:'shortcut-fixture',usage:{input_tokens:1,output_tokens:1},pressure:'nutrient_bloom',duration:6,evidence:{choice:'nutrient_bloom',confidence:1,probabilities:Object.fromEntries(['unsupported',...ENVIRONMENT_PRESSURES].map(k=>[k,k==='nutrient_bloom'?1:0]))}}}})});
  await page.setViewportSize({width,height});await page.clock.install({time:new Date('2026-11-03T12:00:00Z')});await page.clock.pauseAt(new Date('2026-11-03T12:00:01Z'));
- await page.goto('/play');await page.getByRole('button',{name:'Preview Resource competition',exact:true}).click();await page.getByRole('button',{name:'Review this world',exact:true}).click();
+ await page.goto('/experiment');await page.getByRole('button',{name:'Preview Resource competition',exact:true}).click();await page.getByRole('button',{name:'Review this world',exact:true}).click();
  await page.getByLabel('World policy',{exact:true}).selectOption('adaptive');
  await page.getByRole('button',{name:/Seed ecosystem/}).click();
  await page.getByRole('button',{name:'Ask Jev to change this world'}).click();
