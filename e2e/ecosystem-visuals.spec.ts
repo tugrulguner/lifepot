@@ -24,7 +24,7 @@ for(const width of [1280,390])for(const theme of ['Light','Dark'])test(`readable
    return path?originalStroke.call(this,path):(originalStroke as ()=>void).call(this);
   };
  });
- await page.goto('/play');await page.getByLabel('Theme').selectOption(theme.toLowerCase());await page.getByRole('button',{name:'Explore deterministic preset'}).click();await page.getByLabel('World policy').selectOption('fixed');await page.getByRole('button',{name:/Seed ecosystem/}).click();
+ await page.goto('/experiment');await page.getByLabel('Theme').selectOption(theme.toLowerCase());await page.getByRole('button',{name:'Explore deterministic preset'}).click();await page.getByLabel('World policy').selectOption('fixed');await page.getByRole('button',{name:/Seed ecosystem/}).click();
  const dir=process.env.LIFEPOT_VISUAL_EVIDENCE??testInfo.outputDir;mkdirSync(dir,{recursive:true});
  await page.clock.runFor(1100);await expect(page.getByTestId('generation')).not.toHaveText('0 / 180');
  await page.screenshot({path:join(dir,`running-${width}x850-${theme.toLowerCase()}.png`)});

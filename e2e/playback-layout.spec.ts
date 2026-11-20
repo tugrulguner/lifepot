@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 for (const { width, gutter } of [{ width: 375, gutter: 0 }, { width: 390, gutter: 0 }, { width: 390, gutter: 15 }]) {
   test(`recorded replay controls stay compact and usable at ${width}px with ${gutter}px gutter`, async ({ page }) => {
     await page.setViewportSize({ width, height: 850 });
-    await page.goto("/play");
+    await page.goto("/experiment");
     if (gutter) {
       await page.addStyleTag({ content: "body { margin-right: 15px !important; }" });
     }
@@ -61,7 +61,7 @@ for (const viewport of [
     let inferenceCalls = 0;
     page.on("pageerror", error => errors.push(error.message));
     await page.route("**/api/judge", route => { inferenceCalls++; return route.abort(); });
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.clock.install();
     await page.clock.pauseAt(new Date(Date.now() + 1000));
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();

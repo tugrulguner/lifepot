@@ -24,7 +24,7 @@ test.describe("live Jev setup and gameplay", () => {
    } catch { /* Assertions on awaited responses handle failures. */ }
   });
   await page.setViewportSize({ width: 1280, height: 850 });
-  await page.goto("/play");
+  await page.goto("/experiment");
   let response;
   for (const [i, answer] of answers.entries()) {
    await page.locator(".question-panel input").fill(answer);

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 for (const width of [390, 1280]) test(`approved microscopic magnifications at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", {name:"Explore deterministic preset"}).click();
   await page.getByLabel("World policy", {exact:true}).selectOption("fixed");
   await page.getByRole("button", {name:/Seed ecosystem/}).click();

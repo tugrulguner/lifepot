@@ -7,7 +7,7 @@ for(const width of [390,1280])for(const name of starters){
   const errors:string[]=[],inference:string[]=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/judge',route=>{inference.push(route.request().url());return route.abort()});
-  await page.goto('/play');
+  await page.goto('/experiment');
   const choice=page.getByRole('button',{name:`Preview ${name}`,exact:true});
   await choice.click();
   const preview=page.getByRole('img',{name:/Starter habitat preview/});
@@ -34,7 +34,7 @@ for(const width of [390,1280])for(const name of starters){
 }
 
 test('custom creation remains available with the original prose and request validation',async({page})=>{
- await page.goto('/play');
+ await page.goto('/experiment');
  await page.getByRole('button',{name:'Describe your own world',exact:true}).click();
  await expect(page.getByRole('button',{name:'Review this world',exact:true})).toHaveCount(0);
  const input=page.locator('.answer-field input');

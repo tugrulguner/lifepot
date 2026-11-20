@@ -3,7 +3,7 @@ for(const width of [390,1280])test(`${width}px entry opens on the real square ha
  const consoleErrors:string[]=[];
  page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())});
  await page.setViewportSize({width,height:844});
- await page.goto('/play');
+ await page.goto('/experiment');
  const preview=page.getByRole('img',{name:/Starter habitat preview/});
  await expect(preview).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(20);

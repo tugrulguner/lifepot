@@ -11,14 +11,14 @@ const resources = [
   { label: "About Tugrul", href: "https://tugrul.modepot.io/" },
 ];
 
-export function FeedbackLink({ path }: { path: "/" | "/learn" | "/play" }) {
+export function FeedbackLink({ path }: { path: "/" | "/learn" | "/play" | "/experiment" }) {
   const title = `LifePot feedback — ${path}`;
   const body = `LifePot page: ${path}\n\nPlease describe the issue or feedback. Avoid including private questions, replay data, saved-world names, or other personal information.`;
   const href = `https://github.com/tugrulguner/lifepot/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
   return <a className="family-feedback ph-no-autocapture" href={href} target="_blank" rel="noopener noreferrer" aria-label={`Feedback / report an issue for ${path} (opens in a new tab)`} data-ph-no-autocapture="true">Feedback</a>;
 }
 
-export function FamilyHeader({ children, feedbackPath = "/play", skipTarget }: { children?: ReactNode; feedbackPath?: "/" | "/learn" | "/play"; skipTarget: string }) {
+export function FamilyHeader({ children, feedbackPath = "/play", skipTarget }: { children?: ReactNode; feedbackPath?: "/" | "/learn" | "/play" | "/experiment"; skipTarget: string }) {
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   useEffect(() => {

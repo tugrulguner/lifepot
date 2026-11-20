@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 for (const viewport of [{ width: 1280, height: 633 }, { width: 390, height: 850 }, { width: 320, height: 850 }]) {
   for (const theme of ["light", "dark"]) test(`fixed habitat controls preserve board and theme at ${viewport.width}px ${theme}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.getByRole("combobox", { name: "Color theme" }).selectOption(theme);
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await page.getByLabel("World policy", { exact: true }).selectOption("fixed");

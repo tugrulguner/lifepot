@@ -4,7 +4,7 @@ declare global { interface Window { turningPointAlphas: number[] } }
 
 async function preset(page: Page, scarce = false) {
   await page.route("**/api/judge", route => route.abort());
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset", exact: true }).click();
   if (scarce) {
     await page.getByText("Edit world conditions", { exact: true }).click();

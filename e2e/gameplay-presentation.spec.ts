@@ -12,7 +12,7 @@ function evidenceFile(testInfo: TestInfo, filename: string) {
 async function seedPreset(page: import("@playwright/test").Page) {
   let modelCalls = 0;
   await page.route("**/api/judge**", async (route) => { modelCalls++; await route.abort(); });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await expect(page.getByRole("img", { name: /ecosystem generation/i })).toBeVisible();
@@ -32,7 +32,7 @@ test("setup arrivals begin at the gameplay header before any operating control i
     { width: 768, height: 850 }, { width: 390, height: 850 }, { width: 320, height: 850 },
   ]) {
     await page.setViewportSize(viewport);
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
@@ -73,7 +73,7 @@ test("ordinary three-question setup arrives at gameplay without retained review 
     await route.fulfill({ json: { config: deterministicSetup(request.answers), source: "jev", requestHash: hashSetupRequest(request.answers), model: "declared-browser-fixture", fidelity: { verdict: "approve", model: "declared-browser-fixture", usage: { input_tokens: 1, output_tokens: 1 } } } });
   });
   await page.setViewportSize({ width: 390, height: 850 });
-  await page.goto("/play");
+  await page.goto("/experiment");
   for (let question = 0; question < 3; question++) {
     const input = page.getByRole("textbox");
     await input.fill(`A balanced ecosystem answer ${question + 1}`);
@@ -104,7 +104,7 @@ test("near-board observation loop stays readable beside the desktop board and ab
   await page.route("**/api/judge**", async route => { modelCalls++; await route.abort(); });
   for (const viewport of [{ width: 1280, height: 850 }, { width: 1280, height: 633 }, { width: 768, height: 850 }, { width: 390, height: 850 }, { width: 320, height: 850 }]) {
     await page.setViewportSize(viewport);
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     const canvas = page.getByRole("img", { name: /ecosystem generation/i });
@@ -169,7 +169,7 @@ test("running game keeps its cool-neutral habitat field and semantic role colors
   await page.emulateMedia({ colorScheme: "light" });
   let modelCalls = 0;
   await page.route("**/api/judge**", async (route) => { modelCalls++; await route.abort(); });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await expect(page.getByRole("img", { name: /ecosystem generation/i })).toBeVisible();

@@ -47,7 +47,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     const errors: string[] = [], inference: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     await page.route("**/api/{judge,reflect,player-proposal}", route => { inference.push(route.request().url()); return route.abort(); });
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.getByRole("button", { name: "Explore deterministic preset", exact: true }).click();
     await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
     await expect(page.getByRole("checkbox", { name: "Enable same-world save and continuation" })).not.toBeChecked();
@@ -111,7 +111,7 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
 test("completed window extends explicitly without replacing or advancing its world", async ({ page }) => {
   const checkpoint = fixture(3);
   expect(checkpoint.state.generation).toBe(3);
-  await page.goto("/play");
+  await page.goto("/experiment");
   await importCheckpoint(page, checkpoint);
   await library(page).getByRole("button", { name: "Open paused habitat: Boundary pond", exact: true }).click();
   await expect(page.getByText("Reached the 3-generation observation limit", { exact: true })).toBeVisible();
@@ -128,7 +128,7 @@ test("completed window extends explicitly without replacing or advancing its wor
 
 test("failed save and duplicate import preserve the prior checkpoint and paused world", async ({ page }) => {
   const checkpoint = fixture(1800);
-  await page.goto("/play");
+  await page.goto("/experiment");
   await importCheckpoint(page, checkpoint);
   await library(page).getByRole("button", { name: "Open paused habitat: Boundary pond", exact: true }).click();
   const prior = (await records(page))[0].wire;
@@ -162,7 +162,7 @@ test("failed save and duplicate import preserve the prior checkpoint and paused 
 
 for (const kind of ["extinct", "cap"] as const) test(`${kind} habitat cannot be extended or reseeded by reopening`, async ({ page }) => {
   const checkpoint = fixture(kind === "cap" ? 1800 : 180, kind === "extinct");
-  await page.goto("/play");
+  await page.goto("/experiment");
   await importCheckpoint(page, checkpoint);
   await library(page).getByRole("button", { name: "Open paused habitat: Boundary pond", exact: true }).click();
   await expect(page.getByRole("button", { name: /^Extend observation/ })).toHaveCount(0);

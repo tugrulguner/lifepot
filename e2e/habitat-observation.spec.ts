@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 async function startPaused(page: Page) {
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset", exact: true }).click();
   await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();

@@ -10,7 +10,7 @@ for (const width of [390, 1280]) test.describe.serial(`${width}px habitat-to-out
   });
   test.afterAll(async () => { await context?.close(); });
   test('natural completion keeps the real final habitat in view', async () => {
-    await page.goto('/play');
+    await page.goto('/experiment');
     await page.getByRole('button', { name: 'Review this world', exact: true }).click();
     await page.getByRole('button', { name: /Seed ecosystem/ }).click();
     const key = page.getByRole('note', { name: 'Canvas marks', exact: true });

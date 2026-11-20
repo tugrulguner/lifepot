@@ -19,7 +19,7 @@ test("completed runs expose reachable continuation actions before evidence and r
   });
 
   await page.setViewportSize({ width: 390, height: 850 });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");

@@ -10,7 +10,7 @@ for(const width of [390,1280])test.describe.serial(`player-change comparison ${w
  });
  test.afterAll(async()=>{await page?.close()});
  test('complete the unchanged reference trial',async()=>{
-  await page.goto('/play');await page.getByRole('button',{name:'Explore deterministic preset'}).click();
+  await page.goto('/experiment');await page.getByRole('button',{name:'Explore deterministic preset'}).click();
   await page.getByText('Edit world conditions',{exact:true}).click();await page.getByLabel('Environment pressure',{exact:true}).selectOption('stability');
   await page.getByRole('button',{name:/Seed ecosystem/}).click();await page.getByLabel('Playback speed',{exact:true}).selectOption('fast');
   await expect(page.getByRole('region',{name:'Run results',exact:true})).toBeVisible({timeout:24000});

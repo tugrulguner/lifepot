@@ -22,7 +22,7 @@ test.describe("built gameplay world legend acceptance", () => {
       await page.emulateMedia({ colorScheme: theme });
       let judgeCalls = 0;
       await page.route("**/api/judge**", async route => { judgeCalls++; await route.abort(); });
-      await page.goto("/play");
+      await page.goto("/experiment");
       await page.getByRole("combobox", { name: "Color theme" }).selectOption(theme);
       await page.getByRole("button", { name: "Explore deterministic preset" }).click();
       await page.getByRole("button", { name: /Seed ecosystem/ }).click();

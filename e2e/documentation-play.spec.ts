@@ -22,7 +22,8 @@ for (const width of [1280, 768, 390, 320]) {
       await page.screenshot({ path: info.outputPath(`documentation-${width}-${theme}.png`) });
       await play.click();
       await expect(page).toHaveURL(/\/play$/);
-      await expect(page.getByRole("button", { name: "Explore deterministic preset", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Whole world", exact: true })).toBeVisible();
     }
     expect(judgeCalls).toBe(0);
   });
