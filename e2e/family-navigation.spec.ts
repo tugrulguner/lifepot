@@ -59,7 +59,7 @@ test("compact header exposes Feedback and menu preserves ordered family resource
     await expect(feedback).toHaveAttribute("rel","noopener noreferrer");
     const feedbackUrl=new URL((await feedback.getAttribute("href"))!);
     expect(feedbackUrl.origin+feedbackUrl.pathname).toBe("https://github.com/tugrulguner/lifepot/issues/new");
-    expect(feedbackUrl.searchParams.get("title")).toBe("LifePot feedback — /play");
+    expect(feedbackUrl.searchParams.get("title")).toBe("LifePot feedback — /experiment");
     expect(feedbackUrl.href).not.toContain("PRIVATE_SENTINEL");
     const feedbackHit=await feedback.evaluate(e=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{width:r.width,height:r.height,hit:hit===e||e.contains(hit)}});
     expect(feedbackHit.width).toBeGreaterThanOrEqual(44);expect(feedbackHit.height).toBeGreaterThanOrEqual(44);expect(feedbackHit.hit).toBe(true);
