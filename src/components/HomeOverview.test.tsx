@@ -17,8 +17,9 @@ it("keeps canonical artwork in the family hero and creator/family attribution im
   const root = overview();
   expect(root.querySelector('.overview-hero img[src="/lifepot-lockup.png?v=adaptive-life-1"]')).not.toBeNull();
   const actions = root.querySelector(".overview-actions")!;
-  expect(actions.querySelector('.overview-primary[href="/play"]')).not.toBeNull();
-  expect(actions.querySelector('.overview-secondary[href="/learn"]')).not.toBeNull();
+  expect(root.querySelector('.overview-more a[href="/experiment"]')?.textContent).toContain("Create your own world");
+  expect(actions.querySelector('.overview-secondary[href="/learn"]')?.textContent).toContain("Documentation");
+  expect(actions.querySelector('.overview-primary[href="/play"]')?.textContent).toContain("Open observatory");
   const credit = actions.nextElementSibling!;
   expect(credit.classList.contains("creator-row")).toBe(true);
   expect(credit.querySelector(".overview-credit")).not.toBeNull();

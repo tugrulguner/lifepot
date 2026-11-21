@@ -9,7 +9,7 @@ interaction structure together; matching renderer layers alone is not parity.
 is no copied simulation engine. `entry.js` preserves explicit legacy example
 and replay URLs by forwarding those visits, unchanged, to `/experiment`, where
 the full setup, saved-world, replay and adaptive experiment application lives.
-Normal `/play` visits do not take that route or call inference.
+Normal `/play` visits do not take that route or call inference. App responses advertise the advanced workspace with a `lifepot-app` Server-Timing metric on the document. A standalone copy, including one served over HTTP at `/play`, has no such marker: it plays locally without following legacy redirects or offering links to missing routes.
 
 `npm run dev`, `build`, `test` and `typecheck` generate `generated-html.ts` through
 `scripts/build-observatory.mjs`. The generated module is ignored. To produce
