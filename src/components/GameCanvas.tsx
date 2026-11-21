@@ -499,6 +499,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
       </div>
       <p role="status">{lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Last camera position retained.` : "Family pin changed. Full world restored." : tracked ? `Camera follows ${validTarget!.kind} #${validTarget!.id}${validTarget!.kind === "family" ? " through its oldest living member" : ""}.` : releasedNotice || "Camera is free. Zoom and drag to explore; the simulation is unchanged."}</p>
       <details><summary>Camera controls</summary><p>Mouse: drag while zoomed. Touch: enable Drag to pan; turn it off to scroll the page over the board. Tap without dragging to inspect. Keyboard on the board: +/− zoom, Shift+arrows pan, 0 restores the full world. Following tracks identity through movement. At a wrapping edge the camera moves to the other side; family following switches to the oldest surviving member.</p></details>
+      <a className="advanced-return-link" href="/play">Back to observatory</a>
     </section>
     </>
   );
@@ -1188,6 +1189,7 @@ export function GameCanvas() {
         </section>
         <HabitatLibrary onOpen={openSavedHabitat} refreshKey={habitatRefreshKey} />
         <MyWorldsPanel entryShortcut onOpen={openSavedWorld} onReview={reviewSavedWorld} />
+        <p className="observatory-return"><a className="advanced-return-link" href="/play">Back to observatory</a></p>
       </main>
     );
   }
@@ -1257,6 +1259,7 @@ export function GameCanvas() {
           >
             Seed ecosystem <span>→</span>
           </button>
+          <p className="observatory-return"><a className="advanced-return-link" href="/play">Back to observatory</a></p>
         </section>
       </main>
     );

@@ -58,6 +58,13 @@ function renderPresetForPlayback() {
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
 }
 
+test("advanced camera tools provide a direct return to the play screen", () => {
+  renderPresetForPlayback();
+  const link = screen.getByRole("link", { name: "Back to observatory" });
+  expect(link).toHaveAttribute("href", "/play");
+  expect(link.closest('[aria-label="Camera options"]')).not.toBeNull();
+});
+
 test("visual event metadata retains the previous generation's actual family identities", () => {
   const updates = vi.spyOn(eventEffects, "updateEventEffects");
   renderPresetForPlayback();

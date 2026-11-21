@@ -5,5 +5,8 @@ const replay = new URLSearchParams(url.hash.slice(1)).has('replay') || url.searc
 if ((url.protocol === 'http:' || url.protocol === 'https:') && (replay || url.hash === '#example')) {
   location.replace('/experiment' + url.search + url.hash);
 } else {
+  const web = url.protocol === 'http:' || url.protocol === 'https:';
+  document.getElementById('advanced-tools').hidden = !web;
+  document.getElementById('offline-tools').hidden = web;
   void import('./client.js');
 }
