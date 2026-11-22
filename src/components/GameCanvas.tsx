@@ -1177,6 +1177,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
           {qi === 0 && (
             <details className="setup-intro">
               <summary>How LifePot works · guides & credits</summary>
+              <div className="creator-row"><p className="creator-attribution">Created by <a aria-label="Created by Tugrul Guner" href="https://tugrul.modepot.io/">Tugrul Guner</a></p><CreatorSocialLinks /></div>
               <p>
                 Three answers shape your world. In adaptive worlds, Jev responds
                 to the ecology through supported environmental changes and
@@ -1191,7 +1192,6 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
                 {publicDocuments.some((document) => document.slug === "roadmap") && <><Link href="/project-docs/roadmap">Roadmap ↗</Link>{' · '}</>}
                 <a href="https://github.com/tugrulguner/lifepot/tree/main/docs" target="_blank" rel="noopener noreferrer">About LifePot ↗</a>
               </p>
-              <div className="creator-row"><p className="creator-attribution">Created by <a aria-label="Created by Tugrul Guner" href="https://tugrul.modepot.io/">Tugrul Guner</a></p><CreatorSocialLinks /></div>
             </details>
           )}
           </>}

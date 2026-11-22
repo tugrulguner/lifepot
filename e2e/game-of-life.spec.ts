@@ -134,7 +134,7 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
     // Native autofocus scrolls asynchronously; assert after the browser has settled.
     await page.waitForTimeout(300);
     await page.locator(".setup-intro summary").click();
-    const explanation = page.locator(".setup-intro p").first();
+    const explanation = page.locator(".setup-intro > p").filter({ hasText: "Three answers shape your world" });
     await expect(explanation).toBeVisible();
     await expect(explanation).toContainText("In adaptive worlds, Jev responds to the ecology");
     await expect(explanation).toContainText("not direct control of individual organisms");
