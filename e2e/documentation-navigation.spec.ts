@@ -48,7 +48,7 @@ test("overview has first-fold Play and preserves the keyless game entry across t
       await page.screenshot({ path: info.outputPath(`overview-${width}-${theme}.png`), fullPage: true });
       await play.click();
       await expect(page).toHaveURL(/\/experiment$/);
-      await expect(page.getByRole("button", { name: "Custom world", exact: true })).toBeVisible();
+      await expect(page.getByRole("textbox", { name: "What exists in your world?" })).toBeVisible();
     }
     await page.goto("/learn/contracts");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -62,15 +62,15 @@ test("Play skip link bypasses FamilyHeader and enters starter and custom content
     await page.goto("/experiment");
     const skip = page.getByRole("link", { name: "Skip to main content" });
     if (custom) {
-      await page.getByRole("button", { name: "Custom world", exact: true }).click();
-      await expect(page.getByRole("textbox").first()).toBeFocused();
-      // Traverse backward from deliberate custom-input focus, not an imperative focus call.
-      for (let index = 0; index < 20 && !(await skip.evaluate(element => element === document.activeElement)); index++) {
-        await page.keyboard.press("Shift+Tab");
-      }
+      // Input-first is the default; the skip link is keyboard reachable without textarea autofocus.
+      await expect(page.getByRole("textbox", { name: "What exists in your world?" })).toBeVisible();
     } else {
-      // Starter entry must not scroll to the questionnaire through autofocus.
+      // Exercise the optional starter mode separately from the input-first default.
+      await page.getByRole("button", { name: "Use a starter world instead", exact: true }).click();
+      await expect(page.getByRole("heading", { name: "Choose a living world" })).toBeVisible();
       await expect(page.getByRole("textbox")).toHaveCount(0);
+    }
+    for (let index = 0; index < 30 && !(await skip.evaluate(element => element === document.activeElement)); index++) {
       await page.keyboard.press("Tab");
     }
     await expect(skip).toBeFocused();

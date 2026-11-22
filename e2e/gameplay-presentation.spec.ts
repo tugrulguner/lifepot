@@ -74,7 +74,7 @@ test("ordinary three-question setup arrives at gameplay without retained review 
   });
   await page.setViewportSize({ width: 390, height: 850 });
   await page.goto("/experiment");
-  await page.getByRole("button", { name: "Custom world", exact: true }).click();
+
   for (let question = 0; question < 3; question++) {
     const input = page.getByRole("textbox");
     await input.fill(`A balanced ecosystem answer ${question + 1}`);

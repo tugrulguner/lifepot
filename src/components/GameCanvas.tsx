@@ -102,7 +102,7 @@ const QUESTIONS: Array<{
 }> = [
   {
     key: "world",
-    title: "What exists in this world?",
+    title: "What exists in your world?",
     note: "Describe resources and founder balance.",
     examples: [
       "Rich mineral pools with abundant prey",
@@ -528,8 +528,14 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
   const [exampleRetry, setExampleRetry] = useState(0);
   const exampleJourney = useRef(0);
   const setupJourney = useRef(0);
-  const [customSetup, setCustomSetup] = useState(false);
-  const customAnswerInput = useRef<HTMLTextAreaElement>(null);
+  const [customSetup, setCustomSetup] = useState(true);
+  const focusReturningEditor = useRef(false);
+  const mountAnswer = useCallback((field: HTMLTextAreaElement | null) => {
+    if (field && focusReturningEditor.current) {
+      focusReturningEditor.current = false;
+      field.focus({ preventScroll: true });
+    }
+  }, []);
   const exampleRequest = useRef<AbortController | null>(null);
   const cancelExample = useCallback(() => {
     exampleJourney.current++;
@@ -613,9 +619,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
     analyticsProof = useRef<typeof proof>(null),
     analyticsBaseline = useRef(false),
     acceptedFollowup = useRef(false);
-  useEffect(() => {
-    if (stage === "questions" && customSetup) customAnswerInput.current?.focus({ preventScroll: true });
-  }, [customSetup, stage]);
+  // Keep setup entry intentional: mounting never moves focus or scrolls.
   useEffect(() => { analyticsProof.current = proof; analyticsBaseline.current = Boolean(baseline); }, [proof, baseline]);
   const complete = simulation && simulation.outcome !== "running";
   const completedReplay = currentReplay;
@@ -1106,7 +1110,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
         <FamilyHeader feedbackPath="/experiment" skipTarget="play-content"><span className="header-detail">{proof?.starter ? "Designed starter" : "Co-evolution laboratory"}</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
         <section id="play-content" tabIndex={-1} className={`question-panel ${setupStyles.panel} ${customSetup ? setupStyles.custom : ""}`} style={!customSetup ? { width: "min(1000px, calc(100% - 40px))", maxWidth: "1000px" } : undefined} onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
           <div id="my-worlds-entry" />
-          <StarterWorldPicker customMode={customSetup} onChoose={chooseStarter} onDescribeOwn={() => setCustomSetup(true)} onReturnToStarters={() => setCustomSetup(false)} />
+          {!customSetup && <StarterWorldPicker onChoose={chooseStarter} onDescribeOwn={() => { focusReturningEditor.current = true; setCustomSetup(true); }} />}
           {customSetup && <>
           <div className="step-label">QUESTION {qi + 1} / 3</div>
           <div className="progress-track">
@@ -1132,7 +1136,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
                     if (answers[q.key].trim() && !interpreting) event.currentTarget.form?.requestSubmit();
                   }
                 }}
-                ref={customAnswerInput}
+                ref={mountAnswer}
                 onFocus={cancelExample}
                 aria-label={q.title}
                 maxLength={140}
@@ -1176,6 +1180,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
               </div>
             </div>
           </form>
+          <button type="button" className={setupStyles.starterLink} onClick={() => setCustomSetup(false)}>Use a starter world instead</button>
           {qi === 0 && (
             <details className="setup-intro">
               <summary>How LifePot works · guides & credits</summary>
@@ -1460,7 +1465,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
         onEditMoment={!simulation.fixedHabitat ? reviewOutcome : undefined}
         onReplay={!simulation.fixedHabitat ? () => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); } : undefined}
         onEdit={!simulation.fixedHabitat ? () => { setParentWorldId(originWorldId ?? parentWorldId); setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); } : undefined}
-        onNew={() => { setRecordedMoment(null); setLocalWorldName(""); setArchivedEvidence(null); setOriginWorldId(null); setParentWorldId(null); setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setStage("questions"); window.scrollTo(0, 0); }}>
+        onNew={() => { setRecordedMoment(null); setLocalWorldName(""); setArchivedEvidence(null); setOriginWorldId(null); setParentWorldId(null); setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setCustomSetup(true); setStage("questions"); window.scrollTo(0, 0); }}>
         {!simulation.fixedHabitat && <>
         <button type="button" onClick={() => {
           setParentWorldId(originWorldId ?? parentWorldId);

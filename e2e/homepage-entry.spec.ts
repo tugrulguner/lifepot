@@ -15,7 +15,7 @@ for (const width of [320, 390, 1280]) {
 
     await create.click();
     await expect(page).toHaveURL(/\/experiment$/);
-    await expect(page.getByRole("button", { name: "Custom world", exact: true })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "What exists in your world?" })).toBeVisible();
 
     await page.goto("/");
     await page.getByRole("link", { name: "Open observatory", exact: true }).click();

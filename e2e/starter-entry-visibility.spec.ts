@@ -4,6 +4,7 @@ for(const width of [390,1280])test(`${width}px entry opens on the real square ha
  page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text())});
  await page.setViewportSize({width,height:844});
  await page.goto('/experiment');
+ await page.getByRole('button',{name:'Use a starter world instead',exact:true}).click();
  const preview=page.getByRole('img',{name:/Starter habitat preview/});
  await expect(preview).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(20);

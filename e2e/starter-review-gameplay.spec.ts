@@ -1,6 +1,7 @@
 import {expect,test} from '@playwright/test';
 for(const width of [390,1280])test(`${width}px designed review keeps seeding reachable without a long scroll`,async({page})=>{
  await page.setViewportSize({width,height:844});await page.goto('/experiment');
+    await page.getByRole('button', { name: 'Use a starter world instead', exact: true }).click();
  await page.getByRole('button',{name:'Review this world',exact:true}).click();
  await expect(page.getByRole('heading',{name:'World conditions',exact:true})).toBeVisible();
  const seed=page.getByRole('button',{name:/Seed ecosystem/});

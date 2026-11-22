@@ -50,6 +50,8 @@
   font-variant-numeric: tabular-nums;
 }
 .panel :global(.question-note) { line-height: 1.55; }
+.starterLink { display: block; margin: 10px 0 0; padding: 6px 0; border: 0; background: transparent; color: var(--mp-accent); font: 650 14px/1.4 var(--mp-font); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.starterLink:focus-visible { outline: 2px solid var(--mp-accent); outline-offset: 3px; }
 .panel :global(.chips) { display: flex; flex-wrap: wrap; }
 .panel :global(.chips button) { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .panel :global(.question-footer) { align-items: center; gap: 12px; }

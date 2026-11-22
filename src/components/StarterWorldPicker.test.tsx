@@ -12,7 +12,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-it('shows a generated habitat from the selected starter and can switch to custom questions', () => {
+it('shows a generated habitat and returns to the world description from starter mode', () => {
   const onChoose = vi.fn();
   const onDescribeOwn = vi.fn();
   render(<StarterWorldPicker onChoose={onChoose} onDescribeOwn={onDescribeOwn} />);
@@ -22,27 +22,29 @@ it('shows a generated habitat from the selected starter and can switch to custom
   expect(screen.getByText(/Starting population: \d+ organisms/)).toBeInTheDocument();
   expect(screen.getByText(/Relationship: B consumes A/)).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Custom world' }));
+  expect(screen.getByRole('heading', { name: 'Choose a living world' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Describe your own world' }));
   expect(onDescribeOwn).toHaveBeenCalledOnce();
 });
 
-it('keeps the chooser heading and mode controls stable while custom input is focused', () => {
+it('keeps the world question first and does not autofocus it', () => {
   render(<GameCanvas />);
-  fireEvent.click(screen.getByRole('button', { name: 'Custom world' }));
-  const heading = screen.getByRole('heading', { name: 'Choose a living world' });
-  const textbox = screen.getByRole('textbox', { name: /What exists in this world/ });
-  textbox.focus();
-  expect(heading).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Starter worlds' })).toBeVisible();
-  expect(textbox).toHaveFocus();
+  expect(screen.getByRole('heading', { name: 'What exists in your world?' })).toBeVisible();
+  const textbox = screen.getByRole('textbox', { name: /What exists in your world/ });
+  expect(textbox).not.toHaveFocus();
+  expect(screen.queryByRole('heading', { name: 'Choose a living world' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Custom world' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Starter worlds' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Use a starter world instead' }));
+  expect(screen.getByRole('heading', { name: 'Choose a living world' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Describe your own world' })).toBeVisible();
 });
 
-it('retains custom prose when switching between starter browsing and custom setup', () => {
+it('retains custom prose when switching to and from starter browsing', () => {
   render(<GameCanvas />);
-  fireEvent.click(screen.getByRole('button', { name: 'Custom world' }));
-  const worldAnswer = screen.getByRole('textbox', { name: /What exists in this world/ });
+  const worldAnswer = screen.getByRole('textbox', { name: /What exists in your world/ });
   fireEvent.change(worldAnswer, { target: { value: 'My saved custom habitat' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Starter worlds' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Custom world' }));
-  expect(screen.getByRole('textbox', { name: /What exists in this world/ })).toHaveValue('My saved custom habitat');
+  fireEvent.click(screen.getByRole('button', { name: 'Use a starter world instead' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Describe your own world' }));
+  expect(screen.getByRole('textbox', { name: /What exists in your world/ })).toHaveValue('My saved custom habitat');
 });

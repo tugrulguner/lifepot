@@ -7,7 +7,8 @@ for(const width of [390,1280])test.describe.serial(`${width}px connected starter
  test.beforeAll(async({browser})=>{context=await browser.newContext({viewport:{width,height:844}});page=await context.newPage();await page.route('**/api/judge',route=>{calls++;return route.abort()})});
  test.afterAll(async()=>{await context?.close()});
  test('the baseline retains the actual followed family at its ending',async()=>{
-  await page.goto('/experiment');await page.getByRole('button',{name:'Review this world',exact:true}).click();
+  await page.goto('/experiment');
+    await page.getByRole('button', { name: 'Use a starter world instead', exact: true }).click();await page.getByRole('button',{name:'Review this world',exact:true}).click();
   await page.getByRole('button',{name:/Seed ecosystem/}).click();
   await page.getByRole('button',{name:'Inspect living organism',exact:true}).first().click();
   const lineage=(await page.getByRole('button',{name:/Follow founder lineage/}).innerText()).match(/#(\d+)/)![1];

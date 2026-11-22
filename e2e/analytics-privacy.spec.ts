@@ -138,7 +138,7 @@ test("real SDK captures setup failure from an actual failed setup request", asyn
     await route.continue();
   });
   await page.goto("/experiment");
-  await page.getByRole("button", { name: "Custom world", exact: true }).click();
+
   const panel = page.locator(".question-panel");
   for (let question = 0; question < 3; question++) {
     await panel.getByRole("textbox").fill(["A stable test ecosystem", "Predators may threaten grazers", "I want to observe persistence"][question]);

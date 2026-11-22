@@ -6,7 +6,7 @@ for (const suffix of ['#example', '?replay=invalid#kept', '#replay=invalid']) te
   await page.goto('/play' + suffix);
   await expect(page).toHaveURL(new RegExp('/experiment' + suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'));
   if (suffix === '#example') await expect(page.locator('canvas.life-canvas')).toBeVisible();
-  else await expect(page.getByRole('button', {name:'Custom world', exact:true})).toBeVisible();
+  else await expect(page.getByRole('textbox', {name:'What exists in your world?' })).toBeVisible();
   expect(apiCalls).toEqual([]);
 });
 
