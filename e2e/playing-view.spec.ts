@@ -6,7 +6,7 @@ for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 850 });
     let inference = 0;
     await page.route("**/api/**", route => { inference++; return route.abort(); });
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
@@ -39,7 +39,7 @@ for (const width of [1280, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
     let inference = 0;
     await page.route("**/api/**", route => { inference++; return route.abort(); });
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();

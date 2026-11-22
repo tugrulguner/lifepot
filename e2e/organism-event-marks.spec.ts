@@ -27,7 +27,7 @@ for (const width of [390, 1280]) test(`recorded prey captures and resource feedi
       return path ? stroke.call(this, path) : (stroke as () => void).call(this);
     };
   });
-  await page.goto('/play');
+  await page.goto('/experiment');
   await page.getByRole('button', { name: 'Explore deterministic preset' }).click();
   await page.getByLabel('World policy').selectOption('fixed');
   await page.getByRole('button', { name: /Seed ecosystem/ }).click();
@@ -58,7 +58,7 @@ test('reduced motion keeps factual activity without transient event marks', asyn
     };
   });
   await page.route('**/api/judge', route => route.abort());
-  await page.goto('/play');
+  await page.goto('/experiment');
   await page.getByRole('button', { name: 'Explore deterministic preset' }).click();
   await page.getByLabel('World policy').selectOption('fixed');
   await page.getByRole('button', { name: /Seed ecosystem/ }).click();

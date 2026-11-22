@@ -29,6 +29,7 @@ export async function servePublicRequest(request: Request, assets: AssetBinding,
   for (const [name, value] of Object.entries(route.headers)) headers.set(name, value);
   headers.set("Content-Type", isRsc ? "text/x-component" : (route.headers["content-type"] ?? "text/html; charset=utf-8"));
   headers.set("Cache-Control", route.headers["cache-control"] ?? "public, max-age=0, must-revalidate");
+  if (path === "/play" && !isRsc) headers.set("Server-Timing", "lifepot-app;desc=app-delivered");
   if (route.rsc) headers.set("Vary", vary);
   return new Response(request.method === "HEAD" || response.status === 304 ? null : response.body, { status: response.status, headers });
 }

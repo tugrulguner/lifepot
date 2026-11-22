@@ -38,7 +38,7 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   page.on("pageerror", error => errors.push(error.message));
   let inference = 0;
   await page.route("**/api/judge", route => { inference++; return route.abort(); });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
@@ -133,7 +133,7 @@ for (const width of [1280, 390]) test.describe.serial(`linked camera completion 
   test.afterAll(async () => { await page?.close(); });
 
   test("fresh run releases its lost target and starts replay from visible results", async () => {
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
@@ -187,7 +187,7 @@ test("touch panning is opt-in and does not inspect a dragged cell", async ({ bro
   try {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
-    await page.goto(test.info().project.use.baseURL + "/play");
+    await page.goto(test.info().project.use.baseURL + "/experiment");
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();

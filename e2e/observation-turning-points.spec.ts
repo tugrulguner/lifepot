@@ -4,7 +4,7 @@ declare global { interface Window { turningPointAlphas: number[] } }
 
 async function preset(page: Page, scarce = false) {
   await page.route("**/api/judge", route => route.abort());
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset", exact: true }).click();
   if (scarce) {
     await page.getByText("Edit world conditions", { exact: true }).click();
@@ -70,5 +70,5 @@ test("an extinct focus retains visible context without clearing the player's spe
   await expect(page.locator('[aria-label="Species B count"] b')).toHaveText("0");
   expect(Number(await page.locator('[aria-label="Species A count"] b').innerText())).toBeGreaterThan(0);
   await expect(page.getByRole("button", { name: "Focus species B", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect.poll(() => page.evaluate(() => window.turningPointAlphas.length > 0 && window.turningPointAlphas.every(a => a >= .45))).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.turningPointAlphas.length ? Math.min(...window.turningPointAlphas) : -1)).toBeGreaterThanOrEqual(.45);
 });

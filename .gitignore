@@ -10,3 +10,4 @@ test-results
 .DS_Store
 *.tsbuildinfo
 src/app/learn/generated-content.ts
+src/observatory/generated-html.ts

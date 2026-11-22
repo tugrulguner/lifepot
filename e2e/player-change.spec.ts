@@ -8,7 +8,7 @@ for(const width of [320,375,390,1280])for(const pressure of ['nutrient_bloom','d
  await page.route('**/*posthog.com/**',route=>route.abort());await page.route('**/api/judge',route=>route.abort());
  await page.route('**/api/player-proposal',route=>{requests.push(route.request().postDataJSON());return route.fulfill({json:{outcome:'proposed',proposal:proposal(pressure)}})});
  await page.setViewportSize({width,height:850});await page.clock.install({time:new Date('2026-10-26T02:00:00Z')});await page.clock.pauseAt(new Date('2026-10-26T02:00:01Z'));
- await page.goto('/play');await page.getByRole('button',{name:'Explore deterministic preset'}).click();await page.getByText('Edit world conditions',{exact:true}).click();await page.getByLabel('Environment pressure',{exact:true}).selectOption('stability');
+ await page.goto('/experiment');await page.getByRole('button',{name:'Explore deterministic preset'}).click();await page.getByText('Edit world conditions',{exact:true}).click();await page.getByLabel('Environment pressure',{exact:true}).selectOption('stability');
  // Fixture-backed proposal semantics are distinct from live Jev evaluation.
  await page.getByRole('button',{name:/Seed ecosystem/}).click();await expect(page.getByTestId('generation')).toHaveText('0 / 180');
  await page.getByRole('button',{name:'Ask Jev to change this world'}).click();
@@ -29,7 +29,7 @@ test('player-authorized run saves as v4 and visible replay reproduces it without
  test.setTimeout(120000);let calls=0;const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*posthog.com/**',r=>r.abort());await page.route('**/api/judge',r=>{calls++;return r.abort()});
  await page.route('**/api/player-proposal',r=>{calls++;return r.fulfill({json:{outcome:'proposed',proposal:proposal('nutrient_bloom')}})});
- await page.goto('/play');await page.getByRole('button',{name:'Explore deterministic preset'}).click();await page.getByText('Edit world conditions',{exact:true}).click();await page.getByLabel('Environment pressure',{exact:true}).selectOption('stability');await page.getByLabel('Your question or prediction (optional)').fill('PRIVATE_QUESTION_KEEP_LOCAL');await page.getByRole('button',{name:/Seed ecosystem/}).click();await page.getByRole('button',{name:'Ask Jev to change this world'}).click();
+ await page.goto('/experiment');await page.getByRole('button',{name:'Explore deterministic preset'}).click();await page.getByText('Edit world conditions',{exact:true}).click();await page.getByLabel('Environment pressure',{exact:true}).selectOption('stability');await page.getByLabel('Your question or prediction (optional)').fill('PRIVATE_QUESTION_KEEP_LOCAL');await page.getByRole('button',{name:/Seed ecosystem/}).click();await page.getByRole('button',{name:'Ask Jev to change this world'}).click();
  await page.getByRole('textbox',{name:'Request a temporary world change'}).fill('PRIVATE_PLAYER_REQUEST: temporarily increase nutrients');await page.getByRole('button',{name:'Ask Jev for a proposal'}).click();await page.getByRole('button',{name:'Accept this change'}).click();
  await page.getByLabel('Playback speed',{exact:true}).selectOption('fast');await page.getByRole('button',{name:'Resume',exact:true}).click();
  const result=page.getByRole('region',{name:'Run results',exact:true});await expect(result).toBeVisible({timeout:45000});await expect(result.getByRole('region',{name:'Player-directed changes'})).toContainText('player requests');

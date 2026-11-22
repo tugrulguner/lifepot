@@ -17,7 +17,7 @@ for (const width of [1280, 390]) test(`late example download preserves a newer p
       return new Response(text, { status: response.status, headers: response.headers });
     };
   });
-  await page.goto("/play#example");
+  await page.goto("/experiment#example");
   await page.waitForFunction(() => typeof (window as Window & { releaseExample?: () => void }).releaseExample === "function");
   await page.getByRole("button", { name: "Explore deterministic preset", exact: true }).click();
   await page.getByLabel("World policy").selectOption("fixed");

@@ -73,7 +73,8 @@ describe("camera transforms", () => {
   });
   it("bounds zoom and keeps full-world reset neutral", () => {
     expect(clampZoom(.01)).toBe(1);
-    expect(clampZoom(8)).toBe(3);
+    expect(clampZoom(8)).toBe(8);
+    expect(clampZoom(12)).toBe(10);
     expect(clampZoom(1)).toBe(1);
   });
 });

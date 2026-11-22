@@ -56,7 +56,7 @@ test.describe.serial("interpreted names through complete real-engine trials", ()
   test.afterAll(async () => { await page?.close(); });
 
   test("first completion retains both interpreted organism names", async () => {
-    await page.goto("/play");
+    await page.goto("/experiment");
     for (const [index, value] of ["A pond with pond snails and small minnows", "Minnows eat snails", "Inherited variation"].entries()) {
       await page.getByRole("textbox").fill(value);
       await page.getByRole("button", { name: index === 2 ? "Review ecosystem" : "Continue", exact: true }).click();

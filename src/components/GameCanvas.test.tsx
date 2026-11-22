@@ -33,6 +33,18 @@ vi.mock("@/game/world", async importOriginal => {
   } };
 });
 vi.mock("next/link", () => ({ default: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => <a {...props}>{children}</a> }));
+// jsdom canvases are used both as the visible board and as offscreen raster sprites/textures.
+// Supply deterministic serialization and no-op implementations for newly-used native canvas APIs.
+Object.defineProperty(HTMLCanvasElement.prototype, "toDataURL", { configurable: true, value: () => "data:image/png;base64,test-canvas" });
+function canvasContext(context: object) {
+  return new Proxy(context, { get(target, key, receiver) {
+    const value = Reflect.get(target, key, receiver);
+    if (value !== undefined) return value;
+    if (key === "createImageData") return (width: number, height: number) => ({ width, height, data: new Uint8ClampedArray(width * height * 4) });
+    if (key === "getImageData") return (x: number, y: number, width: number, height: number) => ({ x, y, width, height, data: new Uint8ClampedArray(width * height * 4) });
+    return () => {};
+  } });
+}
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); captured.length = 0; advanced.length = 0; analyticsCapture.mockReset(); });
 
 function renderPresetForPlayback() {
@@ -46,6 +58,13 @@ function renderPresetForPlayback() {
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
 }
 
+test("advanced camera tools provide a direct return to the play screen", () => {
+  renderPresetForPlayback();
+  const link = screen.getByRole("link", { name: "Back to observatory" });
+  expect(link).toHaveAttribute("href", "/play");
+  expect(link.closest('[aria-label="Camera options"]')).not.toBeNull();
+});
+
 test("visual event metadata retains the previous generation's actual family identities", () => {
   const updates = vi.spyOn(eventEffects, "updateEventEffects");
   renderPresetForPlayback();
@@ -54,10 +73,10 @@ test("visual event metadata retains the previous generation's actual family iden
   const original = JSON.stringify(initial);
   const marks = vi.spyOn(eventEffects, "traceEventMark");
   const context = new Proxy({ createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }) }, {
-    get(target, key) { return Reflect.get(target, key) ?? (() => {}); },
+    get(target, key) { const value = Reflect.get(target, key); if (value !== undefined) return value; if (key === "createImageData") return (width: number, height: number) => ({ width, height, data: new Uint8ClampedArray(width * height * 4) }); if (key === "getImageData") return (x: number, y: number, width: number, height: number) => ({ x, y, width, height, data: new Uint8ClampedArray(width * height * 4) }); return () => {}; },
     set(target, key, value) { return Reflect.set(target, key, value); },
   });
-  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(canvasContext(context) as unknown as CanvasRenderingContext2D);
   vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
   fireEvent.click(screen.getByRole("button", { name: "Step one generation" }));
   expect(marks).toHaveBeenCalled();
@@ -197,7 +216,7 @@ test("overview field shading does not compete with organisms as thousands of rep
     save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
     globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1,
   };
-  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(canvasContext(context) as unknown as CanvasRenderingContext2D);
   vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
@@ -208,7 +227,7 @@ test("overview field shading does not compete with organisms as thousands of rep
   fireEvent.click(screen.getByRole("button", { name: "Pause" }));
   const state = captured.at(-1)!;
   expect(state.resources.some(value => value > 0)).toBe(true);
-  expect(context.createRadialGradient).toHaveBeenCalled();
+  expect(context.drawImage.mock.calls.some(([image]) => image instanceof HTMLCanvasElement && (image as HTMLCanvasElement).width === 200 && (image as HTMLCanvasElement).height === 200)).toBe(true);
   expect(beads).toBe(0);
   expect(chevrons).toBe(0);
 });
@@ -233,7 +252,7 @@ test.each([false, true])("theme repaint preserves every engine field and continu
   vi.stubGlobal("scrollTo", vi.fn());
   if (sprites) vi.stubGlobal("Path2D", class { moveTo() {} lineTo() {} closePath() {} });
   const context = { clip: vi.fn(), setTransform: vi.fn(), translate: vi.fn(), drawImage: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), quadraticCurveTo: vi.fn(), ellipse: vi.fn(), closePath: vi.fn(), rect: vi.fn(), strokeRect: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1 };
-  const contextCalls = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+  const contextCalls = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(canvasContext(context) as unknown as CanvasRenderingContext2D);
   // jsdom has no layout; provide a drawable board for repaint assertions.
   vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
   class TestResizeObserver { observe() {} disconnect() {} }
@@ -276,11 +295,10 @@ test.each([false, true])("theme repaint preserves every engine field and continu
     fireEvent.change(theme, { target: { value: choice } });
     await waitFor(() => expect(contextCalls.mock.calls.length).toBeGreaterThan(paintsBeforeThemeMutation));
     expect(context.fillRect.mock.calls.length).toBeGreaterThan(paintedCells);
-    if (sprites) expect(context.drawImage.mock.calls.length).toBeGreaterThan(paintedSprites);
-    else expect(context.drawImage).not.toHaveBeenCalled();
-    expect(context.arc).toHaveBeenCalled();
-    expect(context.createRadialGradient).toHaveBeenCalled();
-    expect(context.lineTo).toHaveBeenCalled();
+    const themeDraws = context.drawImage.mock.calls.slice(paintedSprites);
+    const fieldImages = themeDraws.filter(([image]) => image instanceof HTMLCanvasElement && (image as HTMLCanvasElement).width === 200 && (image as HTMLCanvasElement).height === 200);
+    expect(fieldImages.length, `${choice} repaint must redraw the 200x200 field image`).toBeGreaterThan(0);
+    if (sprites) expect(themeDraws.some(([image]) => image instanceof HTMLCanvasElement && (image as HTMLCanvasElement).width === 192)).toBe(true);
     expect(fullState(engine), `engine state changed on ${choice} repaint`).toBe(before);
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
   }
@@ -294,7 +312,7 @@ test("reuses DPR-sized role sprites for populated organism cells", () => {
   }
   vi.stubGlobal("Path2D", TestPath2D);
   const context = { clip: vi.fn(), rect: vi.fn(), strokeRect: vi.fn(), setTransform: vi.fn(), translate: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), closePath: vi.fn(), arc: vi.fn(), fill: vi.fn(), drawImage: vi.fn(), stroke: vi.fn(), save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1, lineJoin: "miter" };
-  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(canvasContext(context) as unknown as CanvasRenderingContext2D);
   vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
@@ -304,10 +322,9 @@ test("reuses DPR-sized role sprites for populated organism cells", () => {
 
   const population = captured.at(-1)!.guild.reduce((count, guild) => count + Number(Boolean(guild)), 0);
   expect(population).toBeGreaterThan(1);
-  const drawnSprites = context.drawImage.mock.calls.map(call => call[0]);
-  expect(drawnSprites).toHaveLength(population);
-  expect(new Set(drawnSprites).size).toBeLessThan(population);
-  expect(drawnSprites.every(sprite => sprite instanceof HTMLCanvasElement)).toBe(true);
+  const drawnSprites = context.drawImage.mock.calls.map(call => call[0]).filter(sprite => sprite instanceof HTMLCanvasElement && sprite.width === 192);
+  expect(drawnSprites.length).toBeGreaterThanOrEqual(population);
+  expect(new Set(drawnSprites).size).toBeLessThan(drawnSprites.length);
   const originalSize = (drawnSprites[0] as HTMLCanvasElement).width;
   context.drawImage.mockClear();
   fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
@@ -316,15 +333,13 @@ test("reuses DPR-sized role sprites for populated organism cells", () => {
 
 test.each([180, 240, 318, 600])("organism marks stay cell-bounded on a %ipx board", (boardSize) => {
   vi.stubGlobal("scrollTo", vi.fn());
-  const organismStrokes: Array<{ color: string; width: number }> = [];
-  const arcRadii: number[] = [];
   const cellPitch = (boardSize - 36) / 50;
   const context = {
-    translate: vi.fn(), clip: vi.fn(), setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), quadraticCurveTo: vi.fn(), ellipse: vi.fn(), closePath: vi.fn(), rect: vi.fn(), strokeRect: vi.fn(), arc: vi.fn((_x: number, _y: number, radius: number) => { arcRadii.push(radius); }), fill: vi.fn(),
-    stroke: vi.fn(function (this: CanvasRenderingContext2D) { organismStrokes.push({ color: this.strokeStyle as string, width: this.lineWidth }); }),
+    translate: vi.fn(), clip: vi.fn(), setTransform: vi.fn(), fillRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), quadraticCurveTo: vi.fn(), ellipse: vi.fn(), closePath: vi.fn(), rect: vi.fn(), strokeRect: vi.fn(), arc: vi.fn(), drawImage: vi.fn(), fill: vi.fn(),
+    stroke: vi.fn(),
     save: vi.fn(), restore: vi.fn(), setLineDash: vi.fn(), createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })), createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })), globalAlpha: 1, fillStyle: "", strokeStyle: "", lineWidth: 1,
   };
-  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(canvasContext(context) as unknown as CanvasRenderingContext2D);
   vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: boardSize, bottom: boardSize, width: boardSize, height: boardSize, toJSON() {} });
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
@@ -332,14 +347,16 @@ test.each([180, 240, 318, 600])("organism marks stay cell-bounded on a %ipx boar
   fireEvent.click(screen.getByRole("button", { name: "Explore deterministic preset" }));
   fireEvent.click(screen.getByRole("button", { name: /Seed ecosystem/ }));
 
-  const roleEdges = organismStrokes.filter(stroke => stroke.color === "#07100f");
-  const speciesEdges = organismStrokes.filter(stroke => stroke.color === "rgba(241,248,237,.94)");
-  expect(roleEdges.length).toBeGreaterThan(0);
-  expect(speciesEdges.length).toBeGreaterThan(0);
-  expect(roleEdges[0].width).toBeCloseTo(cellPitch * .07, 4);
-  expect(speciesEdges[0].width).toBeCloseTo(cellPitch * .035, 4);
-  expect(cellPitch * .44 + roleEdges[0].width / 2).toBeLessThan(cellPitch / 2);
-  expect(cellPitch * .44 + speciesEdges[0].width / 2).toBeLessThan(cellPitch / 2);
+  const spriteDraws = context.drawImage.mock.calls.filter(call => call[0] instanceof HTMLCanvasElement && (call[0] as HTMLCanvasElement).width === 192);
+  expect(spriteDraws.length).toBeGreaterThan(0);
+  // The canvas is translated to each cell center before drawImage; its local
+  // destination must retain the approved 1.18-cell footprint and centered .59 offsets.
+  for (const [, x, y, width, height] of spriteDraws) {
+    expect(Number(x)).toBeCloseTo(-cellPitch * .59, 5);
+    expect(Number(y)).toBeCloseTo(-cellPitch * .59, 5);
+    expect(Number(width)).toBeCloseTo(cellPitch * 1.18, 5);
+    expect(Number(height)).toBeCloseTo(cellPitch * 1.18, 5);
+  }
 });
 
 test("reviews a separate fixed-rule baseline without auto-seeding or losing private context", async () => {

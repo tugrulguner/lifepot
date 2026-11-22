@@ -33,11 +33,11 @@ test("overview has first-fold Play and preserves the keyless game entry across t
       await skip.press("Enter");
       await expect(page.locator("#overview-content")).toBeFocused();
       await page.keyboard.press("Tab");
-      await expect(page.getByRole("link", { name: "Create your own world" })).toBeFocused();
+      await expect(page.getByRole("link", { name: "Open observatory" })).toBeFocused();
       await page.goto("/");
       await page.getByRole("combobox", { name: "Color theme" }).selectOption(theme);
       await expect(page.getByRole("combobox", { name: "Color theme" })).toHaveValue(theme);
-      const play = page.locator(".overview-actions").getByRole("link", { name: "Create your own world" });
+      const play = page.locator(".overview-actions").getByRole("link", { name: "Open observatory" });
       await expect(play).toHaveAttribute("href", "/play");
       const box = await play.boundingBox();
       expect(box && box.y >= 0 && box.y + box.height < 850).toBe(true);
@@ -47,7 +47,8 @@ test("overview has first-fold Play and preserves the keyless game entry across t
       await page.screenshot({ path: info.outputPath(`overview-${width}-${theme}.png`), fullPage: true });
       await play.click();
       await expect(page).toHaveURL(/\/play$/);
-      await expect(page.getByRole("button", { name: "Explore deterministic preset" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Whole world", exact: true })).toBeVisible();
     }
     await page.goto("/learn/contracts");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -58,7 +59,7 @@ test("overview has first-fold Play and preserves the keyless game entry across t
 test("Play skip link bypasses FamilyHeader and enters starter and custom content", async ({ page }) => {
   await page.route("**/api/judge**", route => route.abort());
   for (const custom of [false, true]) {
-    await page.goto("/play");
+    await page.goto("/experiment");
     const skip = page.getByRole("link", { name: "Skip to main content" });
     if (custom) {
       await page.getByRole("button", { name: "Describe your own world", exact: true }).click();
@@ -112,7 +113,7 @@ test("skip navigation enters Learn, review, and paused-world content without inf
       await page.keyboard.press("Tab");
       await expect.poll(() => target.evaluate(element => element.contains(document.activeElement) && element !== document.activeElement)).toBe(true);
     }
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await expect(page.getByRole("heading", { name: "World conditions", exact: true })).toBeVisible();
     await reachSkip();

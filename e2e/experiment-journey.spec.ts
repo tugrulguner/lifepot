@@ -26,7 +26,7 @@ for (const width of [390, 1280]) test.describe.serial(`observed-history journey 
   test.afterAll(async () => { await page?.close(); });
 
   test('follow a founder through a real completed baseline', async () => {
-    await page.goto('/play');
+    await page.goto('/experiment');
     await page.getByRole('button', { name: 'Explore deterministic preset', exact: true }).click();
     await page.getByLabel('World policy', { exact: true }).selectOption('fixed');
     await page.getByLabel('Your question or prediction (optional)', { exact: true }).fill('Does resource abundance change this observed outcome?');

@@ -7,7 +7,7 @@ for (const viewport of [{ width: 1280, height: 633 }, { width: 390, height: 850 
     const runtimeErrors: string[] = [];
     page.on("pageerror", error => runtimeErrors.push(error.message));
     await page.route("**/api/judge", route => { inferenceCalls++; return route.abort(); });
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.clock.install();
     await page.clock.pauseAt(new Date(Date.now() + 1000));
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();

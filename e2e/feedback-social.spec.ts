@@ -5,7 +5,7 @@ import { join } from "node:path";
 test("social destinations and deliberate issue route stay visible, touchable and private", async ({ page }) => {
   for (const width of [1280, 1050, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
-    for (const path of ["/", "/learn", "/play"]) {
+    for (const path of ["/", "/learn", "/experiment"]) {
       await page.goto(path);
       const directIssue=page.locator(width<=1100?".family-compact-home .family-feedback":".family-header-actions .family-feedback");
       await expect(directIssue).toBeVisible();
