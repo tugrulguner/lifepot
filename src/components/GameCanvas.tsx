@@ -302,6 +302,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
 }
 function World({ state, selected, followed, focusedSpecies, onInspect, onCameraUpdate, idPrefix = "world", showMeasurements = true }: { state: SimulationState; selected: number | null; followed: number | null; focusedSpecies: SpeciesId | null; onInspect: (index: number) => void; onCameraUpdate: (message: string) => void; idPrefix?: string; showMeasurements?: boolean }) {
   const cameraHintId = `${idPrefix}-camera-hint`, cameraOptionsId = `${idPrefix}-camera-options`;
+  const [viewOptionsOpen, setViewOptionsOpen] = useState(false);
   const ref = useRef<HTMLCanvasElement>(null);
   const overviewRef = useRef<HTMLCanvasElement>(null);
   const [camera, setCamera] = useState<Camera>(NEUTRAL_CAMERA);
@@ -478,6 +479,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
       aria-label={`Ecosystem generation ${state.generation}; ${state.stats.population} organisms`}
     />
     <section className="camera-tools camera-primary" aria-label="World camera">
+      {idPrefix === "world" && <button type="button" className={gameplayStyles.viewOptions} aria-expanded={viewOptionsOpen} onClick={() => setViewOptionsOpen(open => !open)}>View options</button>}
       <div className="watching-progress" role="group" aria-label="Watching progress"><span>{state.outcome !== "running" && <strong>{state.stats.population === 0 ? "World empty" : "Observation complete"} · </strong>}Generation {state.generation} / {state.fixedHabitat ? getObservationLimit(state) : DEFAULT_GENERATIONS} · {state.stats.population} living</span>{showMeasurements && <a href="#live-measurements">Measurements</a>}</div>
       <div className="camera-buttons">
         <button aria-label="Zoom out" disabled={view.zoom <= 1} onClick={() => { zoom(-.5); returnToWorld(); }}>−</button>
@@ -1488,7 +1490,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
         }}/>
 
         <ResultImageShare key={`${simulation.seed}-${simulation.generation}`} state={simulation} question={question} evidence={evidence}/>
-        <button className="back-button" onClick={async () => { try { if (!replayRef.current) return setNotice("Replay not ready"); const url = new URL(location.origin + location.pathname); url.hash = new URLSearchParams({ replay: encodeReplay(replayRef.current) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
+        <button className="back-button" onClick={async () => { try { if (!replayRef.current) return setNotice("Replay not ready"); const url = new URL("/experiment", location.origin); url.hash = new URLSearchParams({ replay: encodeReplay(replayRef.current) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
         </>}
       </RunResults>}
       {complete && simulation.outcome !== "running" && showResults && evidence && completedReplay && <MyWorldsPanel current={{ replay: completedReplay, evidence, outcome: simulation.outcome, stopReason: simulation.stats.population === 0 ? "World empty" : "Observation horizon reached", parentId: parentWorldId, policy: replayMode ? recordedPolicy : policy, setup: proof ? { source: proof.source, model: proof.model, namedIntent: proof.namedIntent } : undefined }} onOpen={openSavedWorld} onReview={reviewSavedWorld} onSaved={record => { setOriginWorldId(record.id); setLocalWorldName(record.name); }} />}

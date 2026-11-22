@@ -46,6 +46,26 @@ main.starterReview { overflow: clip; }
 }
 
 .mobileMarkKey { display: none; }
+.viewOptions { display: none; }
+@media (max-width: 600px) {
+  .shell .viewOptions { display: block; float: right; min-height: 44px; padding-inline: 12px; }
+  .shell .viewOptions::after { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 2px 3px 7px; border: solid currentColor; border-width: 0 1px 1px 0; transform: rotate(45deg); }
+  .shell .viewOptions[aria-expanded="true"]::after { transform: rotate(225deg); margin-bottom: 0; }
+  .shell .viewOptions ~ :global(.watching-progress) { min-height: 44px; }
+  .shell .viewOptions ~ :global(.camera-buttons) { clear: both; }
+  .shell .viewOptions[aria-expanded="false"] ~ :global(.camera-buttons),
+  .shell .viewOptions[aria-expanded="false"] ~ :global(.camera-hint),
+  .shell .viewOptions[aria-expanded="false"] ~ :global(.watching-progress a),
+  .shell:has(.viewOptions[aria-expanded="false"]) .worldContext :global(.configured-species-counts) { display: none; }
+  .shell:global(.simulation-shell):has(.viewOptions[aria-expanded="true"]) { row-gap: 4px; }
+  /* With no selection, keep playback and the habitat first. */
+  .shell:global(.simulation-shell):has(.viewOptions[aria-expanded="false"]) {
+    grid-template-areas: "controls" "camera-primary" "board" "focus-controls" "inspector" "observation" "outcome" "result" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
+  }
+  .shell:global(.simulation-shell):has(.viewOptions[aria-expanded="false"]):has(:global(.watching-organism)) {
+    grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "inspector" "outcome" "result" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
+  }
+}
 @media (max-width: 1000px) {
   .shell:global(.simulation-shell) {
     grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "inspector" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event" "result";

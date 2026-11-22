@@ -8,6 +8,7 @@ async function startFollowing(page: Page) {
   await page.getByRole("button", { name: "Reopen and replay", exact: true }).click();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.getByRole("button", { name: "Inspect living organism", exact: true }).click();
+  await page.getByRole("button", { name: "View options", exact: true }).click();
   await page.getByRole("button", { name: "Pin this family", exact: true }).click();
   await page.getByRole("button", { name: "Follow pinned family with camera", exact: true }).click();
 }
