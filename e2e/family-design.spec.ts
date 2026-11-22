@@ -10,6 +10,7 @@ async function settle(page: import("@playwright/test").Page) {
 test("family foundation renders shared typography, neutral surfaces, and accessible theme control", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/experiment");
+  await page.getByRole("button", { name: "Custom world", exact: true }).click();
   await settle(page);
   const header = page.locator(".family-header");
   await expect(header).toBeVisible();

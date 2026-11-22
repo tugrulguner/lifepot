@@ -70,7 +70,7 @@ test("Play skip link bypasses FamilyHeader and enters starter and custom content
       }
     } else {
       // Starter entry must not scroll to the questionnaire through autofocus.
-      await expect(page.getByRole("textbox").first()).not.toBeFocused();
+      await expect(page.getByRole("textbox")).toHaveCount(0);
       await page.keyboard.press("Tab");
     }
     await expect(skip).toBeFocused();

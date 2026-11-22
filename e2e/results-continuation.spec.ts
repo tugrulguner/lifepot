@@ -30,6 +30,7 @@ test("completed runs expose reachable continuation actions before evidence and r
   await expect(page.getByRole("region", { name: "Jev run reflection" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Share final world image" })).toBeVisible();
   await expect(page.getByRole("region", { name: "My Worlds — browser-local saves" })).toBeVisible();
+  await page.getByRole("region", { name: "My Worlds — browser-local saves" }).getByText("Storage, privacy & exports", { exact: true }).click();
   await expect(page.getByText(/Optional private questions and notes are omitted/)).toBeVisible();
   for (const viewport of [{ width: 375, height: 850 }, { width: 390, height: 850 }, { width: 1280, height: 850 }]) {
     await page.setViewportSize(viewport);
