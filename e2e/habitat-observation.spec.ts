@@ -106,6 +106,7 @@ for (const width of [1280, 390]) test(`species focus keeps an inspected and pinn
   await expectAlpha(1); // Focus changes must not dim an inspected organism sprite.
   await inspector.getByRole("button", { name: /Follow founder lineage/ }).click();
   await inspector.getByRole("button", { name: "Clear inspection", exact: true }).click();
+  if (width <= 600) await page.getByRole("button", { name: "View options", exact: true }).click();
   await page.getByRole("button", { name: "Follow pinned family with camera", exact: true }).click();
   await expectAlpha(1); // Clearing inspection must not dim the independently pinned family.
   await inspector.getByRole("button", { name: "Stop following", exact: true }).click();

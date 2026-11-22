@@ -6,6 +6,7 @@ for(const width of [390,1280])test(`recorded species direction stays beside the 
  await page.clock.install({time:new Date('2026-10-08T04:00:00Z')});await page.clock.pauseAt(new Date('2026-10-08T04:00:01Z'));
  await page.goto('/experiment');await page.getByLabel('Theme').selectOption('dark');await page.getByRole('button',{name:'Explore deterministic preset',exact:true}).click();await page.getByLabel('World policy',{exact:true}).selectOption('fixed');await page.getByRole('button',{name:/Seed ecosystem/}).click();await page.clock.runFor(1100);await page.getByRole('button',{name:'Pause',exact:true}).click();
  for(let i=1;i<24;i++)await page.getByRole('button',{name:'Step one generation',exact:true}).click();await expect(page.getByTestId('generation')).toHaveText('24 / 180');
+ if(width<=600)await page.getByRole('button',{name:'View options',exact:true}).click();
  const before:Record<string,number>={};for(const id of ['A','B'])before[id]=Number(await page.getByLabel(`Species ${id} count`,{exact:true}).locator('b').innerText());
  for(let i=0;i<6;i++)await page.getByRole('button',{name:'Step one generation',exact:true}).click();await expect(page.getByTestId('generation')).toHaveText('30 / 180');
  for(const id of ['A','B']){
