@@ -43,6 +43,7 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
+  if (width <= 600) await page.getByRole("button", { name: "View options", exact: true }).click();
   const board = page.locator("canvas.life-canvas");
   const camera = page.getByRole("region", { name: "World camera", exact: true });
   const gen = await page.getByTestId("generation").textContent();
@@ -139,6 +140,7 @@ for (const width of [1280, 390]) test.describe.serial(`linked camera completion 
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     await page.getByRole("button", { name: "Pause", exact: true }).click();
     await page.getByRole("button", { name: "Inspect a living organism", exact: true }).click();
+    if (width <= 600) await page.getByRole("button", { name: "View options", exact: true }).click();
     await page.getByRole("button", { name: "Follow organism with camera" }).click();
     await page.getByLabel("Playback speed").selectOption("normal");
     await page.getByRole("button", { name: "Resume", exact: true }).click();
@@ -192,6 +194,7 @@ test("touch panning is opt-in and does not inspect a dragged cell", async ({ bro
     await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     await page.getByRole("button", { name: "Pause", exact: true }).click();
+    await page.getByRole("button", { name: "View options", exact: true }).click();
     const board = page.locator("canvas.life-canvas");
     await page.getByRole("button", { name: "Zoom in", exact: true }).click();
     await expect(board).toHaveCSS("touch-action", "pan-y");

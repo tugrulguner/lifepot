@@ -892,10 +892,27 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 }
 @media(max-width:370px) { .overview-shell .family-product { font-size:13px; } .overview-hero { padding:12px 0; gap:8px; } .overview-copy h1 { margin:8px 0; } .overview-actions { display:grid; grid-template-columns:1fr; } .example-card { grid-template-columns:96px minmax(0,1fr); gap:12px; } }
 
-.my-worlds { max-width: 68rem; margin: 2rem auto; padding: clamp(1rem, 3vw, 2rem); border: 1px solid var(--line, #cbd5d1); border-radius: 1rem; background: var(--mp-surface); color: var(--mp-ink); overflow-wrap: anywhere; }
-.my-worlds-shortcut { display: block; margin: 0 auto 14px; min-height: 2.75rem; padding: .65rem 1rem; border: 1px solid var(--mp-control-boundary); border-radius: 999px; background: var(--mp-surface); color: var(--mp-ink); box-shadow: 0 4px 18px #0002; font-weight: 700; }
+.your-library { grid-column:1 / -1; min-width:0; max-width:68rem; width:100%; margin:1rem auto 2rem; padding:clamp(.9rem,2.5vw,1.4rem); border:1px solid var(--mp-border); border-radius:.9rem; background:var(--mp-surface); color:var(--mp-ink); overflow-wrap:anywhere; }
+.your-library-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding-bottom:.8rem; border-bottom:1px solid var(--mp-border); }
+.your-library-heading h2 { margin:0; font-size:1.35rem; letter-spacing:-.03em; }
+.your-library-heading > p { margin:0; color:var(--mp-muted); font-size:.85rem; }
+.your-library-kicker { margin:0 0 .2rem; color:var(--mp-muted); font-size:.62rem; font-weight:700; letter-spacing:.13em; }
+.your-library-items { display:block; padding-top:.85rem; }
+.your-library-items > * + * { margin-top:1rem; padding-top:.9rem; border-top:1px solid var(--mp-border); }
+.my-worlds { min-width:0; margin:0; padding:0; border:0; border-radius:0; background:transparent; color:var(--mp-ink); overflow-wrap:anywhere; }
+.my-worlds-privacy { margin:.5rem 0 .7rem; color:var(--mp-muted); font-size:.82rem; }
+.my-worlds-privacy summary { cursor:pointer; width:fit-content; }
+.my-worlds-privacy p { max-width:60ch; font-size:.82rem; line-height:1.5; }
+.my-worlds-shortcut { display: block; margin: 0 auto 14px; min-height: 2.75rem; padding: .65rem 1rem; border: 1px solid var(--mp-control-boundary); border-radius: 999px; background: var(--mp-surface); color: var(--mp-ink); font-weight: 700; }
 .my-worlds-shortcut:focus-visible { outline: 3px solid var(--mp-accent); outline-offset: 3px; }
-.my-worlds h2 { margin-top: 0; }
+.my-worlds-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; border-bottom:1px solid var(--mp-border); padding-bottom:.65rem; }
+.my-worlds-heading h2 { margin:0; font-size:1.05rem; letter-spacing:-.02em; }
+.my-worlds-kicker { margin:0 0 .25rem; color:var(--mp-muted); font-size:.65rem; font-weight:700; letter-spacing:.13em; }
+.my-worlds-count { flex:none; border:1px solid var(--mp-border); border-radius:999px; padding:.3rem .65rem; color:var(--mp-muted); font-size:.8rem; }
+.my-worlds > p { max-width:76ch; color:var(--mp-muted); font-size:.85rem; line-height:1.5; }
+.my-worlds.is-empty { padding-block:1.1rem; }
+.my-worlds.is-empty > p:not(.my-worlds-empty) { display:none; }
+.my-worlds-empty { border-left:2px solid var(--mp-accent); padding:.7rem .85rem; background:color-mix(in srgb,var(--mp-accent) 7%,var(--mp-surface)); }
 .my-worlds { scroll-margin-top: 80px; }
 .saved-world-heading { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .my-worlds-summary { flex: 1 1 15rem; min-width: 0; display: grid; gap: .35rem; }
@@ -908,7 +925,7 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .my-worlds-save, .my-worlds-import { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: 1rem 0; }
 .my-worlds-save input { flex: 1 1 14rem; min-width: 0; padding: .65rem; }
 .my-worlds ul { padding-left: 1.2rem; }
-.my-worlds li { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .7rem 0; border-top: 1px solid var(--line, #cbd5d1); }
+.my-worlds li { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; padding: 1rem 0; border-top: 1px solid var(--mp-border); }
 .my-worlds-import input[type=file] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .my-worlds button { min-height: 2.5rem; }
 /* Camera tools live below the habitat, never over organisms or playback. */
@@ -929,7 +946,8 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .world-legend-row > .paused-world-context { flex: 0 0 auto; }
 .world-legend-row > .paused-world-context[open] { flex: 1 0 100%; }
 .world-legend-row .world-legend-heading { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-@media(max-width:700px) { .my-worlds li { align-items:stretch; } }
+@media(max-width:700px) { .my-worlds li { align-items:stretch; } .your-library-heading { align-items:flex-start; flex-direction:column; gap:.35rem; } }
+@media(max-width:700px) { .my-worlds-actions { display:grid; grid-template-columns:1fr 1fr; width:100%; } .my-worlds-actions button { min-width:0; } }
 
 /* Paused inspection keeps a measured, magnified subject with the habitat. */
 /* Swapping compact evidence on resume must not let scroll anchoring move the page. */

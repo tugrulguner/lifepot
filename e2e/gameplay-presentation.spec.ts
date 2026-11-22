@@ -74,6 +74,7 @@ test("ordinary three-question setup arrives at gameplay without retained review 
   });
   await page.setViewportSize({ width: 390, height: 850 });
   await page.goto("/experiment");
+  await page.getByRole("button", { name: "Custom world", exact: true }).click();
   for (let question = 0; question < 3; question++) {
     const input = page.getByRole("textbox");
     await input.fill(`A balanced ecosystem answer ${question + 1}`);
@@ -112,6 +113,7 @@ test("near-board observation loop stays readable beside the desktop board and ab
     await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
     const observation = page.getByRole("region", { name: "Near-board observations" });
     await expect(observation).toBeVisible();
+    if (viewport.width <= 600) await page.getByRole("button", { name: "View options", exact: true }).click();
     const worldLegend = observation.getByLabel("Configured species counts");
     await expect(worldLegend).toContainText("World legend");
     await expect(worldLegend.locator("svg.species-legend-glyph").first()).toBeVisible();
@@ -286,6 +288,7 @@ test("gameplay header, stats, controls, and useful board geometry do not overlap
     // Measurements remain complete and directly reachable, without occupying
     // the watching view before the habitat. Exercise the actual anchor.
     const generation = await page.getByTestId("generation").textContent();
+    if (width <= 600) await page.getByRole("button", { name: "View options", exact: true }).click();
     await page.getByRole("link", { name: "Measurements", exact: true }).click();
     const fullStats = page.getByRole("region", { name: "Live ecosystem statistics" });
     await expect(fullStats).toBeInViewport();

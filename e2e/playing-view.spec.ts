@@ -26,6 +26,7 @@ for (const width of [1280, 390]) {
     expect(geometry.scrollY).toBe(0);
     expect(geometry.overflow).toBe(false);
     if (width === 390) {
+      await page.getByRole("button", { name: "View options", exact: true }).click();
       const cameraButtons = await page.locator(".camera-primary .camera-buttons").boundingBox();
       expect(cameraButtons!.height, "camera actions fit one row without orphaned options").toBeLessThanOrEqual(48);
     }
@@ -44,6 +45,7 @@ for (const width of [1280, 390, 320]) {
     await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     await page.getByRole("button", { name: "Pause", exact: true }).click();
+    if (width <= 600) await page.getByRole("button", { name: "View options", exact: true }).click();
     const camera = page.getByRole("region", { name: "World camera", exact: true });
     const closeUp = camera.getByRole("button", { name: "Close-up view", exact: true });
     await expect(closeUp).toBeInViewport();

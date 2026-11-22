@@ -29,6 +29,7 @@ test("real mobile inspection layout settles without ResizeObserver errors", asyn
   page.on("pageerror", e => errors.push(e.message));
   try {
     await preset(page);
+    await page.getByRole("button", { name: "View options", exact: true }).click();
     for (let i = 0; i < 3; i++) {
       await page.getByRole("button", { name: "Inspect living organism", exact: true }).click();
       await page.getByRole("button", { name: "Pin this family", exact: true }).click();

@@ -26,6 +26,7 @@ test.describe("built gameplay world legend acceptance", () => {
       await page.getByRole("combobox", { name: "Color theme" }).selectOption(theme);
       await page.getByRole("button", { name: "Explore deterministic preset" }).click();
       await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+      if (viewport.width <= 600) await page.getByRole("button", { name: "View options", exact: true }).click();
       const board = page.locator("canvas.life-canvas");
       const generation = page.getByTestId("generation");
       await expect(generation).not.toHaveText("0 / 180", { timeout: 5_000 });

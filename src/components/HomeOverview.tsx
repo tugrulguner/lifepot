@@ -13,7 +13,7 @@ export function HomeOverview() {
         <p>Build an ecosystem, then watch organisms feed, reproduce and change.</p>
         <nav className="overview-actions" aria-label="Explore LifePot">
           <Link className="overview-primary" href="/experiment" prefetch={false}>Play LifePot <span aria-hidden="true">→</span></Link>
-          <Link className="overview-secondary" href="/play#example" prefetch={false}>Play example</Link>
+          <Link className="overview-secondary" href="/play/example" prefetch={false}>Play example</Link>
         </nav>
         <div className="creator-row"><p className="overview-credit">
           <a href="https://tugrul.modepot.io/">Created by Tugrul Guner</a>

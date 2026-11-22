@@ -19,7 +19,7 @@ it("keeps canonical artwork in the family hero and creator/family attribution im
   expect(root.querySelector('.overview-hero img[src="/lifepot-lockup.png?v=adaptive-life-1"]')).not.toBeNull();
   const actions = root.querySelector(".overview-actions")!;
   expect(root.querySelector('.overview-actions a[href="/experiment"]')?.textContent).toContain("Play LifePot");
-  expect(actions.querySelector('.overview-secondary[href="/play#example"]')?.textContent).toContain("Play example");
+  expect(actions.querySelector('.overview-secondary[href="/play/example"]')?.textContent).toContain("Play example");
   expect(actions.querySelector('.overview-primary[href="/experiment"]')?.textContent).toContain("Play LifePot");
   expect(root.querySelector('footer .overview-preset[href="/play"]')?.textContent).toContain("Open observatory");
   const credit = actions.nextElementSibling!;
@@ -47,7 +47,7 @@ it("separates the recorded preview from the hero without a competing filled prim
   expect(card.closest(".overview-hero")).toBeNull();
   expect(card.querySelector('.example-media img[src="/life-example-poster.jpg"]')).not.toBeNull();
   expect(root.querySelectorAll("video")).toHaveLength(0);
-  expect(root.querySelectorAll('.overview-actions a[href="/play#example"]')).toHaveLength(1);
+  expect(root.querySelectorAll('.overview-actions a[href="/play/example"]')).toHaveLength(1);
   expect(card.querySelectorAll(".overview-primary")).toHaveLength(0);
   expect(card.textContent).toContain("Recorded example · exact replay");
 });

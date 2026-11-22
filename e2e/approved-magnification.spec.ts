@@ -6,6 +6,7 @@ for (const width of [390, 1280]) test(`approved microscopic magnifications at ${
   await page.getByLabel("World policy", {exact:true}).selectOption("fixed");
   await page.getByRole("button", {name:/Seed ecosystem/}).click();
   await page.getByRole("button", {name:"Pause",exact:true}).click();
+  if (width <= 600) await page.getByRole("button", { name: "View options", exact: true }).click();
   const generation = await page.getByTestId("generation").innerText();
   for (const zoom of [2,5,10]) {
     await page.getByRole("button", {name:`${zoom}× magnification`,exact:true}).click();

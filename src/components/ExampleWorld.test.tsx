@@ -11,14 +11,14 @@ describe("homepage video-free entry", () => {
     expect(root.querySelectorAll("source[src$='.mp4']")).toHaveLength(0);
     expect(root.querySelectorAll("[data-example-video]")).toHaveLength(0);
     expect(root.querySelector('a[href="/experiment"]')?.textContent).toContain("Play LifePot");
-    expect(root.querySelector('a[href="/play#example"]')?.textContent).toContain("Play example");
-    expect(root.querySelector('a[href="/play#example"]')).not.toBeNull();
+    expect(root.querySelector('a[href="/play/example"]')?.textContent).toContain("Play example");
+    expect(root.querySelector('a[href="/play/example"]')).not.toBeNull();
     expect(root.querySelector('a[href="/play"]')).not.toBeNull();
   });
   it("shows a lightweight example image and no media element", () => {
     const html = renderToStaticMarkup(<HomeOverview />);
     expect(html).toContain("Recorded example · exact replay");
-    expect(html).toContain('href="/play#example"');
+    expect(html).toContain('href="/play/example"');
     const root = document.createElement("div"); root.innerHTML = html;
     expect(root.querySelector('.example-media img[src="/life-example-poster.jpg"]')).not.toBeNull();
     expect(html).not.toContain("<video");

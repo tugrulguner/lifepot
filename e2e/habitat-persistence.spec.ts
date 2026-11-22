@@ -108,6 +108,15 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
   });
 }
 
+for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) test(`populated library visual evidence at ${viewport.width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize(viewport);
+  await page.goto("/experiment");
+  await importCheckpoint(page, fixture(3));
+  await page.evaluate(() => { const el = document.querySelector(".your-library"); if (el) window.scrollTo(0, window.scrollY + el.getBoundingClientRect().top - 88); });
+  await expect(page.getByRole("heading", { name: "Your library" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath(`your-library-${viewport.width}.png`) });
+});
+
 test("completed window extends explicitly without replacing or advancing its world", async ({ page }) => {
   const checkpoint = fixture(3);
   expect(checkpoint.state.generation).toBe(3);
