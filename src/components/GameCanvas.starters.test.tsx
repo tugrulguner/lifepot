@@ -115,3 +115,13 @@ it('keeps custom world creation available after browsing starters',()=>{
  expect(screen.getByRole('textbox',{name:/world/i})).toHaveFocus();
  expect(screen.queryByRole('button',{name:'Review this world'})).not.toBeInTheDocument();
 });
+
+it('keeps the answer counter in a reserved inset at the 140-character limit',()=>{
+ render(<GameCanvas/>);
+ fireEvent.click(screen.getByRole('button',{name:'Describe your own world'}));
+ const answer=screen.getByRole('textbox',{name:'What exists in this world?'}) as HTMLInputElement;
+ fireEvent.change(answer,{target:{value:'x'.repeat(140)}});
+ expect(answer).toHaveValue('x'.repeat(140));
+ expect(screen.getByText('140/140')).toBeVisible();
+ expect(answer).toHaveAttribute('maxlength','140');
+});

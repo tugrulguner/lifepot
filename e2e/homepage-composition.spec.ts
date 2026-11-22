@@ -45,11 +45,14 @@ for (const width of [320, 375, 390, 768, 800, 801, 1024, 1280, 1920, 2560]) {
     if (width <= 370) {
       expect(metrics.primary.x).toBe(metrics.secondary.x); expect(metrics.primary.width).toBe(metrics.secondary.width);
       expect(metrics.secondary.y).toBeGreaterThanOrEqual(metrics.primary.bottom);
+    } else if (width <= 900) {
+      expect(metrics.primary.y).toBe(metrics.secondary.y);
+      expect(metrics.secondary.x).toBeGreaterThan(metrics.primary.x);
     } else expect(metrics.primary.y).toBe(metrics.secondary.y);
     expect(metrics.credit.y).toBeGreaterThanOrEqual(Math.max(metrics.primary.bottom, metrics.secondary.bottom));
     expect(metrics.example.y).toBeGreaterThanOrEqual(metrics.hero.bottom);
-    if (width === 1280) expect(Math.abs(metrics.logo.width - 469.594)).toBeLessThan(2); // Live Intpot/Summonpot/Dexpot/RefPot reference.
-    if (width <= 800) expect(metrics.logo.height).toBe(224); // Same contained mobile artwork treatment as the reference.
+    if (width === 1280) expect(Math.abs(metrics.logo.width - 484.625)).toBeLessThan(2); // New compact hero geometry.
+    if (width <= 800) expect(metrics.logo.height).toBe(164); // Compact contained artwork leaves the example in view.
     await expect(page.locator('.overview-credit a[href="https://tugrul.modepot.io/"]')).toContainText("Created by Tugrul Guner");
     await expect(page.locator('.overview-credit a[href="https://modepot.io/"]')).toContainText("Part of ModePot");
     await expect(page.locator(".overview-example .overview-primary")).toHaveCount(0);

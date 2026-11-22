@@ -32,7 +32,8 @@ test("prepared RSC supports real client navigation from overview through docs to
   await page.goto("/");
   await expect(page.locator(".overview-actions")).toBeVisible();
   await page.evaluate(() => { Object.assign(window, { deliveryNavigationSentinel: "same-document" }); });
-  await page.locator(".overview-actions").getByRole("link", { name: "Documentation", exact: true }).click();
+  await page.locator(".home-reference").locator("summary").click();
+  await page.getByRole("link", { name: "All learning guides" }).click();
   await expect(page.getByRole("heading", { name: "LifePot documentation", exact: true })).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { deliveryNavigationSentinel?: string }).deliveryNavigationSentinel)).toBe("same-document");
   await page.getByRole("link", { name: "Play the game", exact: true }).click();

@@ -32,6 +32,6 @@ describe("homepage recorded example", () => {
     expect(html).toContain('poster="/life-example-poster.jpg"');
     expect(html).toContain('data-example-video');
     expect(html).toContain("Explore this example");
-    expect(html).toContain("Create your own world");
+    expect(html).toContain("Play the full experience");
   });
 });

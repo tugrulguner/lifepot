@@ -37,7 +37,7 @@ test('custom creation remains available with the original prose and request vali
  await page.goto('/experiment');
  await page.getByRole('button',{name:'Describe your own world',exact:true}).click();
  await expect(page.getByRole('button',{name:'Review this world',exact:true})).toHaveCount(0);
- const input=page.locator('.answer-field input');
+ const input=page.locator('.answer-field textarea');
  await input.fill('An ecology with two competing resource feeders');
  await page.getByRole('button',{name:'Continue',exact:true}).click();
  await page.getByRole('button',{name:'Back',exact:true}).click();

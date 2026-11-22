@@ -7,6 +7,7 @@ for (const width of [390, 1280]) test(`explained demo is on demand and playable 
   page.on("request", r => requests.push(r.url()));
   page.on("pageerror", e => errors.push(e.message));
   await page.goto("/");
+  await page.locator(".home-walkthrough > summary").click();
   const section = page.getByRole("region", { name: "Watch how it works", exact: true });
   const video = page.getByLabel("LifePot explained product demo", { exact: true });
   await section.scrollIntoViewIfNeeded();
@@ -44,6 +45,6 @@ for (const width of [390, 1280]) test(`explained demo is on demand and playable 
   expect(range.headers()["content-range"]).toBe("bytes 0-1023/2125192");
   expect((await range.body()).length).toBe(1024);
   await expect(page.locator("[data-example-video]")).toBeAttached();
-  await expect(page.getByRole("link", { name: /Create your own world/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Play the full experience/ })).toBeVisible();
   expect(errors).toEqual([]);
 });
