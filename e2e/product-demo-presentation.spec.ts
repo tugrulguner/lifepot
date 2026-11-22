@@ -99,6 +99,10 @@ for (const width of [320, 390, 1280]) for (const theme of ["light", "dark"]) {
     await section.screenshot({ path: info.outputPath(`walkthrough-${width}-${theme}.png`) });
     const start = section.getByRole("button", { name: "Watch the walkthrough", exact: true });
     await start.focus();
+    // Enter through keyboard navigation, not programmatic focus in pointer mode.
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await expect(start).toBeFocused();
     const focus = await start.evaluate(e => { const s = getComputedStyle(e); return { style: s.outlineStyle, color: s.outlineColor, background: s.backgroundColor }; });
     expect(focus.style).toBe("solid");
     expect(focus.color).not.toBe(focus.background);

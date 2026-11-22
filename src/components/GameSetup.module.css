@@ -25,7 +25,7 @@
   width: min(940px, calc(100% - 40px)) !important;
   max-width: 940px !important;
   min-height: 0 !important;
-  margin: 28px auto 24px !important;
+  margin: 64px auto 24px !important; /* Clear the fixed family header, including on saved-world entry. */
   padding: 20px 0 24px !important;
   justify-content: flex-start !important;
 }
@@ -51,7 +51,7 @@
 }
 .shell :global(.primary-button:disabled) { background: var(--mp-raised) !important; color: var(--mp-muted) !important; }
 @media (max-width: 700px) {
-  .panel { width: calc(100% - 32px) !important; margin: 16px auto !important; padding: 18px 0 24px !important; }
+  .panel { width: calc(100% - 32px) !important; margin: 64px auto 16px !important; padding: 18px 0 24px !important; }
   .panel :global(.question-footer) { flex-wrap: wrap; }
   .panel :global(.question-footer > span) { flex-basis: 100%; }
   .panel :global(.question-footer > div) { display: flex; flex-wrap: wrap; gap: 8px; }
