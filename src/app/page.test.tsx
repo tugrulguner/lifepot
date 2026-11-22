@@ -7,7 +7,7 @@ describe("product overview", () => {
     const html = renderToStaticMarkup(<HomeOverview />);
     expect(html).toContain('href="/experiment"');
     expect(html).toContain("Play LifePot");
-    expect(html).toContain('href="/play#example"');
+    expect(html).toContain('href="/play/example"');
     expect(html).toContain("Play example");
     expect(html).not.toContain("<video");
     expect(html).not.toContain(".mp4");

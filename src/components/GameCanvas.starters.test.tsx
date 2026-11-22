@@ -10,14 +10,14 @@ it.each([true,false])('ignores an old custom interpretation after choosing a new
  const pending=new Promise<Response>(r=>{resolve=r});
  const fetch=vi.fn(()=>pending);vi.stubGlobal('fetch',fetch);
  render(<GameCanvas/>);
- fireEvent.click(screen.getByRole('button',{name:'Describe your own world'}));
+ fireEvent.click(screen.getByRole('button',{name:'Custom world'}));
  const answers={world:'My custom ecology',threat:'A drought',reward:'Survival'};
  for(const [index,value] of Object.values(answers).entries()){
   fireEvent.change(screen.getByRole('textbox'),{target:{value}});
   fireEvent.click(screen.getByRole('button',{name:index===2?'Review ecosystem':'Continue'}));
  }
  expect(fetch).toHaveBeenCalledTimes(1);
- fireEvent.click(screen.getByRole('button',{name:'Back to starter worlds'}));
+ fireEvent.click(screen.getByRole('button',{name:'Starter worlds'}));
  fireEvent.click(screen.getByRole('button',{name:'Preview Hunters and prey'}));
  fireEvent.click(screen.getByRole('button',{name:'Review this world'}));
  await act(async()=>{resolve(success?new Response(JSON.stringify({source:'jev',model:'test-fixture',config:defaultConfig(),requestHash:hashSetupRequest(answers)}),{status:200}):new Response('',{status:503}));await pending});
@@ -29,7 +29,7 @@ it.each([true,false])('ignores an old custom interpretation after choosing a new
 it('does not let an abandoned custom request disable a deliberately chosen legacy preset',async()=>{
  let resolve!:(value:Response)=>void;const pending=new Promise<Response>(r=>{resolve=r});
  vi.stubGlobal('fetch',vi.fn(()=>pending));render(<GameCanvas/>);
- fireEvent.click(screen.getByRole('button',{name:'Describe your own world'}));
+ fireEvent.click(screen.getByRole('button',{name:'Custom world'}));
  for(let index=0;index<3;index++){
   fireEvent.change(screen.getByRole('textbox'),{target:{value:['Custom pond','Drought','Survival'][index]}});
   fireEvent.click(screen.getByRole('button',{name:index===2?'Review ecosystem':'Continue'}));
@@ -98,12 +98,13 @@ it('lets a newcomer review a designed food web without submitting prose or reque
  expect(fetch).not.toHaveBeenCalled();
 });
 
-it.each(['focus','typing'] as const)('enters custom mode when the questionnaire is used directly (%s)',mode=>{
+it.each(['focus','typing'] as const)('retains explicit custom mode while editing (%s)',mode=>{
  const fetch=vi.fn();vi.stubGlobal('fetch',fetch);render(<GameCanvas/>);
+ fireEvent.click(screen.getByRole('button',{name:'Custom world'}));
  const answer=screen.getByRole('textbox',{name:'What exists in this world?'});
  if(mode==='focus')fireEvent.focus(answer);else fireEvent.change(answer,{target:{value:'My directly described pond'}});
  expect(screen.queryByRole('img',{name:/Starter habitat preview/})).not.toBeInTheDocument();
- expect(screen.getByRole('button',{name:'Back to starter worlds'})).toBeInTheDocument();
+ expect(screen.getByRole('button',{name:'Starter worlds'})).toBeInTheDocument();
  if(mode==='typing')expect(answer).toHaveValue('My directly described pond');
  expect(fetch).not.toHaveBeenCalled();
 });
@@ -111,14 +112,14 @@ it.each(['focus','typing'] as const)('enters custom mode when the questionnaire 
 it('keeps custom world creation available after browsing starters',()=>{
  render(<GameCanvas/>);
  fireEvent.click(screen.getByRole('button',{name:'Preview Hunters and prey'}));
- fireEvent.click(screen.getByRole('button',{name:'Describe your own world'}));
+ fireEvent.click(screen.getByRole('button',{name:'Custom world'}));
  expect(screen.getByRole('textbox',{name:/world/i})).toHaveFocus();
  expect(screen.queryByRole('button',{name:'Review this world'})).not.toBeInTheDocument();
 });
 
 it('keeps the answer counter in a reserved inset at the 140-character limit',()=>{
  render(<GameCanvas/>);
- fireEvent.click(screen.getByRole('button',{name:'Describe your own world'}));
+ fireEvent.click(screen.getByRole('button',{name:'Custom world'}));
  const answer=screen.getByRole('textbox',{name:'What exists in this world?'}) as HTMLInputElement;
  fireEvent.change(answer,{target:{value:'x'.repeat(140)}});
  expect(answer).toHaveValue('x'.repeat(140));

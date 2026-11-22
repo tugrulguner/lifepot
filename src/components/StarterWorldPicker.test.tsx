@@ -22,16 +22,27 @@ it('shows a generated habitat from the selected starter and can switch to custom
   expect(screen.getByText(/Starting population: \d+ organisms/)).toBeInTheDocument();
   expect(screen.getByText(/Relationship: B consumes A/)).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Describe your own world' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Custom world' }));
   expect(onDescribeOwn).toHaveBeenCalledOnce();
+});
+
+it('keeps the chooser heading and mode controls stable while custom input is focused', () => {
+  render(<GameCanvas />);
+  fireEvent.click(screen.getByRole('button', { name: 'Custom world' }));
+  const heading = screen.getByRole('heading', { name: 'Choose a living world' });
+  const textbox = screen.getByRole('textbox', { name: /What exists in this world/ });
+  textbox.focus();
+  expect(heading).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Starter worlds' })).toBeVisible();
+  expect(textbox).toHaveFocus();
 });
 
 it('retains custom prose when switching between starter browsing and custom setup', () => {
   render(<GameCanvas />);
-  fireEvent.click(screen.getByRole('button', { name: 'Describe your own world' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Custom world' }));
   const worldAnswer = screen.getByRole('textbox', { name: /What exists in this world/ });
   fireEvent.change(worldAnswer, { target: { value: 'My saved custom habitat' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Back to starter worlds' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Describe your own world' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Starter worlds' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Custom world' }));
   expect(screen.getByRole('textbox', { name: /What exists in this world/ })).toHaveValue('My saved custom habitat');
 });

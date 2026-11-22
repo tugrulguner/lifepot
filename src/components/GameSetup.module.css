@@ -30,6 +30,12 @@
   justify-content: flex-start !important;
 }
 .panel.custom { max-width: 42rem !important; }
+.panel.custom :global(.step-label) { margin-top: 6px; color: var(--mp-muted); font-size: 12px; font-weight: 750; letter-spacing: .08em; }
+.panel.custom :global(.progress-track) { height: 4px; margin: 10px 0 22px; overflow: hidden; border-radius: 99px; background: var(--mp-raised); }
+.panel.custom :global(.progress-track i) { display: block; height: 100%; border-radius: inherit; background: var(--mp-accent); transition: width 180ms ease; }
+.panel.custom > :global(.eyebrow) { margin: 18px 0 5px; color: var(--mp-accent); font-size: 13px; font-weight: 700; }
+.panel.custom h1 { max-width: 14ch; margin: 0; color: var(--mp-ink); font-size: clamp(28px, 4vw, 42px); line-height: 1.04; letter-spacing: -.035em; }
+.panel.custom :global(.question-note) { max-width: 48ch; margin: 10px 0 18px; color: var(--mp-muted); font-size: 15px; }
 .panel :global(.answer-field) { display: grid; gap: 4px; width: 100%; }
 .panel textarea {
   box-sizing: border-box; width: 100%; min-width: 0; resize: vertical; field-sizing: content;

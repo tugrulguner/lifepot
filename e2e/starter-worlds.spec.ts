@@ -35,7 +35,7 @@ for(const width of [390,1280])for(const name of starters){
 
 test('custom creation remains available with the original prose and request validation',async({page})=>{
  await page.goto('/experiment');
- await page.getByRole('button',{name:'Describe your own world',exact:true}).click();
+ await page.getByRole('button',{name:'Custom world',exact:true}).click();
  await expect(page.getByRole('button',{name:'Review this world',exact:true})).toHaveCount(0);
  const input=page.locator('.answer-field textarea');
  await input.fill('An ecology with two competing resource feeders');

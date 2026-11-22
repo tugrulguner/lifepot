@@ -505,7 +505,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
     </>
   );
 }
-export function GameCanvas() {
+export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" | "example" } = {}) {
   const [recordedMoment, setRecordedMoment] = useState<{ moment: RecordedMoment; replay: ReplayData } | null>(null);
   const [recordedCell, setRecordedCell] = useState<number | null>(null);
   const [recordedFamily, setRecordedFamily] = useState<number | null>(null);
@@ -521,7 +521,9 @@ export function GameCanvas() {
   const [playerEvents,setPlayerEvents]=useState<AcceptedPlayerEvent[]>([]);
   const playerEventsRef=useRef<AcceptedPlayerEvent[]>([]);
   const [playerBinding,setPlayerBinding]=useState<PlayerProposalBinding|null>(null);
-  const [isExample, setIsExample] = useState(false);
+  const [isExample, setIsExample] = useState(initialEntry === "example");
+  const [exampleLoadError, setExampleLoadError] = useState("");
+  const [exampleRetry, setExampleRetry] = useState(0);
   const exampleJourney = useRef(0);
   const setupJourney = useRef(0);
   const [customSetup, setCustomSetup] = useState(false);
@@ -572,7 +574,7 @@ export function GameCanvas() {
     const dark = choice === "dark" || (choice === "auto" && isDark);
     document.documentElement.dataset.theme = dark ? "dark" : "light";
   };
-  const [stage, setStage] = useState<Stage>("questions"),
+  const [stage, setStage] = useState<Stage>(initialEntry === "example" ? "simulation" : "questions"),
     [arrivalRevision, setArrivalRevision] = useState(0),
     [answers, setAnswers] = useState(EMPTY),
     [qi, setQi] = useState(0),
@@ -610,7 +612,7 @@ export function GameCanvas() {
     analyticsBaseline = useRef(false),
     acceptedFollowup = useRef(false);
   useEffect(() => {
-    if (stage === "questions" && customSetup) customAnswerInput.current?.focus();
+    if (stage === "questions" && customSetup) customAnswerInput.current?.focus({ preventScroll: true });
   }, [customSetup, stage]);
   useEffect(() => { analyticsProof.current = proof; analyticsBaseline.current = Boolean(baseline); }, [proof, baseline]);
   const complete = simulation && simulation.outcome !== "running";
@@ -721,11 +723,11 @@ export function GameCanvas() {
   }
   useEffect(() => {
     let cancelled = false;
-    if (location.hash === "#example") {
+    if (initialEntry === "example" || location.hash === "#example") {
       const journey = exampleJourney.current;
       const controller = new AbortController();
       exampleRequest.current = controller;
-      const current = () => !cancelled && !controller.signal.aborted && exampleJourney.current === journey && location.hash === "#example";
+      const current = () => !cancelled && !controller.signal.aborted && exampleJourney.current === journey && (initialEntry === "example" || location.hash === "#example");
       const navigate = () => { if (location.hash !== "#example") cancelExample(); };
       window.addEventListener("hashchange", navigate);
       void fetch("/example-world.json", { signal: controller.signal }).then(response => {
@@ -738,7 +740,7 @@ export function GameCanvas() {
         exampleRequest.current = null;
         begin(r.answers, r.config, r.seed, r);
         setIsExample(true); setSpeed("normal"); setExampleTips(true);
-      }).catch(() => { if (current()) setNotice("The example could not be loaded. You can still create your own world."); });
+      }).catch(() => { if (current()) { if (initialEntry === "example") setExampleLoadError("The recorded example could not be loaded."); else setNotice("The example could not be loaded. You can still create your own world."); } });
       return () => {
         cancelled = true; controller.abort();
         if (exampleRequest.current === controller) exampleRequest.current = null;
@@ -753,7 +755,7 @@ export function GameCanvas() {
       } catch {
         queueMicrotask(() => setNotice("Invalid or legacy replay rejected"));
       }
-  }, [begin, cancelExample]);
+  }, [begin, cancelExample, initialEntry, exampleRetry]);
   useEffect(() => {
     if (
       !simulation ||
@@ -1094,6 +1096,7 @@ export function GameCanvas() {
     playerEventsRef.current=[...playerEventsRef.current,accepted];setPlayerEvents(playerEventsRef.current);setPlayerBinding(null);
     setEvent(`Player accepted ${title(proposal.pressure)}; starts at generation ${accepted.generation}. The world remains paused.`);
   }
+  if (initialEntry === "example" && stage === "simulation" && !simulation) return <main className="simulation-shell" aria-busy={!exampleLoadError}><section id="play-content" tabIndex={-1} className="run-status" aria-label="Recorded example"><h1>The little pond</h1>{exampleLoadError ? <><p role="alert">{exampleLoadError}</p><button type="button" onClick={() => { setExampleLoadError(""); setExampleRetry(value => value + 1); }}>Retry loading example</button><p><a href="/experiment">Open the experiment workspace</a></p></> : <p role="status" aria-live="polite">Loading the recorded world…</p>}</section></main>;
   if (stage === "questions") {
     const q = QUESTIONS[qi];
     return (
@@ -1102,7 +1105,7 @@ export function GameCanvas() {
         <section id="play-content" tabIndex={-1} className={`question-panel ${setupStyles.panel} ${customSetup ? setupStyles.custom : ""}`} style={!customSetup ? { width: "min(1000px, calc(100% - 40px))", maxWidth: "1000px" } : undefined} onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
           <div id="my-worlds-entry" />
           <StarterWorldPicker customMode={customSetup} onChoose={chooseStarter} onDescribeOwn={() => setCustomSetup(true)} onReturnToStarters={() => setCustomSetup(false)} />
-          <>
+          {customSetup && <>
           <div className="step-label">QUESTION {qi + 1} / 3</div>
           <div className="progress-track">
             <i style={{ width: `${((qi + 1) / 3) * 100}%` }} />
@@ -1128,8 +1131,7 @@ export function GameCanvas() {
                   }
                 }}
                 ref={customAnswerInput}
-                onFocus={() => { cancelExample(); setCustomSetup(true); }}
-                autoFocus={customSetup || qi > 0}
+                onFocus={cancelExample}
                 aria-label={q.title}
                 maxLength={140}
                 value={answers[q.key]}
@@ -1192,11 +1194,16 @@ export function GameCanvas() {
               <div className="creator-row"><p className="creator-attribution">Created by <a aria-label="Created by Tugrul Guner" href="https://tugrul.modepot.io/">Tugrul Guner</a></p><CreatorSocialLinks /></div>
             </details>
           )}
-          {qi === 0 && <button type="button" className="back-button" onClick={loadDeterministicPreset}>Explore deterministic preset</button>}
-          </>
+          </>}
+          {(!customSetup || qi === 0) && <button type="button" className="back-button" onClick={loadDeterministicPreset}>Explore deterministic preset</button>}
         </section>
-        <HabitatLibrary onOpen={openSavedHabitat} refreshKey={habitatRefreshKey} />
-        <MyWorldsPanel entryShortcut onOpen={openSavedWorld} onReview={reviewSavedWorld} />
+        <section className="your-library" aria-labelledby="your-library-title">
+          <header className="your-library-heading"><div><p className="your-library-kicker">EXPERIMENT ARCHIVE</p><h2 id="your-library-title">Your library</h2></div><p>Pick up a saved habitat or revisit a recorded world.</p></header>
+          <div className="your-library-items">
+            <HabitatLibrary onOpen={openSavedHabitat} refreshKey={habitatRefreshKey} />
+            <MyWorldsPanel entryShortcut onOpen={openSavedWorld} onReview={reviewSavedWorld} />
+          </div>
+        </section>
         <p className="observatory-return"><a className="advanced-return-link" href="/play">Back to observatory</a></p>
       </main>
     );

@@ -48,7 +48,7 @@ test("overview has first-fold Play and preserves the keyless game entry across t
       await page.screenshot({ path: info.outputPath(`overview-${width}-${theme}.png`), fullPage: true });
       await play.click();
       await expect(page).toHaveURL(/\/experiment$/);
-      await expect(page.getByRole("button", { name: "Describe your own world" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Custom world", exact: true })).toBeVisible();
     }
     await page.goto("/learn/contracts");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -62,7 +62,7 @@ test("Play skip link bypasses FamilyHeader and enters starter and custom content
     await page.goto("/experiment");
     const skip = page.getByRole("link", { name: "Skip to main content" });
     if (custom) {
-      await page.getByRole("button", { name: "Describe your own world", exact: true }).click();
+      await page.getByRole("button", { name: "Custom world", exact: true }).click();
       await expect(page.getByRole("textbox").first()).toBeFocused();
       // Traverse backward from deliberate custom-input focus, not an imperative focus call.
       for (let index = 0; index < 20 && !(await skip.evaluate(element => element === document.activeElement)); index++) {

@@ -18,6 +18,6 @@ export default function WalkthroughPage() {
       <p>This guided introduction is optional documentation. The video loads only when you start playback; chapters and a full transcript are available below.</p>
       <ProductWalkthrough />
     </article>
-    <footer className="learn-footer"><Link href="/learn">← LifePot documentation</Link><Link href="/play#example">Explore the recorded example →</Link></footer>
+    <footer className="learn-footer"><Link href="/learn">← LifePot documentation</Link><Link href="/play/example">Explore the recorded example →</Link></footer>
   </main>;
 }

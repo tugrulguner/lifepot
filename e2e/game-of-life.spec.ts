@@ -9,6 +9,7 @@ const answers = {
 };
 
 async function answerSetupWithKeyboard(page: Page) {
+  await page.getByRole("button", {name:"Custom world", exact:true}).click();
   await page.getByRole("textbox", { name: "What exists in this world?" }).fill(answers.world);
   await page.keyboard.press("Enter");
   await page.getByRole("textbox", { name: "What threatens life here?" }).fill(answers.threat);
@@ -126,7 +127,7 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
     await page.setViewportSize(viewport);
     await page.route("**/api/judge", (route) => route.abort());
     await page.goto("/experiment");
-    await page.getByRole("button", { name: "Describe your own world", exact: true }).click();
+    await page.getByRole("button", { name: "Custom world", exact: true }).click();
     await expect(page.getByText("QUESTION 1 / 3")).toBeVisible();
     await expect(page.getByRole("heading", { name: "What exists in this world?" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "What exists in this world?" })).toBeFocused();

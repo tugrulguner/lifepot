@@ -49,15 +49,17 @@ export default function StarterWorldPicker({ customMode = false, onChoose, onDes
   }
 
   return (
-    <section className={styles.picker} aria-label={customMode ? "Starter worlds" : undefined} aria-labelledby={customMode ? undefined : "starter-world-heading"}>
+    <section className={styles.picker} aria-labelledby="starter-world-heading">
+      <p className={styles.eyebrow}>DESIGN A WORLD · CHOOSE YOUR START</p>
+      <h2 id="starter-world-heading">Choose a living world</h2>
+      <div className={styles.modeSwitch} role="group" aria-label="World setup mode">
+        <button type="button" aria-pressed={!customMode} onClick={onReturnToStarters}>Starter worlds</button>
+        <button type="button" aria-pressed={customMode} onClick={onDescribeOwn}>Custom world</button>
+      </div>
       {!customMode && <>
-        <p className={styles.eyebrow}>Designed starters · no AI calls</p>
-        <h2 id="starter-world-heading">Choose a living world</h2>
         <div className={styles.choices} aria-label="Starter worlds">
           {STARTER_WORLDS.map((world) => <button key={world.id} type="button" aria-label={`Preview ${world.title}`} className={styles.choice} aria-pressed={selected.id === world.id} onClick={() => select(world.id)}><strong>{world.title}</strong></button>)}
         </div>
-      </>}
-      {customMode ? <button type="button" className={styles.secondary} onClick={onReturnToStarters}>Back to starter worlds</button> : <>
         <div className={styles.habitat}>
           <svg className={styles.canvas} role="img" aria-label={`Starter habitat preview: ${selected.title}`} data-starter-id={selected.id} viewBox="0 0 500 500">
             <rect width="500" height="500" fill="var(--mp-canvas)" />
@@ -65,6 +67,10 @@ export default function StarterWorldPicker({ customMode = false, onChoose, onDes
             {hazardCells.map(({ value, index }) => <rect key={`hazard-${index}`} x={index % GRID_SIZE * 10} y={Math.floor(index / GRID_SIZE) * 10} width="10" height="10" fill="#ee856b" opacity={.06 + value / 255 * .22} />)}
             {hydrated && organisms.map(({ index, role, color }) => <svg key={`organism-${index}`} x={(index % GRID_SIZE + .12) * 10} y={(Math.floor(index / GRID_SIZE) + .12) * 10} width="7.6" height="7.6" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork variant={simulation.organismId[index]} role={role} color={color} /></svg>)}
           </svg>
+          <div className={styles.brief}>
+            <h3>{selected.title}</h3>
+            <p className={styles.question}>{selectedWorldQuestion(selected.id)}</p>
+            <button type="button" className={styles.primary} onClick={() => onChoose(selected)}>Review this world</button>
           <details className={styles.summary} aria-label={`${selected.title} habitat summary`}>
             <summary><strong>Generation 0 · {simulation.stats.population} organisms</strong> · details</summary>
             <p>{STARTER_WORLDS.find(world => world.id === selected.id)!.description} Review or edit these starting conditions before seeding.</p>
@@ -73,11 +79,7 @@ export default function StarterWorldPicker({ customMode = false, onChoose, onDes
             {relation && <p>Relationship: {relationshipName(relation.mode)}</p>}
             <ul aria-label="Starter species populations">{populationBySpecies.map(({ species, population }) => <li key={species.id}>Species {species.id} · {species.role}: {population}</li>)}</ul>
           </details>
-        </div>
-        <p className={styles.question}>Explore question: {selectedWorldQuestion(selected.id)}</p>
-        <div className={styles.actions}>
-          <button type="button" className={styles.primary} onClick={() => onChoose(selected)}>Review this world</button>
-          <button type="button" className={styles.secondary} onClick={onDescribeOwn}>Describe your own world</button>
+          </div>
         </div>
       </>}
 

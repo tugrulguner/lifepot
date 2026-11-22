@@ -109,7 +109,7 @@ export function HabitatLibrary({ onOpen, refreshKey = 0 }: Props) {
         <span>Saved habitats</span><span className={styles.count}>{habitats.length}</span>
       </summary>
       <div className={styles.content}>
-        <p className={styles.disclosure}>Saved only on this device in browser storage. The browser may clear or evict local data; export a backup to keep a copy. No account or sync. These are fixed-rule habitats: no runtime AI, no offline advance, and reopening resumes the saved checkpoint without reseeding.</p>
+        <details className={styles.privacy}><summary>Storage, privacy &amp; continuity</summary><p className={styles.disclosure}>Saved only on this device in browser storage. The browser may clear or evict local data; export a backup to keep a copy. No account or sync. These are fixed-rule habitats: no runtime AI, no offline advance, and reopening resumes the saved checkpoint without reseeding.</p></details>
         <div className={styles.importRow}>
           <button type="button" disabled={busy} onClick={() => fileRef.current?.click()}>Import habitat backup</button>
           <input ref={fileRef} className={styles.file} disabled={busy} type="file" accept="application/json,.json" aria-label="Import a habitat backup" onChange={event => void importFile(event.target.files?.[0])} />

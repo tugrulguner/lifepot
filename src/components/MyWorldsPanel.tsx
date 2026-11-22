@@ -61,10 +61,9 @@ export function MyWorldsPanel({ current, entryShortcut = false, onOpen, onReview
   };
   return <>
   {entryShortcut && records.length > 0 && (() => { const button = <button type="button" className="my-worlds-shortcut ph-no-capture" data-ph-no-capture="true" aria-label={`My Worlds (${records.length})`} onClick={() => document.getElementById("my-worlds-shelf")?.scrollIntoView({ behavior: "instant", block: "start" })}>My Worlds ({records.length})</button>; const entry = document.getElementById("my-worlds-entry"); return entry ? createPortal(button, entry) : button; })()}
-  <section id="my-worlds-shelf" className="my-worlds ph-no-capture" data-ph-no-capture="true" aria-label="My Worlds — browser-local saves" aria-busy={busy}>
-    <h2>My Worlds</h2>
-    <p>Saved only in this browser and device. No account or sync. Browser storage can be cleared or evicted, so export a backup.</p>
-    <p>Portable exports include your setup answers, world parameters and recorded decisions. Optional private questions and notes are omitted. Nothing is uploaded by saving or importing.</p>
+  <section id="my-worlds-shelf" className={`my-worlds ph-no-capture ${records.length ? "has-worlds" : "is-empty"}`} data-ph-no-capture="true" aria-label="My Worlds — browser-local saves" aria-busy={busy}>
+    <header className="my-worlds-heading"><div><p className="my-worlds-kicker">YOUR FIELD NOTES</p><h2>Saved worlds</h2></div>{records.length > 0 && <span className="my-worlds-count">{records.length} {records.length === 1 ? "world" : "worlds"}</span>}</header>
+    <details className="my-worlds-privacy"><summary>Storage, privacy &amp; exports</summary><p>Saved only in this browser and device. No account or sync. Browser storage can be cleared or evicted, so export a backup.</p><p>Portable exports include your setup answers, world parameters and recorded decisions. Optional private questions and notes are omitted. Nothing is uploaded by saving or importing.</p></details>
     {current && <div className="my-worlds-save">
       <label htmlFor="my-world-name">Optional world name (stored locally)</label>
       <input id="my-world-name" value={name} maxLength={80} disabled={busy} onChange={event => setName(event.target.value)} autoComplete="off" />
@@ -73,7 +72,7 @@ export function MyWorldsPanel({ current, entryShortcut = false, onOpen, onReview
     <div className="my-worlds-import"><button type="button" disabled={busy} onClick={() => fileRef.current?.click()}>Import world export</button><input ref={fileRef} disabled={busy} type="file" accept="application/json,.json" aria-label="Import a LifePot world export" onChange={event => void importFile(event.target.files?.[0])} /></div>
     {error && <p role="alert">{error}</p>}
     {message && <p role="status">{message}</p>}
-    {!error && records.length === 0 && <p>No saved worlds in this browser yet. Complete a run to save it.</p>}
+    {!error && records.length === 0 && <p className="my-worlds-empty">No saved worlds in this browser yet. Complete a run to save it.</p>}
     {records.length > 0 && <ul>{records.map(record => <li key={record.id}>
       <div className="my-worlds-summary"><strong>{record.name || "Unnamed world"}</strong>
         <span>Generation {record.evidence.samples.at(-1)?.generation ?? 0} · {record.outcome} · {record.stopReason}</span>

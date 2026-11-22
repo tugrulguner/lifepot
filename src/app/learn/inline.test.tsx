@@ -28,7 +28,7 @@ describe("guide inline Markdown", () => {
       return <p key={index}>{renderInline(block.text)}</p>;
     })}</>);
     expect(document.querySelectorAll("strong")).toHaveLength(40);
-    for (const label of ["Review this world", "Describe your own world", "Measurements", "Close-up", "Full world", "Follow family", "Options", "Pause and save habitat", "Open paused habitat", "1,800 generations", "Import habitat backup"]) {
+    for (const label of ["Review this world", "Custom world", "Measurements", "Close-up", "Full world", "Follow family", "Options", "Pause and save habitat", "Open paused habitat", "1,800 generations", "Import habitat backup"]) {
       expect([...document.querySelectorAll("strong")].some(node => node.textContent === label)).toBe(true);
     }
     expect(document.querySelector("pre code")).toBeInTheDocument();

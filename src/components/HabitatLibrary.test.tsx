@@ -22,6 +22,13 @@ it("renders as a distinct private saved-habitat library with local-storage and f
   const { container } = render(<HabitatLibrary onOpen={vi.fn()} />);
   expect(await screen.findByText("Reed marsh")).toBeVisible();
   expect(screen.getByRole("region", { name: /Saved habitats/ })).toHaveAttribute("data-ph-no-capture", "true");
+  const shelf = screen.getByText("Saved habitats").closest("details");
+  expect(shelf).toHaveAttribute("open");
+  const privacy = screen.getByText("Storage, privacy & continuity").closest("details");
+  expect(privacy).not.toHaveAttribute("open");
+  expect(screen.queryByText(/saved only on this device/i)).not.toBeVisible();
+  fireEvent.click(screen.getByText("Storage, privacy & continuity"));
+  expect(privacy).toHaveAttribute("open");
   expect(screen.getByText(/saved only on this device/i)).toBeVisible();
   expect(screen.getByText(/fixed-rule habitats/i)).toBeVisible();
   expect(screen.getByText(/no offline advance/i)).toBeVisible();
