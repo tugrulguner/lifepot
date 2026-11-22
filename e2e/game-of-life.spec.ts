@@ -218,6 +218,63 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
   await expect(page.getByRole("button", { name: "Resume" })).toBeVisible();
 });
 
+test.describe.serial("share a second world after the pond example", () => {
+  let page: Page, copied: string;
+  let pond: Awaited<ReturnType<typeof finish>>, second: typeof pond;
+  test.afterAll(async () => { await page?.context().close(); });
+  let apiCalls = 0;
+  test.beforeAll(async ({ browser }) => {
+    const context = await browser.newContext({ baseURL: test.info().project.use.baseURL, reducedMotion: "reduce" });
+    page = await context.newPage();
+    await context.route("**/api/**", route => { apiCalls++; return route.abort(); });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  });
+  async function finish(world: Page) {
+    await world.getByRole("button", { name: "Pause", exact: true }).click();
+    await world.getByRole("button", { name: "Step one generation" }).evaluate(async button => {
+      for (let n = 0; n < 180 && button.isConnected; n++) {
+        (button as HTMLButtonElement).click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    });
+    const results = world.getByRole("region", { name: "Run results", exact: true });
+    await expect(results).toBeVisible();
+    const endpoint = await world.locator("canvas.life-canvas").getAttribute("aria-label");
+    expect(endpoint).toMatch(/^Ecosystem generation \d+; \d+ organisms$/);
+    const totals = (await results.innerText()).match(/cumulative births: \d+; deaths: \d+; kills: \d+/)?.[0];
+    expect(totals).toBeTruthy();
+    return { endpoint, totals };
+  }
+  test("finish the bundled example", async () => {
+    await page.goto("/play/example");
+    pond = await finish(page);
+  });
+  test("play a different world in the same tab and copy its link", async () => {
+    await page.getByRole("button", { name: "New world", exact: true }).click();
+    await page.getByRole("button", { name: "Preview Hunters and prey" }).click();
+    await page.getByRole("button", { name: "Review this world", exact: true }).click();
+    await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+    second = await finish(page);
+    expect(second).not.toEqual(pond);
+    await page.getByRole("button", { name: "Copy challenge link" }).click();
+    copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(new URL(copied).pathname).toBe("/experiment");
+    expect(new URL(copied).search).toBe("");
+    expect(new URL(copied).hash).toMatch(/^#replay=/);
+  });
+  test("the copied link replays the second outcome in a fresh tab", async () => {
+    const recipient = await page.context().newPage();
+    let exampleRequests = 0;
+    await recipient.route("**/example-world.json", route => { exampleRequests++; return route.abort(); });
+    await recipient.emulateMedia({ reducedMotion: "reduce" });
+    await recipient.goto(copied);
+    await expect(recipient.getByText("Exact recorded replay · no inference")).toBeVisible();
+    expect(await finish(recipient)).toEqual(second);
+    expect(exampleRequests).toBe(0);
+    expect(apiCalls).toBe(0);
+  });
+});
+
 test("copied replay opens at generation zero and never calls the judge", async ({ page, context }) => {
   // Serialization/replay contract: retain the full real-engine trajectory without
   // decorative event-animation work. Normal-motion playback has separate coverage.
