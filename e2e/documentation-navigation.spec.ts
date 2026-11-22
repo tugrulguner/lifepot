@@ -33,11 +33,11 @@ test("overview has first-fold Play and preserves the keyless game entry across t
       await skip.press("Enter");
       await expect(page.locator("#overview-content")).toBeFocused();
       await page.keyboard.press("Tab");
-      await expect(page.getByRole("link", { name: /Play the full experience/ })).toBeFocused();
+      await expect(page.getByRole("link", { name: /Play LifePot/ })).toBeFocused();
       await page.goto("/");
       await page.getByRole("combobox", { name: "Color theme" }).selectOption(theme);
       await expect(page.getByRole("combobox", { name: "Color theme" })).toHaveValue(theme);
-      const play = page.locator(".overview-actions").getByRole("link", { name: /Play the full experience/ });
+      const play = page.locator(".overview-actions").getByRole("link", { name: /Play LifePot/ });
       await expect(play).toHaveAttribute("href", "/experiment");
       const box = await play.boundingBox();
       expect(box && box.y >= 0 && box.y + box.height < 850).toBe(true);

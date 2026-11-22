@@ -1,10 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
 async function openWalkthrough(page: Page) {
-  await page.goto("/");
+  await page.goto("/learn/walkthrough");
   const region = page.getByRole("region", { name: "Watch how it works", exact: true });
-  await expect(region).toBeHidden();
-  await page.locator("summary").filter({ hasText: "Watch the product walkthrough" }).click();
   await expect(region).toBeVisible();
 }
 

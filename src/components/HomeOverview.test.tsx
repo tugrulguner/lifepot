@@ -18,9 +18,10 @@ it("keeps canonical artwork in the family hero and creator/family attribution im
   const root = overview();
   expect(root.querySelector('.overview-hero img[src="/lifepot-lockup.png?v=adaptive-life-1"]')).not.toBeNull();
   const actions = root.querySelector(".overview-actions")!;
-  expect(root.querySelector('.overview-actions a[href="/experiment"]')?.textContent).toContain("Play the full experience");
-  expect(actions.querySelector('.overview-secondary[href="/play"]')?.textContent).toContain("Observe a preset");
-  expect(actions.querySelector('.overview-primary[href="/experiment"]')?.textContent).toContain("Play the full experience");
+  expect(root.querySelector('.overview-actions a[href="/experiment"]')?.textContent).toContain("Play LifePot");
+  expect(actions.querySelector('.overview-secondary[href="/play#example"]')?.textContent).toContain("Play example");
+  expect(actions.querySelector('.overview-primary[href="/experiment"]')?.textContent).toContain("Play LifePot");
+  expect(root.querySelector('footer .overview-preset[href="/play"]')?.textContent).toContain("Open observatory");
   const credit = actions.nextElementSibling!;
   expect(credit.classList.contains("creator-row")).toBe(true);
   expect(credit.querySelector(".overview-credit")).not.toBeNull();
@@ -44,8 +45,9 @@ it("offers keyboard skip navigation and defers the explicitly sized architecture
 it("separates the recorded preview from the hero without a competing filled primary action", () => {
   const root = overview(), card = root.querySelector(".example-card")!;
   expect(card.closest(".overview-hero")).toBeNull();
-  expect(card.querySelector(".example-media video[data-example-video]")).not.toBeNull();
-  expect(card.querySelector('.example-copy a.overview-secondary[href="/play#example"]')).not.toBeNull();
+  expect(card.querySelector('.example-media img[src="/life-example-poster.jpg"]')).not.toBeNull();
+  expect(root.querySelectorAll("video")).toHaveLength(0);
+  expect(root.querySelectorAll('.overview-actions a[href="/play#example"]')).toHaveLength(1);
   expect(card.querySelectorAll(".overview-primary")).toHaveLength(0);
   expect(card.textContent).toContain("Recorded example · exact replay");
 });
