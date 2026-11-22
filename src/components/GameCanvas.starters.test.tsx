@@ -25,6 +25,25 @@ it.each([true,false])('ignores an old custom interpretation after choosing a new
  expect(screen.getByRole('button',{name:/Seed ecosystem/})).toBeEnabled();
 });
 
+it.each([200,503])('keeps the selected preview when an abandoned interpretation settles (%i)',async status=>{
+ let resolve!:(r:Response)=>void;
+ const pending=new Promise<Response>(r=>{resolve=r});
+ const fetch=vi.fn(()=>pending);vi.stubGlobal('fetch',fetch);render(<GameCanvas/>);
+ const answers={world:'Mineral pools',threat:'Drought',reward:'Survival'};
+ for(const [i,value] of Object.values(answers).entries()){
+  fireEvent.change(screen.getByRole('textbox'),{target:{value}});
+  fireEvent.click(screen.getByRole('button',{name:i===2?'Review ecosystem':'Continue'}));
+ }
+ expect(fetch).toHaveBeenCalledTimes(1);
+ fireEvent.click(screen.getByRole('button',{name:'Use a starter world instead'}));
+ fireEvent.click(screen.getByRole('button',{name:'Preview Hunters and prey'}));
+ await act(async()=>{resolve(new Response(JSON.stringify({source:'jev',model:'fixture',config:defaultConfig(),requestHash:hashSetupRequest(answers)}),{status}));await pending});
+ expect(screen.getByRole('button',{name:'Preview Hunters and prey'})).toHaveAttribute('aria-pressed','true');
+ fireEvent.click(screen.getByRole('button',{name:'Describe your own world'}));
+ expect(screen.getByRole('textbox')).toHaveValue('Survival');
+ expect(screen.getByRole('button',{name:'Review ecosystem'})).toBeEnabled();
+});
+
 it('does not let an abandoned custom request disable a deliberately chosen legacy preset',async()=>{
  let resolve!:(value:Response)=>void;const pending=new Promise<Response>(r=>{resolve=r});
  vi.stubGlobal('fetch',vi.fn(()=>pending));render(<GameCanvas/>);

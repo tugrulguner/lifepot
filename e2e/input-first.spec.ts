@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-for (const width of [320, 390, 1280]) {
-  test(`input-first setup is visible and editable at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 850 });
+for (const { width, height } of [{ width: 320, height: 568 }, { width: 320, height: 850 }, { width: 390, height: 844 }, { width: 1280, height: 900 }]) {
+  test(`input-first setup is visible and editable at ${width}x${height}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
     await page.goto("/");
     await page.getByRole("link", { name: /Play LifePot/ }).click();
     const question = page.getByRole("heading", { name: "What exists in your world?" });
@@ -13,10 +13,10 @@ for (const width of [320, 390, 1280]) {
     await expect(answer).toBeVisible();
     await expect(continueButton).toBeVisible();
     await expect(starterSwitch).toBeVisible();
-    for (const control of [question, answer, continueButton, starterSwitch]) await expect(control).toBeInViewport();
+    for (const control of [question, answer, continueButton, starterSwitch]) await expect(control).toBeInViewport({ ratio: 1 });
     expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
     expect(await page.evaluate(() => scrollY)).toBe(0);
-    await page.screenshot({ path: `test-results/input-first-${width}.png`, fullPage: false });
+    await page.screenshot({ path: `test-results/input-first-${width}x${height}.png`, fullPage: false });
 
     await answer.fill("A draft world of clear pools");
     await continueButton.click();

@@ -65,3 +65,11 @@
   .panel :global(.question-footer > span) { flex-basis: 100%; }
   .panel :global(.question-footer > div) { display: flex; flex-wrap: wrap; gap: 8px; }
 }
+@media (max-height: 620px) and (max-width: 700px) {
+  .panel.custom { padding-top: 4px !important; }
+  .panel.custom :global(.progress-track) { margin: 4px 0 8px; }
+  .panel.custom > :global(.eyebrow) { margin-top: 4px; }
+  .panel.custom :global(.question-note) { margin: 4px 0 8px; }
+  .panel.custom textarea { min-height: 3.5rem; }
+  .starterLink { margin-top: 4px; }
+}

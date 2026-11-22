@@ -899,6 +899,10 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
     setStage("review");
     window.scrollTo(0, 0);
   }
+  function abandonInterpretation() {
+    setupJourney.current++;
+    setInterpreting(false);
+  }
   async function interpret(a: SetupAnswers) {
     cancelExample();
     if (interpreting) return;
@@ -1142,6 +1146,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
                 maxLength={140}
                 value={answers[q.key]}
                 onChange={(e) => {
+                  if (interpreting) abandonInterpretation();
                   setCustomSetup(true);
                   setAnswers({ ...answers, [q.key]: e.target.value });
                 }}
@@ -1153,7 +1158,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
                 <button
                   type="button"
                   key={x}
-                  onClick={() => setAnswers({ ...answers, [q.key]: x })}
+                  onClick={() => { if (interpreting) abandonInterpretation(); setAnswers({ ...answers, [q.key]: x }); }}
                 >
                   {x}
                 </button>
@@ -1166,7 +1171,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
                   <button
                     type="button"
                     className="back-button"
-                    onClick={() => setQi(qi - 1)}
+                    onClick={() => { abandonInterpretation(); setQi(qi - 1); }}
                   >
                     Back
                   </button>
@@ -1180,7 +1185,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
               </div>
             </div>
           </form>
-          <button type="button" className={setupStyles.starterLink} onClick={() => setCustomSetup(false)}>Use a starter world instead</button>
+          <button type="button" className={setupStyles.starterLink} onClick={() => { abandonInterpretation(); setCustomSetup(false); }}>Use a starter world instead</button>
           {qi === 0 && (
             <details className="setup-intro">
               <summary>How LifePot works · guides & credits</summary>
