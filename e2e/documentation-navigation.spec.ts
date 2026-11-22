@@ -33,22 +33,22 @@ test("overview has first-fold Play and preserves the keyless game entry across t
       await skip.press("Enter");
       await expect(page.locator("#overview-content")).toBeFocused();
       await page.keyboard.press("Tab");
-      await expect(page.getByRole("link", { name: "Open observatory" })).toBeFocused();
+      await expect(page.getByRole("link", { name: /Play LifePot/ })).toBeFocused();
       await page.goto("/");
       await page.getByRole("combobox", { name: "Color theme" }).selectOption(theme);
       await expect(page.getByRole("combobox", { name: "Color theme" })).toHaveValue(theme);
-      const play = page.locator(".overview-actions").getByRole("link", { name: "Open observatory" });
-      await expect(play).toHaveAttribute("href", "/play");
+      const play = page.locator(".overview-actions").getByRole("link", { name: /Play LifePot/ });
+      await expect(play).toHaveAttribute("href", "/experiment");
       const box = await play.boundingBox();
       expect(box && box.y >= 0 && box.y + box.height < 850).toBe(true);
+      await page.locator(".home-reference").locator("summary").click();
       const architecture = page.locator('.overview-mechanism img');
       await expect.poll(() => architecture.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.screenshot({ path: info.outputPath(`overview-${width}-${theme}.png`), fullPage: true });
       await play.click();
-      await expect(page).toHaveURL(/\/play$/);
-      await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Whole world", exact: true })).toBeVisible();
+      await expect(page).toHaveURL(/\/experiment$/);
+      await expect(page.getByRole("button", { name: "Describe your own world" })).toBeVisible();
     }
     await page.goto("/learn/contracts");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

@@ -1,0 +1,58 @@
+.shell {
+  --mp-canvas: #f4f5ef;
+  --mp-surface: #fff;
+  --mp-raised: #eef1e7;
+  --mp-ink: #20352c;
+  --mp-muted: #56675b;
+  --mp-border: #d7dfd2;
+  --mp-control-boundary: #82917e;
+  --mp-accent: #315c40;
+  --mp-accent-ink: #fff;
+}
+:global(html[data-theme="dark"]) .shell {
+  --mp-canvas: #111c16;
+  --mp-surface: #1b2920;
+  --mp-raised: #18241c;
+  --mp-ink: #eff3e8;
+  --mp-muted: #b4c2ae;
+  --mp-border: #354737;
+  --mp-control-boundary: #738970;
+  --mp-accent: #b6d59b;
+  --mp-accent-ink: #18241c;
+}
+.panel {
+  box-sizing: border-box;
+  width: min(940px, calc(100% - 40px)) !important;
+  max-width: 940px !important;
+  min-height: 0 !important;
+  margin: 64px auto 24px !important; /* Clear the fixed family header, including on saved-world entry. */
+  padding: 20px 0 24px !important;
+  justify-content: flex-start !important;
+}
+.panel.custom { max-width: 42rem !important; }
+.panel :global(.answer-field) { display: grid; gap: 4px; width: 100%; }
+.panel textarea {
+  box-sizing: border-box; width: 100%; min-width: 0; resize: vertical; field-sizing: content;
+  min-height: 6rem; font: inherit; line-height: 1.5; padding: 12px 14px;
+  border: 1px solid var(--mp-control-boundary); border-radius: 6px;
+  background: var(--mp-surface); color: var(--mp-ink);
+}
+.panel textarea:focus-visible { outline: 2px solid var(--mp-accent); outline-offset: 2px; }
+.panel :global(.answer-field span) {
+  position: static; transform: none; justify-self: end; color: var(--mp-muted);
+  font-variant-numeric: tabular-nums;
+}
+.panel :global(.question-note) { line-height: 1.55; }
+.panel :global(.chips) { display: flex; flex-wrap: wrap; }
+.panel :global(.chips button) { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.panel :global(.question-footer) { align-items: center; gap: 12px; }
+.shell :global(.primary-button), .shell :global(.question-footer .primary-button) {
+  background: var(--mp-accent) !important; color: var(--mp-accent-ink) !important;
+}
+.shell :global(.primary-button:disabled) { background: var(--mp-raised) !important; color: var(--mp-muted) !important; }
+@media (max-width: 700px) {
+  .panel { width: calc(100% - 32px) !important; margin: 64px auto 16px !important; padding: 18px 0 24px !important; }
+  .panel :global(.question-footer) { flex-wrap: wrap; }
+  .panel :global(.question-footer > span) { flex-basis: 100%; }
+  .panel :global(.question-footer > div) { display: flex; flex-wrap: wrap; gap: 8px; }
+}

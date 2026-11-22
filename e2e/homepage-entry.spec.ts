@@ -5,13 +5,12 @@ for (const width of [320, 390, 1280]) {
     await page.setViewportSize({ width, height: 850 });
     await page.goto("/");
     const actions = page.getByRole("navigation", { name: "Explore LifePot" });
-    const create = page.getByRole("link", { name: "Create your own world" });
-    const observatory = actions.getByRole("link", { name: "Open observatory" });
-    const docs = actions.getByRole("link", { name: "Documentation" });
+    const create = actions.getByRole("link", { name: /Play LifePot/ });
+    const observatory = page.getByRole("link", { name: "Open observatory", exact: true });
     await expect(create).toHaveAttribute("href", "/experiment");
     await expect(observatory).toHaveAttribute("href", "/play");
-    await expect(docs).toHaveAttribute("href", "/learn");
-    for (const link of [observatory, docs]) await expect(link).toBeInViewport();
+    await expect(create).toBeInViewport();
+    await expect(actions.getByRole("link", {name: "Play example"})).toBeInViewport();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
     await create.click();
@@ -19,12 +18,13 @@ for (const width of [320, 390, 1280]) {
     await expect(page.getByRole("button", { name: "Describe your own world" })).toBeVisible();
 
     await page.goto("/");
-    await actions.getByRole("link", { name: "Open observatory" }).click();
+    await page.getByRole("link", { name: "Open observatory", exact: true }).click();
     await expect(page).toHaveURL(/\/play$/);
     await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
 
     await page.goto("/");
-    await actions.getByRole("link", { name: "Documentation" }).click();
+    await page.locator(".home-reference").locator("summary").click();
+    await page.getByRole("link", { name: "All learning guides" }).click();
     await expect(page).toHaveURL(/\/learn$/);
     await expect(page.getByRole("heading", { name: "LifePot documentation" })).toBeVisible();
   });

@@ -8,11 +8,15 @@ for (const width of [1280, 768, 390, 320]) {
     for (const theme of ["Light", "Dark"]) {
       await page.getByRole("combobox", { name: "Theme" }).selectOption({ label: theme });
       const panel = page.locator(".question-panel");
+      await page.getByRole("textbox").fill("W".repeat(140));
+      await expect(panel.locator(".answer-field span")).toHaveText("140/140");
       const geometry = await panel.evaluate(el => {
         const r = el.getBoundingClientRect();
-        const input = el.querySelector("input")!.getBoundingClientRect();
+        const field = el.querySelector("textarea")!;
+        const input = field.getBoundingClientRect();
+        const counter = el.querySelector(".answer-field span")!.getBoundingClientRect();
         const header = document.querySelector(".family-header")!.getBoundingClientRect();
-        return { center: r.x + r.width / 2, viewport: document.documentElement.clientWidth / 2,
+        return { counterTop:counter.top, fieldBottom:input.bottom, fits:field.scrollHeight <= field.clientHeight && field.scrollWidth <= field.clientWidth, center: r.x + r.width / 2, viewport: document.documentElement.clientWidth / 2,
           inputCenter: input.x + input.width / 2, inputTop: input.top, headerBottom: header.bottom,
           overflow: document.documentElement.scrollWidth > window.innerWidth };
       });
@@ -20,6 +24,9 @@ for (const width of [1280, 768, 390, 320]) {
       expect(Math.abs(geometry.inputCenter - geometry.center)).toBeLessThan(2);
       expect(geometry.inputTop).toBeGreaterThan(geometry.headerBottom);
       expect(geometry.overflow).toBe(false);
+      expect(geometry.fits).toBe(true);
+      expect(geometry.counterTop).toBeGreaterThanOrEqual(geometry.fieldBottom);
+      await page.screenshot({path:test.info().outputPath(`field-${width}-${theme}.png`)});
       await expect(panel.locator("details")).not.toHaveAttribute("open", "");
       await page.getByRole("textbox").fill("A pond with algae and grazers");
       await page.getByRole("button", { name: "Continue", exact: true }).click();

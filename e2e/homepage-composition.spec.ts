@@ -19,9 +19,9 @@ for (const width of [320, 375, 390, 768, 800, 801, 1024, 1280, 1920, 2560]) {
       const a = element(".overview-actions .overview-primary"), b = element(".overview-actions .overview-secondary");
       const hit = (e: HTMLElement) => { const r = e.getBoundingClientRect(); return e.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); };
       return {
-        logo: rect(".overview-lockup"), hero: rect(".overview-hero"), example: rect(".example-card"), video: rect("video"),
+        logo: rect(".overview-lockup"), hero: rect(".overview-hero"), example: rect(".example-card"), poster: rect(".example-media img"),
         primary: rect(".overview-actions .overview-primary"), secondary: rect(".overview-actions .overview-secondary"),
-        credit: rect(".overview-credit"), creatorRow: rect(".overview-hero .creator-row"), socials: [...document.querySelectorAll<HTMLElement>(".overview-hero .creator-social-links a")].map(e => ({ label:e.textContent, font:getComputedStyle(e).fontSize, height:e.getBoundingClientRect().height })), exampleAction: rect(".example-action"), hit: hit(a) && hit(b),
+        credit: rect(".overview-credit"), creatorRow: rect(".overview-hero .creator-row"), socials: [...document.querySelectorAll<HTMLElement>(".overview-hero .creator-social-links a")].map(e => ({ label:e.textContent, font:getComputedStyle(e).fontSize, height:e.getBoundingClientRect().height })), exampleHeading: rect("#example-title"), hit: hit(a) && hit(b),
         creditHits: [...document.querySelectorAll<HTMLElement>(".overview-credit a")].map(hit),
         primaryBackground: style(".overview-actions .overview-primary").backgroundColor,
         secondaryBackground: style(".overview-actions .overview-secondary").backgroundColor,
@@ -30,6 +30,8 @@ for (const width of [320, 375, 390, 768, 800, 801, 1024, 1280, 1920, 2560]) {
         theme: document.documentElement.dataset.theme,
       };
     });
+    await expect(page.locator("video")).toHaveCount(0);
+    expect(metrics.poster.height).toBeCloseTo(metrics.poster.width, 0);
     expect(metrics.overflow).toBe(false);
     expect(metrics.headingSize).toBeLessThanOrEqual(56);
     expect(metrics.primaryBackground).not.toBe(metrics.secondaryBackground);
@@ -38,18 +40,21 @@ for (const width of [320, 375, 390, 768, 800, 801, 1024, 1280, 1920, 2560]) {
     expect(metrics.socials.map(s=>s.label)).toEqual(["GitHub", "LinkedIn", "X"]);
     for (const social of metrics.socials) { expect(social.font).toBe("15px"); expect(social.height).toBeGreaterThanOrEqual(44); }
     if (width <= 370) expect(metrics.creatorRow.height).toBeLessThanOrEqual(88);
-    for (const r of [metrics.primary, metrics.secondary, metrics.credit, metrics.logo, metrics.video, metrics.exampleAction]) {
+    for (const r of [metrics.primary, metrics.secondary, metrics.credit, metrics.logo, metrics.poster, metrics.exampleHeading]) {
       expect(r.y).toBeGreaterThanOrEqual(64); expect(r.bottom).toBeLessThanOrEqual(850);
     }
     expect(metrics.primary.height).toBeGreaterThanOrEqual(44); expect(metrics.secondary.height).toBeGreaterThanOrEqual(44);
     if (width <= 370) {
       expect(metrics.primary.x).toBe(metrics.secondary.x); expect(metrics.primary.width).toBe(metrics.secondary.width);
       expect(metrics.secondary.y).toBeGreaterThanOrEqual(metrics.primary.bottom);
+    } else if (width <= 900) {
+      expect(metrics.primary.y).toBe(metrics.secondary.y);
+      expect(metrics.secondary.x).toBeGreaterThan(metrics.primary.x);
     } else expect(metrics.primary.y).toBe(metrics.secondary.y);
     expect(metrics.credit.y).toBeGreaterThanOrEqual(Math.max(metrics.primary.bottom, metrics.secondary.bottom));
     expect(metrics.example.y).toBeGreaterThanOrEqual(metrics.hero.bottom);
-    if (width === 1280) expect(Math.abs(metrics.logo.width - 469.594)).toBeLessThan(2); // Live Intpot/Summonpot/Dexpot/RefPot reference.
-    if (width <= 800) expect(metrics.logo.height).toBe(224); // Same contained mobile artwork treatment as the reference.
+    if (width === 1280) expect(Math.abs(metrics.logo.width - 484.625)).toBeLessThan(2); // New compact hero geometry.
+    if (width <= 800) expect(metrics.logo.height).toBe(164); // Compact contained artwork leaves the example in view.
     await expect(page.locator('.overview-credit a[href="https://tugrul.modepot.io/"]')).toContainText("Created by Tugrul Guner");
     await expect(page.locator('.overview-credit a[href="https://modepot.io/"]')).toContainText("Part of ModePot");
     await expect(page.locator(".overview-example .overview-primary")).toHaveCount(0);

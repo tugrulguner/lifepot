@@ -1,11 +1,17 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function openWalkthrough(page: Page) {
+  await page.goto("/learn/walkthrough");
+  const region = page.getByRole("region", { name: "Watch how it works", exact: true });
+  await expect(region).toBeVisible();
+}
 
 for (const width of [390, 1280]) test(`walkthrough retries an exhausted source at the requested chapter: ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   let fail = true;
   await page.route("**/demo/lifepot-explained-demo-8e6e10b2.mp4", route => fail ? route.abort("failed") : route.continue());
-  await page.goto("/");
+  await openWalkthrough(page);
   const section = page.getByRole("region", { name: "Watch how it works", exact: true });
   const video = page.getByLabel("LifePot explained product demo", { exact: true });
   await section.getByRole("button", { name: "Watch the walkthrough", exact: true }).click();
@@ -40,7 +46,7 @@ for (const width of [390, 1280]) test(`native pause during walkthrough buffering
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   try {
-    await page.goto("/");
+    await openWalkthrough(page);
     const section = page.getByRole("region", { name: "Watch how it works", exact: true });
     const video = page.getByLabel("LifePot explained product demo", { exact: true });
     await section.getByRole("button", { name: "Observe and inspect, 0:38", exact: true }).click();
@@ -72,7 +78,7 @@ for (const width of [320, 390, 1280]) for (const theme of ["light", "dark"]) {
     const mediaRequests: string[] = [], errors: string[] = [];
     page.on("request", r => { if (r.url().includes(".mp4") || r.url().includes("/api/")) mediaRequests.push(r.url()); });
     page.on("pageerror", e => errors.push(e.message));
-    await page.goto("/");
+    await openWalkthrough(page);
     await page.getByRole("combobox", { name: "Color theme", exact: true }).selectOption(theme);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     const section = page.getByRole("region", { name: "Watch how it works", exact: true });
@@ -91,6 +97,10 @@ for (const width of [320, 390, 1280]) for (const theme of ["light", "dark"]) {
     await section.screenshot({ path: info.outputPath(`walkthrough-${width}-${theme}.png`) });
     const start = section.getByRole("button", { name: "Watch the walkthrough", exact: true });
     await start.focus();
+    // Enter through keyboard navigation, not programmatic focus in pointer mode.
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await expect(start).toBeFocused();
     const focus = await start.evaluate(e => { const s = getComputedStyle(e); return { style: s.outlineStyle, color: s.outlineColor, background: s.backgroundColor }; });
     expect(focus.style).toBe("solid");
     expect(focus.color).not.toBe(focus.background);

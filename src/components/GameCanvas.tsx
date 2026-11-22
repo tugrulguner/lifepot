@@ -45,6 +45,7 @@ import { WatchingOrganism } from "./WatchingOrganism";
 import { SpeciesFocus } from "./SpeciesFocus";
 import WorldPreview from "./WorldPreview";
 import gameplayStyles from "./GameCanvasGameplay.module.css";
+import setupStyles from "./GameSetup.module.css";
 import historyStyles from "./ObservedHistory.module.css";
 import { RunResults } from "./RunResults";
 import { WorldOutcome } from "./WorldOutcome";
@@ -524,7 +525,7 @@ export function GameCanvas() {
   const exampleJourney = useRef(0);
   const setupJourney = useRef(0);
   const [customSetup, setCustomSetup] = useState(false);
-  const customAnswerInput = useRef<HTMLInputElement>(null);
+  const customAnswerInput = useRef<HTMLTextAreaElement>(null);
   const exampleRequest = useRef<AbortController | null>(null);
   const cancelExample = useCallback(() => {
     exampleJourney.current++;
@@ -1096,9 +1097,9 @@ export function GameCanvas() {
   if (stage === "questions") {
     const q = QUESTIONS[qi];
     return (
-      <main className="setup-shell">
+      <main className={`setup-shell ${setupStyles.shell}`}>
         <FamilyHeader feedbackPath="/experiment" skipTarget="play-content"><span className="header-detail">{proof?.starter ? "Designed starter" : "Co-evolution laboratory"}</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
-        <section id="play-content" tabIndex={-1} className="question-panel" style={!customSetup ? { width: "min(1000px, calc(100% - 40px))", maxWidth: "1000px" } : undefined} onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
+        <section id="play-content" tabIndex={-1} className={`question-panel ${setupStyles.panel} ${customSetup ? setupStyles.custom : ""}`} style={!customSetup ? { width: "min(1000px, calc(100% - 40px))", maxWidth: "1000px" } : undefined} onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
           <div id="my-worlds-entry" />
           <StarterWorldPicker customMode={customSetup} onChoose={chooseStarter} onDescribeOwn={() => setCustomSetup(true)} onReturnToStarters={() => setCustomSetup(false)} />
           <>
@@ -1118,7 +1119,14 @@ export function GameCanvas() {
             }}
           >
             <div className="answer-field">
-              <input
+              <textarea
+                rows={5}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                    event.preventDefault();
+                    if (answers[q.key].trim() && !interpreting) event.currentTarget.form?.requestSubmit();
+                  }
+                }}
                 ref={customAnswerInput}
                 onFocus={() => { cancelExample(); setCustomSetup(true); }}
                 autoFocus={customSetup || qi > 0}

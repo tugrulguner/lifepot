@@ -11,15 +11,17 @@ it("explains adaptive ecology without calling life deterministic or promising in
   expect(mechanism).toContain("mutation policies");
   expect(mechanism).toContain("not direct control of individual organisms");
   expect(mechanism).toContain("Fixed-rule starters");
+  expect(root.querySelector(".home-reference")?.querySelector("summary")?.textContent).toContain("learning resources");
   expect(mechanism).toContain("recorded decisions");
 });
 it("keeps canonical artwork in the family hero and creator/family attribution immediately after aligned actions", () => {
   const root = overview();
   expect(root.querySelector('.overview-hero img[src="/lifepot-lockup.png?v=adaptive-life-1"]')).not.toBeNull();
   const actions = root.querySelector(".overview-actions")!;
-  expect(root.querySelector('.overview-more a[href="/experiment"]')?.textContent).toContain("Create your own world");
-  expect(actions.querySelector('.overview-secondary[href="/learn"]')?.textContent).toContain("Documentation");
-  expect(actions.querySelector('.overview-primary[href="/play"]')?.textContent).toContain("Open observatory");
+  expect(root.querySelector('.overview-actions a[href="/experiment"]')?.textContent).toContain("Play LifePot");
+  expect(actions.querySelector('.overview-secondary[href="/play#example"]')?.textContent).toContain("Play example");
+  expect(actions.querySelector('.overview-primary[href="/experiment"]')?.textContent).toContain("Play LifePot");
+  expect(root.querySelector('footer .overview-preset[href="/play"]')?.textContent).toContain("Open observatory");
   const credit = actions.nextElementSibling!;
   expect(credit.classList.contains("creator-row")).toBe(true);
   expect(credit.querySelector(".overview-credit")).not.toBeNull();
@@ -34,7 +36,7 @@ it("offers keyboard skip navigation and defers the explicitly sized architecture
   const target = root.querySelector("#overview-content[tabindex='-1']")!;
   expect(target).not.toBeNull();
   expect(target.querySelector(".family-header")).toBeNull();
-  expect(target.querySelector('.overview-primary[href="/play"]')).not.toBeNull();
+  expect(target.querySelector('.overview-primary[href="/experiment"]')).not.toBeNull();
   const image = root.querySelector(".overview-mechanism img")!;
   expect(image.getAttribute("loading")).toBe("lazy");
   expect(image.getAttribute("width")).toBe("1600");
@@ -43,8 +45,9 @@ it("offers keyboard skip navigation and defers the explicitly sized architecture
 it("separates the recorded preview from the hero without a competing filled primary action", () => {
   const root = overview(), card = root.querySelector(".example-card")!;
   expect(card.closest(".overview-hero")).toBeNull();
-  expect(card.querySelector(".example-media video[data-example-video]")).not.toBeNull();
-  expect(card.querySelector('.example-copy a.overview-secondary[href="/play#example"]')).not.toBeNull();
+  expect(card.querySelector('.example-media img[src="/life-example-poster.jpg"]')).not.toBeNull();
+  expect(root.querySelectorAll("video")).toHaveLength(0);
+  expect(root.querySelectorAll('.overview-actions a[href="/play#example"]')).toHaveLength(1);
   expect(card.querySelectorAll(".overview-primary")).toHaveLength(0);
   expect(card.textContent).toContain("Recorded example · exact replay");
 });
