@@ -435,8 +435,7 @@ test("maps HTTP 200 fallback reasons to one exact setup failure event", async ()
     });
     vi.stubGlobal("fetch", fetch);
     render(<GameCanvas />);
-    fireEvent.click(screen.getByRole("button", { name: "Custom world" }));
-    for (const [label, value] of [["What exists in this world?", answers.world], ["What threatens life here?", answers.threat], ["What should evolution favor?", answers.reward]] as const) {
+    for (const [label, value] of [["What exists in your world?", answers.world], ["What threatens life here?", answers.threat], ["What should evolution favor?", answers.reward]] as const) {
       fireEvent.change(screen.getByLabelText(label), { target: { value } });
       fireEvent.click(screen.getByRole("button", { name: /Continue|Review ecosystem/ }));
     }
@@ -452,9 +451,8 @@ test("gates failed setup review with retry/report while preserving answers", asy
   vi.stubGlobal("scrollTo", vi.fn());
   vi.stubGlobal("fetch", vi.fn(async () => new Response("unavailable", { status: 503 })));
   render(<GameCanvas />);
-  fireEvent.click(screen.getByRole("button", { name: "Custom world" }));
   const answers = ["A pond with plants and grazers", "A dry season", "Observe population changes"];
-  for (const [label, value] of [["What exists in this world?", answers[0]], ["What threatens life here?", answers[1]], ["What should evolution favor?", answers[2]]] as const) {
+  for (const [label, value] of [["What exists in your world?", answers[0]], ["What threatens life here?", answers[1]], ["What should evolution favor?", answers[2]]] as const) {
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
     fireEvent.click(screen.getByRole("button", { name: /Continue|Review ecosystem/ }));
   }
@@ -464,7 +462,7 @@ test("gates failed setup review with retry/report while preserving answers", asy
   expect(screen.getByRole("link", { name: "Report setup issue ↗" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /Seed ecosystem/ })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Edit setup answers" }));
-  expect(screen.getByLabelText("What exists in this world?")).toHaveValue(answers[0]);
+  expect(screen.getByLabelText("What exists in your world?")).toHaveValue(answers[0]);
 });
 test("offers a no-model preset through the existing guided setup", () => {
   render(<GameCanvas />);
@@ -481,8 +479,7 @@ test("invalid HTTP 200 setup response emits one invalid_response failure", async
   vi.stubGlobal("scrollTo", vi.fn());
   vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
   render(<GameCanvas />);
-  fireEvent.click(screen.getByRole("button", { name: "Custom world" }));
-  for (const label of ["What exists in this world?", "What threatens life here?", "What should evolution favor?"]) {
+  for (const label of ["What exists in your world?", "What threatens life here?", "What should evolution favor?"]) {
     fireEvent.change(screen.getByLabelText(label), { target: { value: "A sufficiently clear ecological world" } });
     fireEvent.click(screen.getByRole("button", { name: /Continue|Review ecosystem/ }));
   }

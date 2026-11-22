@@ -3,10 +3,10 @@ import { test, expect } from "@playwright/test";
 test("setup mode switch and textarea focus do not jump the page or hide the chooser", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/experiment");
-  const heading = page.getByRole("heading", { name: "Choose a living world" });
+  const heading = page.getByRole("heading", { name: "What exists in your world?" });
   await expect(heading).toBeVisible();
-  await page.getByRole("button", { name: "Custom world", exact: true }).click();
-  const textarea = page.getByRole("textbox", { name: "What exists in this world?" });
+
+  const textarea = page.getByRole("textbox", { name: "What exists in your world?" });
   await textarea.scrollIntoViewIfNeeded();
   const position = () => textarea.evaluate(el => ({ scroll: scrollY, top: el.getBoundingClientRect().top }));
   const before = await position();
@@ -15,7 +15,15 @@ test("setup mode switch and textarea focus do not jump the page or hide the choo
   await textarea.fill("A long-answer habitat with many interacting species and shifting resources.");
   const after = await position();
   await expect(heading).toBeVisible();
-  await expect(page.getByRole("button", { name: "Starter worlds", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Use a starter world instead", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Starter worlds", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Custom world", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Use a starter world instead", exact: true }).click();
+  const previews = page.getByRole("button", { name: /^Preview / });
+  await expect(previews).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Preview Resource competition" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Describe your own world", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "What exists in your world?" })).toBeVisible();
   expect(after).toEqual(before);
   await page.screenshot({ path: test.info().outputPath("custom-mode-focus.png") });
 });
@@ -24,7 +32,7 @@ for (const width of [1280, 768, 390, 320]) {
   test(`setup is centered and usable at ${width}px in both themes`, async ({ page }) => {
     await page.setViewportSize({ width, height: 850 });
     await page.goto("/experiment");
-    await page.getByRole("button", { name: "Custom world", exact: true }).click();
+
     for (const theme of ["Light", "Dark"]) {
       await page.getByRole("combobox", { name: "Theme" }).selectOption({ label: theme });
       const panel = page.locator(".question-panel");

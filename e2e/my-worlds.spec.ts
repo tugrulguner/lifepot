@@ -158,7 +158,7 @@ test("return visit exposes saved history and restores archived highlights, child
   const entry = await shortcut.boundingBox();
   expect(entry!.y).toBeGreaterThanOrEqual(64);
   expect(entry!.y + entry!.height).toBeLessThanOrEqual(850);
-  await expect(page.getByRole("heading", { name: "Choose a living world" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What exists in your world?" })).toBeVisible();
   await shortcut.click();
   const shelfTop = await page.getByRole("heading", {name:"Saved worlds",exact:true}).boundingBox();
   expect(shelfTop!.y).toBeGreaterThanOrEqual(64);

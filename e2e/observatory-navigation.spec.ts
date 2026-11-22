@@ -64,7 +64,7 @@ for (const width of [390, 1280]) test(`observatory exposes advanced journeys wit
   await expect(page.locator('#phase')).toHaveText('Paused · generation 0');
   await page.getByRole('link',{name:'Custom and adaptive experiments',exact:true}).click();
   await expect(page).toHaveURL(/\/experiment$/);
-  await expect(page.getByRole('button',{name:'Custom world',exact:true})).toBeVisible();
+  await expect(page.getByRole('textbox',{name:'What exists in your world?' })).toBeVisible();
   await page.getByRole('link',{name:'Back to observatory',exact:true}).click();
   await expect(page).toHaveURL(/\/play$/);
   await expect(page.locator('#phase')).toHaveText('Paused · generation 0');

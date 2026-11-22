@@ -8,6 +8,7 @@ for(const width of [390,1280])for(const name of starters){
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/api/judge',route=>{inference.push(route.request().url());return route.abort()});
   await page.goto('/experiment');
+  await page.getByRole('button',{name:'Use a starter world instead',exact:true}).click();
   const choice=page.getByRole('button',{name:`Preview ${name}`,exact:true});
   await choice.click();
   const preview=page.getByRole('img',{name:/Starter habitat preview/});
@@ -35,7 +36,7 @@ for(const width of [390,1280])for(const name of starters){
 
 test('custom creation remains available with the original prose and request validation',async({page})=>{
  await page.goto('/experiment');
- await page.getByRole('button',{name:'Custom world',exact:true}).click();
+
  await expect(page.getByRole('button',{name:'Review this world',exact:true})).toHaveCount(0);
  const input=page.locator('.answer-field textarea');
  await input.fill('An ecology with two competing resource feeders');

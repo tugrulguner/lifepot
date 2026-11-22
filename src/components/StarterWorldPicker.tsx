@@ -8,10 +8,8 @@ import OrganismArtwork from "./OrganismArtwork";
 import styles from "./StarterWorldPicker.module.css";
 
 type Props = {
-  customMode?: boolean;
   onChoose: (world: StarterWorld) => void;
   onDescribeOwn: () => void;
-  onReturnToStarters?: () => void;
 };
 
 function relationshipName(mode: string): string {
@@ -22,7 +20,7 @@ const subscribeToHydration = () => () => {};
 const clientSnapshot = () => true;
 const serverSnapshot = () => false;
 
-export default function StarterWorldPicker({ customMode = false, onChoose, onDescribeOwn, onReturnToStarters }: Props) {
+export default function StarterWorldPicker({ onChoose, onDescribeOwn }: Props) {
   // Shared glyph paths use transcendental arithmetic whose final float digits
   // can differ across Node and browser engines. Paint them after hydration,
   // without changing the deterministic world or suppressing mismatch warnings.
@@ -52,12 +50,8 @@ export default function StarterWorldPicker({ customMode = false, onChoose, onDes
     <section className={styles.picker} aria-labelledby="starter-world-heading">
       <p className={styles.eyebrow}>DESIGN A WORLD · CHOOSE YOUR START</p>
       <h2 id="starter-world-heading">Choose a living world</h2>
-      <div className={styles.modeSwitch} role="group" aria-label="World setup mode">
-        <button type="button" aria-pressed={!customMode} onClick={onReturnToStarters}>Starter worlds</button>
-        <button type="button" aria-pressed={customMode} onClick={onDescribeOwn}>Custom world</button>
-      </div>
-      {!customMode && <>
-        <div className={styles.choices} aria-label="Starter worlds">
+      <button type="button" className={styles.describeOwn} onClick={onDescribeOwn}>Describe your own world</button>
+      <div className={styles.choices} aria-label="Starter worlds">
           {STARTER_WORLDS.map((world) => <button key={world.id} type="button" aria-label={`Preview ${world.title}`} className={styles.choice} aria-pressed={selected.id === world.id} onClick={() => select(world.id)}><strong>{world.title}</strong></button>)}
         </div>
         <div className={styles.habitat}>
@@ -81,7 +75,6 @@ export default function StarterWorldPicker({ customMode = false, onChoose, onDes
           </details>
           </div>
         </div>
-      </>}
 
     </section>
   );

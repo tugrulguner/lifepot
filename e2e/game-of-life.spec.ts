@@ -9,8 +9,7 @@ const answers = {
 };
 
 async function answerSetupWithKeyboard(page: Page) {
-  await page.getByRole("button", {name:"Custom world", exact:true}).click();
-  await page.getByRole("textbox", { name: "What exists in this world?" }).fill(answers.world);
+  await page.getByRole("textbox", { name: "What exists in your world?" }).fill(answers.world);
   await page.keyboard.press("Enter");
   await page.getByRole("textbox", { name: "What threatens life here?" }).fill(answers.threat);
   await page.keyboard.press("Enter");
@@ -127,10 +126,10 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
     await page.setViewportSize(viewport);
     await page.route("**/api/judge", (route) => route.abort());
     await page.goto("/experiment");
-    await page.getByRole("button", { name: "Custom world", exact: true }).click();
+
     await expect(page.getByText("QUESTION 1 / 3")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "What exists in this world?" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "What exists in this world?" })).toBeFocused();
+    await expect(page.getByRole("heading", { name: "What exists in your world?" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "What exists in your world?" })).not.toBeFocused();
     // Native autofocus scrolls asynchronously; assert after the browser has settled.
     await page.waitForTimeout(300);
     await page.locator(".setup-intro summary").click();
@@ -146,9 +145,9 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
     await expect(about).toHaveAttribute("target", "_blank");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.locator(".setup-intro summary").click();
-    await page.getByRole("heading", { name: "What exists in this world?" }).scrollIntoViewIfNeeded();
+    await page.getByRole("heading", { name: "What exists in your world?" }).scrollIntoViewIfNeeded();
     const headerBounds = await page.locator(".family-header").boundingBox();
-    const headingBounds = await page.getByRole("heading", { name: "What exists in this world?" }).boundingBox();
+    const headingBounds = await page.getByRole("heading", { name: "What exists in your world?" }).boundingBox();
     expect(headerBounds).not.toBeNull();
     expect(headingBounds).not.toBeNull();
     expect(headingBounds!.y).toBeGreaterThanOrEqual(headerBounds!.y + headerBounds!.height);
@@ -251,6 +250,7 @@ test.describe.serial("share a second world after the pond example", () => {
   });
   test("play a different world in the same tab and copy its link", async () => {
     await page.getByRole("button", { name: "New world", exact: true }).click();
+    await page.getByRole("button", { name: "Use a starter world instead", exact: true }).click();
     await page.getByRole("button", { name: "Preview Hunters and prey" }).click();
     await page.getByRole("button", { name: "Review this world", exact: true }).click();
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
