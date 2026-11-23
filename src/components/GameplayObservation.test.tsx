@@ -68,7 +68,7 @@ describe("near-board observation summary", () => {
   it("explains sampled canvas marks beside counts without equating feeding with predation", () => {
     render(<GameplayObservation state={state} evidence={null} followed={null} decision={null} />);
     const key = within(screen.getByRole('region', { name: 'Recorded activity' })).getByRole('note', { name: 'Canvas marks' });
-    for (const label of ['Birth', 'Feeding', 'Prey capture', 'Death', 'Resources', 'Hazards']) expect(key).toHaveTextContent(label);
+    for (const label of ['Birth', 'Feeding', 'Prey capture', 'Death', 'Food resources', 'more grain means more engine resources', 'Hazards', 'coral hatching where visible']) expect(key).toHaveTextContent(label);
     expect(key).toHaveTextContent('Marks are sampled');
     expect(key).toHaveTextContent('reduced motion');
   });

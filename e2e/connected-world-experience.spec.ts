@@ -16,6 +16,9 @@ for (const width of [390, 1280]) test.describe.serial(`${width}px habitat-to-out
     await page.getByRole('button', { name: /Seed ecosystem/ }).click();
     const key = page.getByRole('note', { name: 'Canvas marks', exact: true });
     await expect(key).toHaveCount(1);
+    await expect(key).toContainText('Food resources');
+    await expect(key).toContainText('more grain means more engine resources');
+    await expect(key).toContainText('coral hatching where visible');
     await expect(key).toContainText('Marks are sampled');
     const keyBox = await key.boundingBox(), openingBoard = await page.locator('.life-canvas').boundingBox();
     if (width <= 1000) expect(keyBox!.y).toBeGreaterThanOrEqual(openingBoard!.y + openingBoard!.height);

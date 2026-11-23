@@ -1,5 +1,22 @@
+import nutrientGrain from "./nutrient-grain.json";
+
 const cache = new Map<string, HTMLCanvasElement>();
 const clamp=(n:number)=>Math.max(0,Math.min(255,Math.round(n)));
+const GRAIN_SIZE=32;
+const grainMask=nutrientGrain as number[];
+export function resourceGrainOffset(worldX:number,worldY:number,abundance:number):number {
+  if (abundance <= 0) return 0;
+  const x=((Math.floor(worldX*GRAIN_SIZE/5)%GRAIN_SIZE)+GRAIN_SIZE)%GRAIN_SIZE;
+  const y=((Math.floor(worldY*GRAIN_SIZE/5)%GRAIN_SIZE)+GRAIN_SIZE)%GRAIN_SIZE;
+  const amount=Math.min(1,abundance);
+  return Math.max(0,grainMask[y*GRAIN_SIZE+x]/255-(1-amount)*.65)*Math.sqrt(amount);
+}
+export function hazardHatchAlpha(hazard:number,worldX:number,worldY:number):number {
+  if (hazard <= 0) return 0;
+  const phase=(worldX+worldY)*.8;
+  const stripe=phase-Math.floor(phase)<.33;
+  return Math.round(Math.min(1,hazard/255)*(stripe?205:83));
+}
 // Fixed, perceptually stronger mapping: same engine values always mean the same thing.
 export function resourceFieldColor(value: number): [number, number, number] {
   const t = Math.sqrt(Math.max(0, Math.min(255, value)) / 255);
@@ -24,8 +41,8 @@ export function microscopicSprite(role:string|undefined,color:string,variant:num
  x.save();x.translate(-.12,.07);x.rotate(.3+v*.19);x.beginPath();x.ellipse(0,0,.28,.22,0,0,Math.PI*2);const core=x.createRadialGradient(-.08,-.07,.01,0,0,.32);core.addColorStop(0,pred?'rgba(238,170,123,.75)':'rgba(132,197,153,.8)');core.addColorStop(1,pred?'rgba(100,47,58,.65)':'rgba(20,83,85,.65)');x.fillStyle=core;x.fill();x.strokeStyle='rgba(255,246,218,.35)';x.lineWidth=.016;x.stroke();x.restore();x.strokeStyle=pred?'rgba(119,54,52,.12)':'rgba(22,91,82,.12)';x.lineWidth=.012;for(let j=0;j<4;j++){x.beginPath();x.moveTo(-1,.2*j-.4);x.bezierCurveTo(-.4,-.7+j*.2,.2,.7-j*.17,1,.13*j-.2);x.stroke();}x.restore();
  contour(x,pred,v);x.lineWidth=.034;x.strokeStyle=pred?'rgba(91,28,34,.95)':'rgba(4,63,66,.95)';x.stroke();x.save();x.scale(.955,.955);contour(x,pred,v);x.lineWidth=.026;x.strokeStyle='rgba(255,255,228,.65)';x.stroke();x.restore();x.save();x.scale(.91,.91);contour(x,pred,v);x.lineWidth=.025;x.strokeStyle='rgba(251,255,237,.3)';x.stroke();x.restore();cache.set(key,canvas);if(cache.size>256)cache.delete(cache.keys().next().value!);return canvas;
 }
-// Simulation snapshots own immutable arrays. Cache by array identity and view,
-// not by serializing every cell or rebuilding the hazard raster on each frame.
+// Snapshot arrays are cached by identity/view; texture coordinates derive from wrapped
+// world coordinates, so the generated grain/hatching remain spatially fixed.
 let texture: HTMLCanvasElement | undefined, overlay: HTMLCanvasElement | undefined;
 let resourceSource: Uint8Array | undefined, hazardSource: Uint8Array | undefined;
 let resourceView = "", hazardView = "";
@@ -42,9 +59,9 @@ export function paintResourceField(c: CanvasRenderingContext2D, pad: number, cw:
       const gx=wx-.5,gy=wy-.5,cx=Math.floor(gx),cy=Math.floor(gy),fx=gx-cx,fy=gy-cy;
       const read=(x:number,y:number)=>resources[wrap(y)*50+wrap(x)]||0;
       const q=Math.max(0,Math.min(1,((read(cx,cy)*(1-fx)+read(cx+1,cy)*fx)*(1-fy)+(read(cx,cy+1)*(1-fx)+read(cx+1,cy+1)*fx)*fy)/150));
-      const cell=wrap(cy)*50+wrap(cx),grain=Math.sin((px+cell*13)*12.9898+(py-cell*7)*78.233)*.5,i=(py*200+px)*4;
+      const grain=resourceGrainOffset(wx,wy,q),i=(py*200+px)*4;
       const [red, green, blue] = resourceFieldColor(q * 255);
-      im.data[i]=clamp(red+grain*3);im.data[i+1]=clamp(green+grain*3);im.data[i+2]=clamp(blue+grain*3);im.data[i+3]=255;
+      im.data[i]=clamp(red-grain*29);im.data[i+1]=clamp(green-grain*29);im.data[i+2]=clamp(blue-grain*29);im.data[i+3]=255;
     }
     ctx.putImageData(im,0,0); resourceSource=resources; resourceView=view;
   }
@@ -55,10 +72,11 @@ export function paintResourceField(c: CanvasRenderingContext2D, pad: number, cw:
     const hx=overlay.getContext("2d");if(!hx?.createImageData)return;
     const im=hx.createImageData(160,160);
     for(let y=0;y<160;y++)for(let x=0;x<160;x++){
-      const wx=wrap(Math.floor(camera.x-camera.span/2+(x+.5)/160*camera.span)),wy=wrap(Math.floor(camera.y-camera.span/2+(y+.5)/160*camera.span)),v=hazards[wy*50+wx],k=(y*160+x)*4;
-      im.data[k]=177;im.data[k+1]=75;im.data[k+2]=69;im.data[k+3]=Math.round(v*.62);
+      const wx=wrap(camera.x-camera.span/2+(x+.5)/160*camera.span),wy=wrap(camera.y-camera.span/2+(y+.5)/160*camera.span),v=hazards[Math.floor(wy)*50+Math.floor(wx)],k=(y*160+x)*4;
+      im.data[k]=205;im.data[k+1]=62;im.data[k+2]=42;
+      im.data[k+3]=hazardHatchAlpha(v,wx,wy);
     }
     hx.putImageData(im,0,0);hazardSource=hazards;hazardView=view;
   }
-  c.save();c.globalCompositeOperation="multiply";c.globalAlpha=.78;c.drawImage(overlay,pad,pad,cw*50,ch*50);c.restore();
+  c.save();c.globalCompositeOperation="source-over";c.globalAlpha=.78;c.drawImage(overlay,pad,pad,cw*50,ch*50);c.restore();
 }
