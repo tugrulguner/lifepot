@@ -997,7 +997,7 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .simulation-shell .world-overview button:focus-visible { outline:2px solid var(--mint); outline-offset:3px; }
 .simulation-shell .world-overview canvas { display:block; width:100%; height:auto; aspect-ratio:1; border:1px solid var(--line); border-radius:5px; }
 .simulation-shell { --overview-width: 144px; }
-.simulation-shell:has(.world-overview.is-expanded) { --overview-width: min(216px, 17vw); }
+.simulation-shell:has(.world-overview.is-expanded) { --overview-width: clamp(192px, 17vw, 216px); }
 @media (max-width: 1000px) { .simulation-shell .gameplay-observation { margin-inline-end: calc(var(--overview-width) + 8px); } }
 .simulation-shell .world-overview.is-expanded button { cursor:zoom-out; }
 @media(max-width:600px) {
