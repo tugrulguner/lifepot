@@ -14,7 +14,7 @@ function localTargets(markdown: string): string[] {
   const markdownLinks = [...markdown.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)].map((match) => match[1]);
   const htmlSources = [...markdown.matchAll(/<(?:img|a)\b[^>]*(?:src|href)="([^"]+)"/g)].map((match) => match[1]);
   return [...markdownLinks, ...htmlSources]
-    .map((target) => target.split("#", 1)[0])
+    .map((target) => target.split(/[?#]/, 1)[0])
     .filter((target) => target && !/^(?:https?:|mailto:)/.test(target));
 }
 
@@ -34,6 +34,22 @@ describe("project presentation", () => {
     expect(readme?.sourceUrl).toContain("/blob/");
     expect(roadmap?.sourcePath).toBe("ROADMAP.md");
     expect(roadmap?.markdown).toBe(read("ROADMAP.md"));
+  });
+
+  it("carries the simple-to-complex goal into public docs without claiming it is shipped", async () => {
+    const { publicDocuments } = await import("./app/project-docs/content");
+    const readme = publicDocuments.find((document) => document.slug === "readme")!.markdown;
+    const roadmap = publicDocuments.find((document) => document.slug === "roadmap")!.markdown;
+    const player = await guideMarkdown("player-guide");
+    for (const markdown of [readme, roadmap, player]) {
+      expect(markdown).toContain("simple beginnings");
+      expect(markdown).toContain("complex structures and behaviors");
+      expect(markdown).toContain("reproductive success");
+    }
+    expect(readme).toContain("not a claim that the current engine demonstrates open-ended evolution");
+    expect(roadmap).toContain("not a requirement to finish all interface work before simulation research");
+    expect(roadmap).toContain("rather than scripted stages or predetermined outcomes");
+    expect(player).toContain("research ambitions, not current game features");
   });
 
   it("omits the roadmap public page when no roadmap source is present", async () => {

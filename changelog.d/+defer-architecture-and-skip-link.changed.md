@@ -1,0 +1,1 @@
+Defer the below-fold architecture diagram without changing its artwork or aspect ratio, and provide keyboard-visible skip navigation into overview, game, learning, source-document and not-found content without changing game behavior.

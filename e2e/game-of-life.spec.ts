@@ -9,7 +9,7 @@ const answers = {
 };
 
 async function answerSetupWithKeyboard(page: Page) {
-  await page.getByRole("textbox", { name: "What exists in this world?" }).fill(answers.world);
+  await page.getByRole("textbox", { name: "What exists in your world?" }).fill(answers.world);
   await page.keyboard.press("Enter");
   await page.getByRole("textbox", { name: "What threatens life here?" }).fill(answers.threat);
   await page.keyboard.press("Enter");
@@ -17,23 +17,63 @@ async function answerSetupWithKeyboard(page: Page) {
   await page.keyboard.press("Enter");
 }
 
+async function acceptSetupFixture(page: Page) {
+  let calls = 0;
+  await page.route("**/api/judge", async route => {
+    calls++;
+    await route.fulfill({ json: {
+      config: deterministicSetup(answers), source: "jev", requestHash: hashSetupRequest(answers), model: "declared-browser-fixture",
+      fidelity: { verdict: "approve", model: "declared-browser-fixture", usage: { input_tokens: 1, output_tokens: 1 } },
+    } });
+  });
+  return () => calls;
+}
+
 async function expectModePotLinkFitsViewport(page: Page) {
-  const link = page.getByRole("link", { name: "ModePot" });
+  const feedback = page.locator(".family-compact-home .family-feedback");
+  await expect(feedback).toBeVisible();
+  await expect(feedback).toHaveAttribute("target", "_blank");
+  await expect(feedback).toHaveAttribute("rel", "noopener noreferrer");
+  expect(new URL((await feedback.getAttribute("href"))!).pathname).toBe("/tugrulguner/lifepot/issues/new");
+  const menuButton = page.getByRole("button", { name: "Menu", exact: true });
+  await menuButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(menuButton).toHaveAttribute("aria-expanded", "true");
+  const menu = page.getByRole("region", { name: "Menu", exact: true });
+  const link = menu.getByRole("link", { name: "ModePot", exact: true });
   await expect(link).toBeVisible();
   await expect(link).toHaveAttribute("href", "https://modepot.io/");
+  for (const target of [feedback, link]) {
+    const bounds = await target.evaluate((node) => {
+      const r = node.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return { width: r.width, height: r.height, left: r.left, right: r.right, top: r.top, bottom: r.bottom, viewportWidth: innerWidth, viewportHeight: innerHeight, hit: hit === node || node.contains(hit) };
+    });
+    expect(bounds.width).toBeGreaterThanOrEqual(44);
+    expect(bounds.height).toBeGreaterThanOrEqual(44);
+    expect(bounds.left).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(bounds.viewportWidth);
+    expect(bounds.top).toBeGreaterThanOrEqual(0);
+    expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewportHeight);
+    expect(bounds.hit).toBe(true);
+  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(menuButton).toBeFocused();
+  await expect(feedback).toBeVisible();
 }
 
 test("mobile simulation keeps every stat label and value inside the viewport", async ({ page }) => {
   for (const viewport of [{ width: 320, height: 390 }, { width: 390, height: 844 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(viewport);
     await page.route("**/api/judge", (route) => route.abort());
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     await expect(page.getByRole("img", { name: /ecosystem generation/i })).toBeVisible();
     await expect(page.getByTestId("generation")).not.toHaveText("0 / 180", { timeout: 5_000 });
-    await expect(page.locator(".stat").filter({ visible: true })).toHaveCount(viewport.width <= 760 ? 6 : 8);
+    await expect(page.locator(".stat").filter({ visible: true })).toHaveCount(8);
     const measurements = await page.locator(".stats-strip").evaluate((strip) => {
       const bounds = (element: Element) => {
         const rect = element.getBoundingClientRect();
@@ -71,7 +111,7 @@ test("mobile simulation keeps every stat label and value inside the viewport", a
 test("deterministic preset enters the existing review and simulation without judge calls", async ({ page }) => {
   let judgeCalls = 0;
   await page.route("**/api/judge", async (route) => { judgeCalls += 1; await route.abort(); });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
   await expect(page.getByTestId("interpreter-source")).toHaveText("Deterministic fallback");
@@ -85,23 +125,29 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
   for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 390 }, { width: 320, height: 844 }]) {
     await page.setViewportSize(viewport);
     await page.route("**/api/judge", (route) => route.abort());
-    await page.goto("/play");
+    await page.goto("/experiment");
+
     await expect(page.getByText("QUESTION 1 / 3")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "What exists in this world?" })).toBeVisible();
-    await expect(page.getByRole("textbox", { name: "What exists in this world?" })).toBeFocused();
+    await expect(page.getByRole("heading", { name: "What exists in your world?" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "What exists in your world?" })).not.toBeFocused();
     // Native autofocus scrolls asynchronously; assert after the browser has settled.
     await page.waitForTimeout(300);
     await page.locator(".setup-intro summary").click();
-    await expect(page.getByText(/three answers.*Jev.*validated.*deterministic/i)).toBeVisible();
+    const explanation = page.locator(".setup-intro > p").filter({ hasText: "Three answers shape your world" });
+    await expect(explanation).toBeVisible();
+    await expect(explanation).toContainText("In adaptive worlds, Jev responds to the ecology");
+    await expect(explanation).toContainText("not direct control of individual organisms");
+    await expect(explanation).toContainText("Replay reuses recorded decisions without asking Jev again");
+    await expect(explanation).toContainText("the fallback abstains from new intervention");
     await expect(page.getByText(/not a biological forecast/i)).toBeVisible();
     const about = page.getByRole("link", { name: /About LifePot/i });
     await expect(about).toHaveAttribute("href", "https://github.com/tugrulguner/lifepot/tree/main/docs");
     await expect(about).toHaveAttribute("target", "_blank");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.locator(".setup-intro summary").click();
-    await page.getByRole("heading", { name: "What exists in this world?" }).scrollIntoViewIfNeeded();
+    await page.getByRole("heading", { name: "What exists in your world?" }).scrollIntoViewIfNeeded();
     const headerBounds = await page.locator(".family-header").boundingBox();
-    const headingBounds = await page.getByRole("heading", { name: "What exists in this world?" }).boundingBox();
+    const headingBounds = await page.getByRole("heading", { name: "What exists in your world?" }).boundingBox();
     expect(headerBounds).not.toBeNull();
     expect(headingBounds).not.toBeNull();
     expect(headingBounds!.y).toBeGreaterThanOrEqual(headerBounds!.y + headerBounds!.height);
@@ -119,8 +165,8 @@ test("explains the bounded Jev-to-simulation flow on the first question", async 
 
 test("links every game stage back to ModePot on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.route("**/api/judge", (route) => route.abort());
-  await page.goto("/play");
+  await acceptSetupFixture(page);
+  await page.goto("/experiment");
   await expectModePotLinkFitsViewport(page);
   await answerSetupWithKeyboard(page);
   await expectModePotLinkFitsViewport(page);
@@ -137,13 +183,15 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
       contentType: "application/json",
       body: JSON.stringify({
         config: deterministicSetup(answers),
-        source: "fallback",
+        source: "jev",
         requestHash: hashSetupRequest(answers),
+        model: "declared-browser-fixture",
+        fidelity: { verdict: "approve", model: "declared-browser-fixture", usage: { input_tokens: 1, output_tokens: 1 } },
       }),
     });
   });
 
-  await page.goto("/play");
+  await page.goto("/experiment");
   await answerSetupWithKeyboard(page);
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
   await expect(page.getByLabel("Validated world rules")).toContainText("Species A");
@@ -169,17 +217,77 @@ test("keyboard setup seeds a visibly advancing cellular world and pause stops it
   await expect(page.getByRole("button", { name: "Resume" })).toBeVisible();
 });
 
+test.describe.serial("share a second world after the pond example", () => {
+  let page: Page, copied: string;
+  let pond: Awaited<ReturnType<typeof finish>>, second: typeof pond;
+  test.afterAll(async () => { await page?.context().close(); });
+  let apiCalls = 0;
+  test.beforeAll(async ({ browser }) => {
+    const context = await browser.newContext({ baseURL: test.info().project.use.baseURL, reducedMotion: "reduce" });
+    page = await context.newPage();
+    await context.route("**/api/**", route => { apiCalls++; return route.abort(); });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  });
+  async function finish(world: Page) {
+    await world.getByRole("button", { name: "Pause", exact: true }).click();
+    await world.getByRole("button", { name: "Step one generation" }).evaluate(async button => {
+      for (let n = 0; n < 180 && button.isConnected; n++) {
+        (button as HTMLButtonElement).click();
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    });
+    const results = world.getByRole("region", { name: "Run results", exact: true });
+    await expect(results).toBeVisible();
+    const endpoint = await world.locator("canvas.life-canvas").getAttribute("aria-label");
+    expect(endpoint).toMatch(/^Ecosystem generation \d+; \d+ organisms$/);
+    const totals = (await results.innerText()).match(/cumulative births: \d+; deaths: \d+; kills: \d+/)?.[0];
+    expect(totals).toBeTruthy();
+    return { endpoint, totals };
+  }
+  test("finish the bundled example", async () => {
+    await page.goto("/play/example");
+    pond = await finish(page);
+  });
+  test("play a different world in the same tab and copy its link", async () => {
+    await page.getByRole("button", { name: "New world", exact: true }).click();
+    await page.getByRole("button", { name: "Use a starter world instead", exact: true }).click();
+    await page.getByRole("button", { name: "Preview Hunters and prey" }).click();
+    await page.getByRole("button", { name: "Review this world", exact: true }).click();
+    await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+    second = await finish(page);
+    expect(second).not.toEqual(pond);
+    await page.getByRole("button", { name: "Copy challenge link" }).click();
+    // The link is compressed before it is written, so wait for the confirmation.
+    await expect(page.getByText("Replay link copied")).toBeVisible();
+    copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(new URL(copied).pathname).toBe("/experiment");
+    expect(new URL(copied).search).toBe("");
+    expect(new URL(copied).hash).toMatch(/^#replay=/);
+  });
+  test("the copied link replays the second outcome in a fresh tab", async () => {
+    const recipient = await page.context().newPage();
+    let exampleRequests = 0;
+    await recipient.route("**/example-world.json", route => { exampleRequests++; return route.abort(); });
+    await recipient.emulateMedia({ reducedMotion: "reduce" });
+    await recipient.goto(copied);
+    await expect(recipient.getByText("Exact recorded replay · no inference")).toBeVisible();
+    expect(await finish(recipient)).toEqual(second);
+    expect(exampleRequests).toBe(0);
+    expect(apiCalls).toBe(0);
+  });
+});
+
 test("copied replay opens at generation zero and never calls the judge", async ({ page, context }) => {
   // Serialization/replay contract: retain the full real-engine trajectory without
   // decorative event-animation work. Normal-motion playback has separate coverage.
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.route("**/api/judge", route => route.abort());
+  await acceptSetupFixture(page);
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.goto("/play");
+  await page.goto("/experiment");
   await answerSetupWithKeyboard(page);
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
-  await expect(page.getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByRole("region", { name: "Run results", exact: true }).getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 90_000 });
   await page.getByRole("button", { name: "Copy challenge link" }).click();
   // The link is compressed before it is written, so wait for the confirmation.
   await expect(page.getByText("Replay link copied")).toBeVisible();
@@ -203,9 +311,9 @@ test("copied replay opens at generation zero and never calls the judge", async (
 for (const viewport of [{ width: 1280, height: 633 }, { width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
   test(`observatory never covers the board at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
-    await page.route("**/api/judge", (route) => route.abort());
+    await acceptSetupFixture(page);
     await page.clock.install();
-    await page.goto("/play");
+    await page.goto("/experiment");
     await answerSetupWithKeyboard(page);
     await page.clock.pauseAt(new Date(Date.now() + 1000));
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
@@ -242,7 +350,7 @@ test("graph preview and runtime show bound species policies, not legacy cohort d
     const request = route.request().postDataJSON();
     return route.fulfill({ json: request.kind === "evolution" ? await councilDecision(request.summary) : await councilSetup(answers) });
   });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await answerSetupWithKeyboard(page);
   const rules = page.getByLabel("Validated world rules");
   await expect(rules).toContainText("Omnivore");
@@ -261,7 +369,7 @@ test("graph preview and runtime show bound species policies, not legacy cohort d
 
 test("setup continues safely when the interpreter is offline", async ({ page }) => {
   await page.route("**/api/judge", (route) => route.abort());
-  await page.goto("/play");
+  await page.goto("/experiment");
   await answerSetupWithKeyboard(page);
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
   await expect(page.getByLabel("Validated world rules")).toContainText("Species A");

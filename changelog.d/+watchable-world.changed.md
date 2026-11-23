@@ -1,0 +1,1 @@
+Make the running habitat and its camera controls easier to use as observations accumulate, and retain interpreted organism names in results and trial comparisons without changing simulation mechanics.

@@ -2,6 +2,14 @@
 
 LifePot is a bounded artificial-life simulation. This document states what a run means and what it does not mean.
 
+## Reproducible execution, adaptive decisions
+
+In an adaptive world, Jev responds to observations through bounded environmental changes and evolutionary policies. Species-level strategy, mutation-target and mutation-tempo directives affect offspring through the engine's birth mechanics. These decisions influence the ecology without a direct cell-edit or individual-action interface; they do not guarantee beneficial mutation or survival.
+
+Fixed-rule worlds do not request runtime Jev decisions. Runtime fallback is a labeled abstention from new intervention, not a substitute ecological decision-maker.
+
+Determinism describes execution with a complete record, not a claim that life is predetermined. Fresh adaptive runs obtain new Jev decisions at supported checkpoints; the seed alone does not determine those decisions. Replay instead reuses the accepted ledger without new inference.
+
 ## Deterministic inputs
 
 A run is determined by:

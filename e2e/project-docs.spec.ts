@@ -17,7 +17,14 @@ test("public README and roadmap render from exact build sources with revision pr
     await expect(page.getByText(sourcePath, { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Download source Markdown" })).toHaveAttribute("href", `/project-docs/${slug}/markdown`);
     await expect(page.getByRole("link", { name: "View exact source on GitHub" })).toHaveAttribute("href", new RegExp(`/blob/[^/]+/${sourcePath.replace(".", "\\.")}$`));
-    if (slug === "readme") await expect(page.locator(".learn-prose img").first()).toBeVisible();
+    await expect(page.locator(".learn-prose")).toContainText("complex structures and behaviors");
+    await expect(page.locator(".learn-prose")).toContainText("reproductive success");
+    if (slug === "readme") {
+      await expect(page.locator(".learn-prose img").first()).toBeVisible();
+      await expect(page.locator(".learn-prose")).toContainText("not a claim that the current engine demonstrates open-ended evolution");
+    } else {
+      await expect(page.locator(".learn-prose")).toContainText("not a requirement to finish all interface work before simulation research");
+    }
   }
 });
 
@@ -32,11 +39,11 @@ test("project docs expose the roadmap link and missing roadmap route stays unava
 test("homepage offers the source-backed roadmap beside its local guide action", async ({ page }) => {
   for (const width of [1280, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
-    await page.goto("/play");
+    await page.goto("/experiment");
     for (const theme of ["auto", "light", "dark"] as const) {
       await page.getByLabel("Color theme").selectOption(theme);
-      await page.goto("/play");
-      await page.locator(".setup-intro summary").click();
+      await page.goto("/experiment");
+      await page.getByText("How LifePot works · guides & credits", { exact: true }).click();
       const roadmap = page.getByRole("link", { name: "Roadmap ↗" });
       await expect(roadmap).toBeVisible();
       await expect(roadmap).toHaveAttribute("href", "/project-docs/roadmap");

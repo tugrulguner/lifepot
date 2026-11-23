@@ -13,7 +13,8 @@ test("incomplete council falls back atomically in the browser", async ({ page })
     decision.council!.members.pop();
     return route.fulfill({ json: decision });
   });
-  await page.goto("/play");
+  await page.goto("/experiment");
+
   for (const answer of ["Rich scattered minerals", "Stable environment", "Coexist and replicate"]) {
     await page.getByRole("textbox").fill(answer);
     await page.keyboard.press("Enter");
@@ -44,7 +45,7 @@ test("exact council replay and restart never call the API", async ({ page }) => 
   await expect(page.getByTestId("generation")).toHaveText("0 / 180");
   await expect(page.getByLabel("Runtime council")).toContainText("No runtime judgment yet");
   await expect(page.getByLabel("Runtime council")).toContainText("runtime_orchestrator", { timeout: 15000 });
-  await expect(page.getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 40000 });
+  await expect(page.getByRole("region", { name: "Run results", exact: true }).getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 40000 });
   await expect(page.getByText("Replay ledger verification failed", { exact: true })).toHaveCount(0);
   expect(calls).toBe(0);
 });
@@ -55,7 +56,8 @@ for (const width of [1280, 390]) test(`council provenance and reconciled changes
     const request = route.request().postDataJSON();
     return route.fulfill({ json: request.kind === "evolution" ? await councilDecision(request.summary) : await councilSetup(request.answers) });
   });
-  await page.goto("/play");
+  await page.goto("/experiment");
+
   for (const answer of ["Rich scattered minerals", "Stable environment", "Coexist and replicate"]) {
     await page.getByRole("textbox").fill(answer);
     await page.keyboard.press("Enter");

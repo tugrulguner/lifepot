@@ -1,0 +1,1 @@
+Restore the canonical LifePot artwork to the family-sized homepage hero, keep creation/documentation actions aligned with visible creator and ModePot attribution, and separate the compact recorded example with a secondary action. Preserve the recording, gameplay, replay contracts and family navigation.

@@ -1,0 +1,1 @@
+Serve immutable public pages and navigation payloads from prepared assets, and stream the pinned walkthrough video ahead of Next.js to avoid unnecessary Worker CPU use. Preserve legacy replay entry, gameplay and inference limits.

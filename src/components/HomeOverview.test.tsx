@@ -1,0 +1,53 @@
+// @vitest-environment jsdom
+import { renderToStaticMarkup } from "react-dom/server";
+import { expect, it } from "vitest";
+import { HomeOverview } from "./HomeOverview";
+function overview() { const root = document.createElement("div"); root.innerHTML = renderToStaticMarkup(<HomeOverview />); return root; }
+it("explains adaptive ecology without calling life deterministic or promising individual control", () => {
+  const root = overview();
+  expect(root.innerHTML).not.toMatch(/deterministic artificial[- ]life/i);
+  const mechanism = root.querySelector(".overview-mechanism")!.textContent!;
+  expect(mechanism).toContain("In adaptive worlds, Jev");
+  expect(mechanism).toContain("mutation policies");
+  expect(mechanism).toContain("not direct control of individual organisms");
+  expect(mechanism).toContain("Fixed-rule starters");
+  expect(root.querySelector(".home-reference")?.querySelector("summary")?.textContent).toContain("learning resources");
+  expect(mechanism).toContain("recorded decisions");
+});
+it("keeps canonical artwork in the family hero and creator/family attribution immediately after aligned actions", () => {
+  const root = overview();
+  expect(root.querySelector('.overview-hero img[src="/lifepot-lockup.png?v=adaptive-life-1"]')).not.toBeNull();
+  const actions = root.querySelector(".overview-actions")!;
+  expect(root.querySelector('.overview-actions a[href="/experiment"]')?.textContent).toContain("Play LifePot");
+  expect(actions.querySelector('.overview-secondary[href="/play/example"]')?.textContent).toContain("Play example");
+  expect(actions.querySelector('.overview-primary[href="/experiment"]')?.textContent).toContain("Play LifePot");
+  expect(root.querySelector('footer .overview-preset[href="/play"]')?.textContent).toContain("Open observatory");
+  const credit = actions.nextElementSibling!;
+  expect(credit.classList.contains("creator-row")).toBe(true);
+  expect(credit.querySelector(".overview-credit")).not.toBeNull();
+  expect(Array.from(credit.querySelectorAll(".creator-social-links a")).map(a=>a.textContent)).toEqual(["GitHub","LinkedIn","X"]);
+  expect(root.querySelector('.family-header a[href*="linkedin.com"], .family-header a[href*="x.com/"]')).toBeNull();
+  expect(credit.querySelector('a[href="https://tugrul.modepot.io/"]')?.textContent).toContain("Tugrul Guner");
+  expect(credit.querySelector('a[href="https://modepot.io/"]')?.textContent).toContain("ModePot");
+});
+it("offers keyboard skip navigation and defers the explicitly sized architecture artwork", () => {
+  const root = overview();
+  expect(root.querySelector('a[href="#overview-content"]')?.textContent).toContain("Skip to main content");
+  const target = root.querySelector("#overview-content[tabindex='-1']")!;
+  expect(target).not.toBeNull();
+  expect(target.querySelector(".family-header")).toBeNull();
+  expect(target.querySelector('.overview-primary[href="/experiment"]')).not.toBeNull();
+  const image = root.querySelector(".overview-mechanism img")!;
+  expect(image.getAttribute("loading")).toBe("lazy");
+  expect(image.getAttribute("width")).toBe("1600");
+  expect(image.getAttribute("height")).toBe("900");
+});
+it("separates the recorded preview from the hero without a competing filled primary action", () => {
+  const root = overview(), card = root.querySelector(".example-card")!;
+  expect(card.closest(".overview-hero")).toBeNull();
+  expect(card.querySelector('.example-media img[src="/life-example-poster.jpg"]')).not.toBeNull();
+  expect(root.querySelectorAll("video")).toHaveLength(0);
+  expect(root.querySelectorAll('.overview-actions a[href="/play/example"]')).toHaveLength(1);
+  expect(card.querySelectorAll(".overview-primary")).toHaveLength(0);
+  expect(card.textContent).toContain("Recorded example · exact replay");
+});

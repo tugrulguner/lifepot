@@ -64,7 +64,7 @@ test("My Worlds persists, exports/imports, replays exactly and links a reviewed 
   await page.route("**/api/judge**", async route => { judgeCalls++; await route.abort(); });
   const analytics = await interceptAnalytics(page);
   await page.setViewportSize({ width: 390, height: 850 });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByLabel("World policy").selectOption("fixed");
   await page.getByLabel("Your question or prediction (optional)").fill("PRIVATE_QUESTION_SENTINEL");
@@ -94,14 +94,14 @@ test("My Worlds persists, exports/imports, replays exactly and links a reviewed 
   }
   await page.reload();
   await expect(panel.getByText("PRIVATE_NAME_SENTINEL", { exact: true })).toBeVisible();
-  await expect(page).toHaveURL(/\/play$/);
+  await expect(page).toHaveURL(/\/experiment$/);
   await panel.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(panel.getByText("PRIVATE_NAME_SENTINEL", { exact: true })).toHaveCount(0);
   await page.getByLabel("Import a LifePot world export").setInputFiles(exportPath);
   await expect(panel.getByText("PRIVATE_NAME_SENTINEL", { exact: true })).toBeVisible();
   await panel.getByRole("button", { name: "Reopen and replay" }).click();
   await expect(page.getByText(/Exact recorded replay/)).toBeVisible();
-  await expect(page).toHaveURL(/\/play$/);
+  await expect(page).toHaveURL(/\/experiment$/);
   // Reload restores Slow; explicitly select Fast again for this endpoint/replay acceptance check.
   await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByRole("region", { name: "Run results" })).toBeVisible({ timeout: 100_000 });
@@ -128,7 +128,7 @@ test("My Worlds persists, exports/imports, replays exactly and links a reviewed 
 
 test("actual analytics pageviews/pageleaves strip replay-bearing URL parts", async ({ page }) => {
   const analytics = await interceptAnalytics(page);
-  await page.goto("/play?world=PRIVATE_QUERY_SENTINEL#PRIVATE_FRAGMENT_SENTINEL");
+  await page.goto("/experiment?world=PRIVATE_QUERY_SENTINEL#PRIVATE_FRAGMENT_SENTINEL");
   await expect.poll(() => analytics.filter(event => event.event === "$pageview").length).toBeGreaterThan(0);
   // Trigger the real SDK's lifecycle handler without navigation destroying the
   // asynchronous test-only beacon inspector before it can decode the payload.
@@ -144,7 +144,7 @@ test("return visit exposes saved history and restores archived highlights, child
   let judgeCalls = 0; await page.route("**/api/judge**", async route => { judgeCalls++; await route.abort(); });
   const analytics = await interceptAnalytics(page);
   await page.setViewportSize({ width: 390, height: 850 });
-  await page.goto("/play");
+  await page.goto("/experiment");
   const pond = testInfo.outputPath("pond-notebook.json"), child = testInfo.outputPath("follow-up-pond.json");
   await readFile(new URL("./fixtures/my-worlds/pond-notebook.json", import.meta.url)).then(data => import("node:fs/promises").then(fs => fs.writeFile(pond, data)));
   await readFile(new URL("./fixtures/my-worlds/follow-up-pond.json", import.meta.url)).then(data => import("node:fs/promises").then(fs => fs.writeFile(child, data)));
@@ -158,9 +158,9 @@ test("return visit exposes saved history and restores archived highlights, child
   const entry = await shortcut.boundingBox();
   expect(entry!.y).toBeGreaterThanOrEqual(64);
   expect(entry!.y + entry!.height).toBeLessThanOrEqual(850);
-  await expect(page.getByRole("heading", { name: "What exists in this world?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What exists in your world?" })).toBeVisible();
   await shortcut.click();
-  const shelfTop = await page.getByRole("heading", {name:"My Worlds",exact:true}).boundingBox();
+  const shelfTop = await page.getByRole("heading", {name:"Saved worlds",exact:true}).boundingBox();
   expect(shelfTop!.y).toBeGreaterThanOrEqual(64);
   expect(shelfTop!.y + shelfTop!.height).toBeLessThanOrEqual(850);
   const shelf = page.getByRole("region", { name: "My Worlds — browser-local saves" });

@@ -9,6 +9,40 @@ import { createRunEvidence } from "@/game/run-evidence";
 import recorded from "@/game/fixtures/ca7-replay.json";
 import type { EvolutionLedger } from "@/game/decisions";
 afterEach(cleanup);
+it('distinguishes recorded player pressure windows from unchanged starting conditions',()=>{
+ const config=defaultConfig(),before=run(config,241,'adaptive'),after=run(config,241,'adaptive');
+ after.evidence.playerChanges=[{acceptedGeneration:6,activatedAt:7,restoredAt:13,pressure:'drought',previousPressure:'stability'}];
+ render(<RunComparison before={{...before,decisions:[]}} after={{...after,decisions:[]}}/>);
+ expect(screen.getByText('No recorded starting-condition changes.')).toBeInTheDocument();
+ const changes=screen.getByRole('region',{name:'Compared player-directed conditions'});
+ expect(changes).toHaveTextContent('Previous trial: no player changes recorded');
+ expect(changes).toHaveTextContent('This trial: drought');
+ expect(changes).toHaveTextContent('activated at 7');expect(changes).toHaveTextContent('restored at 13');
+ expect(changes).toHaveTextContent('not proof of cause');
+ expect(screen.getByText('No accepted automatic Jev decision records in either trial.')).toBeInTheDocument();
+});
+it('names automatic records separately when both council and player observations exist',()=>{
+ const config=defaultConfig(),before=run(config,241,'adaptive'),after=run(config,241,'adaptive');
+ after.evidence.playerChanges=[{acceptedGeneration:6,activatedAt:7,restoredAt:13,pressure:'drought',previousPressure:'stability'}];
+ const automatic=(recorded.ledger as EvolutionLedger).filter(entry=>entry.source==='jev').slice(0,1);
+ render(<RunComparison before={{...before,decisions:automatic}} after={{...after,decisions:structuredClone(automatic)}}/>);
+ expect(screen.getByText(/Accepted automatic Jev decision records match/)).toBeInTheDocument();
+});
+it('does not invent activation or restoration for a player window not observed to execute',()=>{
+ const config=defaultConfig(),before=run(config,241,'adaptive'),after=run(config,241,'adaptive');
+ after.evidence.playerChanges=[{acceptedGeneration:6,activatedAt:null,restoredAt:null,pressure:'drought',previousPressure:'stability'}];
+ render(<RunComparison before={before} after={after}/>);
+ const changes=screen.getByRole('region',{name:'Compared player-directed conditions'});
+ expect(changes).toHaveTextContent('activation not observed');expect(changes).toHaveTextContent('restoration not observed');
+ expect(changes).not.toHaveTextContent('activated at 7');
+});
+it('does not call recorded player conditions an unchanged fixed control',()=>{
+ const config=defaultConfig(),before=run(config,241),after=run(config,241);
+ after.evidence.playerChanges=[{acceptedGeneration:6,activatedAt:7,restoredAt:13,pressure:'drought',previousPressure:'stability'}];
+ render(<RunComparison before={before} after={after}/>);
+ expect(screen.getByText(/Player-directed exploration/)).toBeInTheDocument();
+ expect(screen.queryByText(/repeat observation/)).not.toBeInTheDocument();
+});
 it("discloses whether accepted Jev decision records differ",()=>{
  const config=defaultConfig(),jev=(recorded.ledger as EvolutionLedger).filter(entry=>entry.source==="jev");
  expect(jev.length).toBeGreaterThan(1);
@@ -65,4 +99,30 @@ it("shows exact changed conditions and separate aligned species histories",()=>{
  expect(screen.getByText(/Resource abundance/)).toHaveTextContent("balanced → scarce");
  expect(screen.getAllByRole("img",{name:/Compared population history for species/})).toHaveLength(config.rules!.species.length);
  expect(screen.getByText(/does not establish/)).toBeInTheDocument();
+});
+it("shows supplied species names alongside canonical IDs in comparison plots",()=>{
+ const config=defaultConfig(),evidence=createRunEvidence(createSimulation({seed:7,config}));
+ render(<RunComparison before={{config,evidence,seed:7,policy:"fixed"}} after={{config,evidence,seed:7,policy:"fixed"}} speciesNames={{A:"Algae & friends"}}/>);
+ expect(screen.getByRole("img",{name:/Compared population history for Algae & friends \(species A\)/i})).toBeInTheDocument();
+ expect(screen.getByText(/Algae & friends.*Species A.*population by generation/i)).toBeInTheDocument();
+});
+
+it("keeps an optional previous focus anchored to a recorded fact in the before trial", () => {
+ const config = defaultConfig(), evidence = createRunEvidence(createSimulation({ seed: 7, config }));
+ const focus = { id: "population", reference: "population", generation: 0, description: "Population recorded", kind: "end" as const };
+ render(<RunComparison before={{ config, evidence, seed: 7, policy: "fixed", focus }} after={{ config, evidence, seed: 7, policy: "fixed" }} />);
+ expect(screen.getByRole("region", { name: "Observation being investigated" })).toHaveTextContent("Population: 30 at generation 0; 30 at generation 0.");
+ expect(screen.getByText(/repeat observation, not a changed-condition experiment/)).toBeInTheDocument();
+});
+
+it("anchors a third-trial comparison to the previous recorded focus without causal claims", () => {
+ const first = defaultConfig(), previous = structuredClone(first), current = structuredClone(first);
+ previous.environment.abundance = "scarce"; current.environment.abundance = "rich";
+ const evidence = createRunEvidence(createSimulation({ seed: 7, config: previous }));
+ const focus = { id: "population", reference: "population", generation: 0, description: "older summary", kind: "end" as const };
+ render(<RunComparison before={{ config: previous, evidence, seed: 7, policy: "fixed", focus }} after={{ config: current, evidence, seed: 7, policy: "fixed" }} />);
+ expect(screen.getByRole("region", { name: "Observation being investigated" })).toHaveTextContent("Population: 30 at generation 0; 30 at generation 0.");
+ expect(screen.getByText(/Resource abundance/)).toHaveTextContent("scarce → rich");
+ expect(screen.getByRole("region", { name: "Observation being investigated" })).toHaveTextContent("The outcomes below describe each whole trial; they do not establish what caused this observation.");
+ expect(screen.queryByText(/because of/i)).not.toBeInTheDocument();
 });

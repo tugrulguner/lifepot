@@ -1,15 +1,15 @@
 # LifePot
 
 <p align="center">
-  <img src="lifepot.png" alt="LifePot — deterministic artificial life with replayable evolution" width="600">
+  <img src="lifepot.png?v=adaptive-life-1" alt="LifePot — artificial life in a changing world" width="600">
 </p>
 
 <p align="center">Part of <a href="https://modepot.io/">ModePot</a>. &nbsp; <a href="https://lifepot.modepot.io/">Project website</a> &nbsp; <a href="https://tugrul.modepot.io/">Created by Tugrul Guner</a></p>
 
-<p align="center"><strong>Three answers shape your world. Jev proposes ecology; LifePot turns validated rules into deterministic artificial life you can inspect and replay.</strong></p>
+<p align="center"><strong>Shape a world and watch life unfold. Organisms interact under local rules; in adaptive worlds, Jev responds to the ecology through bounded environmental changes and evolutionary policies.</strong></p>
 
 <p align="center">
-  An experimental game, not a biological forecast. Jev proposes ecology, and model decisions become validated ecosystem rules—not executable code; the same world can be inspected and replayed.
+  An experimental artificial-life sandbox, not a biological forecast. Jev shapes supported world conditions and policies without directly assigning individual actions or guaranteeing survival. Inspect what happened and replay its recorded decisions.
 </p>
 
 <p align="center">
@@ -40,12 +40,22 @@
 
 ## Why LifePot
 
-Most generative simulations either hard-code every world or let model prose quietly become behavior. LifePot separates the two:
+The goal is an artificial-life game where simple beginnings and relatively simple local rules can give rise to complex structures and behaviors. Explore how interactions, reproduction, inherited variation and changing environments affect what survives and reproduces, and what organization can develop over time. Players can create worlds, observe them and optionally shape supported conditions.
+
+This is a development ambition, not a claim that the current engine demonstrates open-ended evolution. Mutation does not anticipate an organism's needs; selection depends on reproductive success in particular conditions. Greater complexity is not guaranteed. Social groups, culture and possible civilizations are longer-term research directions, not shipped capabilities or scripted levels. The [roadmap](ROADMAP.md) separates these goals from demonstrated results and makes emergent organization and evolution first-class workstreams alongside gameplay and visual quality.
+
+### How the current game supports that investigation
+
+Most generative simulations either hard-code every world or let model prose quietly become behavior. In LifePot, model decisions become validated ecosystem rules—not executable code. LifePot separates the responsibilities:
 
 - **Jev proposes** typed species roles, relationships, environmental conditions, strategies, and bounded rule changes.
 - **LifePot validates** every proposal against finite schemas and ecosystem invariants.
 - **Deterministic code executes** movement, feeding, resources, hazards, reproduction, mutation, death, and rule activation.
 - **The ledger preserves** the decisions needed to inspect and replay a run without inference.
+
+Adaptive does not mean arbitrary: Jev can select supported environmental pressures, species strategies, mutation targets and mutation tempos. The engine applies species directives at birth; Jev does not edit an individual cell, steer its movement or guarantee its survival. Fixed-rule starters make no setup or runtime model requests unless you explicitly select adaptive policy. When runtime inference is unavailable or rejected, the fallback abstains from new intervention.
+
+Reproducibility is an engineering property, not the premise of the living world: the same configuration, seed, engine version and recorded decisions reproduce a run. A fresh adaptive run asks Jev for new decisions at supported ecological checkpoints; those decisions are not determined by the seed alone.
 
 A world is not an arbitrary script. It is a validated graph:
 
@@ -116,7 +126,11 @@ The seeded engine owns every cell step. It uses typed arrays for world state and
 
 ### 4. Co-evolve at bounded triggers
 
-After generation 12, LifePot can pause on a canonical ecological trigger. Decisions have a 12-generation cooldown and the ledger is capped at eight entries. A candidate decision must match the frozen observation hash, generation, trigger, and current rule-graph version before it can affect the run.
+After generation 12, LifePot can pause on a canonical ecological trigger. Decisions have a 12-generation cooldown. Automatic decisions and accepted player changes share a maximum of eight records. A candidate automatic decision must match the frozen observation hash, generation, trigger, and current rule-graph version before it can affect the run.
+
+During a new adaptive run, **Ask Jev to change this world** pauses observation and lets you request a supported temporary environmental pressure. Jev can decline unsupported requests; review its named choice before explicitly accepting it. An accepted change starts on the next generation, lasts six generations, then restores the previous pressure if the run continues. These are externally imposed player-authorized changes—not spontaneous biology or automatic council decisions. Overlapping changes, unchanged-pressure proposals, stale results and changes to recorded replays are rejected. Cancelling leaves the world paused and unchanged.
+
+Player changes are retained separately in version 4 replays and browser-local world exports, with factual activation/restoration timing. The request text and optional private question are not included in those recordings. Supported version 3 recordings remain unchanged and replay without inference.
 
 ### 5. Replay without inference
 

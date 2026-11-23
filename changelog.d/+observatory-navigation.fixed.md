@@ -1,0 +1,1 @@
+Expose custom/adaptive experiments and saved-world imports from the observatory's existing settings disclosure, with direct return links in advanced setup, review and camera tools. Keep the approved opening screen unchanged and explain web-only capabilities in portable offline HTML.

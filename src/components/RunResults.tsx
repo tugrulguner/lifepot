@@ -1,29 +1,54 @@
 import type { ReactNode } from "react";
+import { useState } from "react";
+import { getRecordedMoments, type RecordedMoment } from "@/game/recorded-moments";
 import type { SimulationState } from "@/game/world";
-import { GRID_CELLS } from "@/game/world";
+import { GRID_CELLS, getSimulationObservationLimit } from "@/game/world";
 import type { RunEvidence } from "@/game/run-evidence";
 import { speciesColor } from "@/game/species-colors";
+import type { SpeciesId } from "@/game/rules";
+import styles from "./ObservedHistory.module.css";
 
 export type RunResultsProps = {
   state: SimulationState;
   evidence: RunEvidence;
   question: string;
-  onEdit: () => void;
+  onEdit?: () => void;
   onNew: () => void;
-  onReplay: () => void;
+  onReplay?: () => void;
   onInspect: () => void;
   children?: ReactNode;
+  comparison?: ReactNode;
+  interventions?: ReactNode;
+  speciesNames?: Partial<Record<SpeciesId, string>>;
+  followedLineage?: number | null;
+  onInspectMoment?: (moment: RecordedMoment) => void;
+  onEditMoment?: (moment: RecordedMoment) => void;
 };
 
 const WIDTH = 640;
 const HEIGHT = 220;
 const PAD = 32;
 
-export function RunResults({ state, evidence, question, onEdit, onNew, onReplay, onInspect, children }: RunResultsProps) {
+export function RunResults({ state, evidence, question, onEdit, onNew, onReplay, onInspect, children, comparison, interventions, speciesNames = {}, followedLineage = null, onInspectMoment, onEditMoment }: RunResultsProps) {
+  const [selection, setSelection] = useState<{ evidence: RunEvidence; id: string } | null>(null);
+  const selectedMomentId = selection?.evidence === evidence ? selection.id : "";
+  const moments = onInspectMoment || onEditMoment ? getRecordedMoments(evidence, state.config, speciesNames) : [];
+  const chosenMoment = moments.find(moment => moment.id === selectedMomentId)
+    ?? (followedLineage === null ? undefined : moments.find(moment => moment.reference === `family:${followedLineage}` || moment.reference === `family-observation:${followedLineage}`))
+    ?? moments.find(moment => moment.kind === "species")
+    ?? moments.at(-1);
+  const displayName = (id: string) => { const value = speciesNames[id as SpeciesId]; return typeof value === "string" && value.trim() ? value.trim() : undefined; };
+  const named = (id: string) => displayName(id) ? `${displayName(id)} (Species ${id})` : `Species ${id}`;
+  const namedSpecies = state.config.rules!.species.filter(rule => displayName(rule.id)).map(rule => named(rule.id)).join(", ");
+  const unnamedCount = state.config.rules!.species.filter(rule => !displayName(rule.id)).length;
+  const chartIdentity = namedSpecies ? `${namedSpecies}${unnamedCount ? ", plus unnamed configured species" : ""}` : "";
   const history = evidence.samples;
   const last = history[history.length - 1];
+  const followedLiving = followedLineage === null ? 0 : state.guild.reduce((count, alive, cell) => count + (alive && state.lineage[cell] === followedLineage ? 1 : 0), 0);
+  const followedExtinction = followedLineage === null ? undefined : evidence.lineageExtinction.find(item => item.lineage === followedLineage);
   const empty = state.stats.population === 0;
-  const limitReached = state.generation >= 180;
+  const observationLimit = getSimulationObservationLimit(state);
+  const limitReached = state.generation >= observationLimit;
   const max = Math.max(1, ...history.map(sample => Math.max(sample.population, sample.resources / GRID_CELLS)));
   const point = (value: number, index: number) => `${PAD + (history.length < 2 ? 0 : index / (history.length - 1) * (WIDTH - PAD * 2))},${HEIGHT - PAD - value / max * (HEIGHT - PAD * 2)}`;
   const populationPoints = history.map((item, index) => point(item.population, index)).join(" ");
@@ -33,18 +58,26 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
   return <section className="run-results" aria-label="Run results" id="run-results" tabIndex={-1}>
     <header><h2 id="run-results-title">{empty ? "No organisms remain" : "Observation complete"}</h2>
       <p>{empty ? (foundedSpecies.size ? `No organisms remain at generation ${state.generation}.` : "No organisms remain because no species were seeded in this world.") : `Observed through generation ${last?.generation ?? state.generation}: ${last?.population ?? 0} organisms remain.`}</p>
-      <p>{empty ? "No organisms remain" : limitReached ? "Reached the 180-generation observation limit" : "Observation stopped before the 180-generation limit."}</p>
+      <p>{empty ? "No organisms remain" : limitReached ? `Reached the ${observationLimit}-generation observation limit` : `Observation stopped before the ${observationLimit}-generation limit.`}</p>
       <p>This is a toy model, not biological proof; it is an observation, not a universal survival score.</p>
     </header>
+    {followedLineage !== null && <p className="followed-lineage-outcome" role="status" aria-label="Followed lineage outcome">{followedLiving > 0 ? `Lineage #${followedLineage} · ${followedLiving} living ${followedLiving === 1 ? "member" : "members"} at final observation` : followedExtinction ? `Lineage #${followedLineage} · no living members at final observation; first observed extinct at generation ${followedExtinction.generation}` : `Lineage #${followedLineage} · no living members at final observation; extinction time unknown from retained observations`}</p>}
     {question.trim() && <p><strong>Your question:</strong> {question}</p>}
-    <nav aria-label="Run actions"><button type="button" onClick={onInspect}>Inspect final world</button><button type="button" onClick={onReplay}>Replay this run</button><button type="button" onClick={onEdit}>Edit this world</button><button type="button" onClick={onNew}>New world</button></nav>
+    <nav aria-label="Run actions"><button type="button" onClick={onInspect}>Inspect final world</button>{onReplay && <button type="button" onClick={onReplay}>Replay this run</button>}{(onEdit || (onEditMoment && chosenMoment)) && <button type="button" onClick={() => chosenMoment && onEditMoment ? onEditMoment(chosenMoment) : onEdit?.()}>Edit this world</button>}<button type="button" onClick={onNew}>New world</button></nav>
+    {chosenMoment && <section className={`${styles.panel} observed-history__moment`} aria-label="Investigate a recorded moment">
+      <label>Recorded moment to investigate<select aria-label="Recorded moment to investigate" value={chosenMoment.id} onChange={event => setSelection({ evidence, id: event.target.value })}>{moments.map(moment => <option key={moment.id} value={moment.id}>{moment.description}</option>)}</select></label>
+      {onInspectMoment && <button type="button" onClick={() => onInspectMoment(chosenMoment)}>Inspect recorded moment</button>}
+      <p>Edit this world to review a new trial from the starting conditions. This is not a continuation from this moment.</p>
+    </section>}
     {last && <ul aria-label="Observed outcomes">
       <li>Peak population: {evidence.peakPopulation}</li>
-      {configured.map(rule => <li key={rule.id}>{rule.role} species {rule.id}: {last.species.find(item => item.speciesId === rule.id)?.population ?? 0} at final observation</li>)}
+      {configured.map(rule => <li key={rule.id}>{rule.role} {displayName(rule.id) ? <><strong>{displayName(rule.id)}</strong> · </> : ""}species {rule.id}: {last.species.find(item => item.speciesId === rule.id)?.population ?? 0} at final observation</li>)}
       <li>{last.resources / GRID_CELLS} mean resources per cell; cumulative births: {last.births}; deaths: {last.deaths}; kills: {last.kills}</li>
-      {evidence.firstExtinction.map(item => <li key={item.speciesId}>Species {item.speciesId} first observed extinct at generation {item.generation}</li>)}
+      {evidence.firstExtinction.map(item => <li key={item.speciesId}>{named(item.speciesId)} first observed extinct at generation {item.generation}</li>)}
       {configured.filter(rule => !foundedSpecies.has(rule.id)).map(rule => <li key={`not-seeded-${rule.id}`}>Species {rule.id} ({rule.role}) was not seeded</li>)}
     </ul>}
+    {interventions}
+    {comparison}
     <figure className="run-results__trajectory"><figcaption>Whole-run population history</figcaption>
       <svg className="run-results__graph" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Whole-run population history">
         <line className="run-results__axis" x1={PAD} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} />
@@ -56,14 +89,14 @@ export function RunResults({ state, evidence, question, onEdit, onNew, onReplay,
       </svg>
       <ul className="run-results__legend"><li>Population: organisms</li><li>Resources: mean per cell</li></ul>
     </figure>
-    <figure className="run-results__trajectory"><figcaption>Whole-run species population history</figcaption>
-      <svg className="run-results__graph" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Whole-run species population history">
+    <figure className="run-results__trajectory"><figcaption>Whole-run species population history{chartIdentity ? ` — ${chartIdentity}` : ""}</figcaption>
+      <svg className="run-results__graph" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`Whole-run species population history${chartIdentity ? ` — ${chartIdentity}` : ""}`}>
         <line className="run-results__axis" x1={PAD} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} />
         <text x={PAD - 6} y={PAD} textAnchor="end">{max.toFixed(0)}</text><text x={PAD - 6} y={HEIGHT - PAD} textAnchor="end">0</text>
-        {configured.map(rule => <polyline key={rule.id} aria-label={`Species ${rule.id}: ${rule.role}`} stroke={speciesColor(rule.id)} strokeWidth={2.5} points={history.map((item, index) => point(item.species.find(entry => entry.speciesId === rule.id)?.population ?? 0, index)).join(" ")} fill="none" />)}
+        {configured.map(rule => <polyline key={rule.id} aria-label={`${displayName(rule.id) ? `${displayName(rule.id)} (Species ${rule.id})` : `Species ${rule.id}`}: ${rule.role}`} stroke={speciesColor(rule.id)} strokeWidth={2.5} points={history.map((item, index) => point(item.species.find(entry => entry.speciesId === rule.id)?.population ?? 0, index)).join(" ")} fill="none" />)}
         <text x={PAD} y={HEIGHT - 8}>Gen {history[0]?.generation ?? 0}</text><text x={WIDTH - PAD} y={HEIGHT - 8} textAnchor="end">Gen {last?.generation ?? 0}</text>
       </svg>
-      <ul className="run-results__legend">{configured.map(rule => <li key={rule.id}><span style={{ color: speciesColor(rule.id) }}>●</span> Species {rule.id}: {rule.role}</li>)}</ul>
+      <ul className="run-results__legend">{configured.map(rule => <li key={rule.id}><span style={{ color: speciesColor(rule.id) }}>●</span> {displayName(rule.id) ? <><strong>{displayName(rule.id)}</strong> · </> : ""}Species {rule.id}: {rule.role}</li>)}</ul>
     </figure>
     <details className="run-results__measurements"><summary>Generation measurements</summary>
       <table><thead><tr><th scope="col">Generation</th><th scope="col">Population</th>{configured.map(rule => <th scope="col" key={rule.id}>{rule.role} {rule.id}</th>)}<th scope="col">Mean resources/cell</th></tr></thead>

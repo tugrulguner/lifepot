@@ -9,6 +9,36 @@ import { defaultConfig } from "@/game/setup";
 
 afterEach(cleanup);
 
+it("shows followed-lineage survivors and only names an observed extinction generation", () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  const lineage = 24;
+  state.guild.fill(0);
+  state.guild[4] = 1;
+  state.lineage[4] = lineage;
+  const evidence = { ...createRunEvidence(state), lineageExtinction: [] };
+  render(<RunResults state={{ ...state, outcome: "surviving" }} evidence={evidence} followedLineage={lineage} question="" onEdit={vi.fn()} onNew={vi.fn()} onReplay={vi.fn()} onInspect={vi.fn()} />);
+  const fate = screen.getByRole("status", { name: "Followed lineage outcome" });
+  expect(fate).toHaveTextContent("Lineage #24 · 1 living member at final observation");
+  expect(fate.compareDocumentPosition(screen.getByRole("navigation", { name: "Run actions" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(fate).not.toHaveTextContent(/extinct|disappeared/i);
+});
+
+it("reports a followed lineage's recorded first-observed extinction", () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  state.guild.fill(0);
+  const evidence = { ...createRunEvidence(state), lineageExtinction: [{ lineage: 24, generation: 17 }] };
+  render(<RunResults state={{ ...state, outcome: "surviving" }} evidence={evidence} followedLineage={24} question="" onEdit={vi.fn()} onNew={vi.fn()} onReplay={vi.fn()} onInspect={vi.fn()} />);
+  expect(screen.getByRole("status", { name: "Followed lineage outcome" })).toHaveTextContent(/first observed extinct at generation 17/i);
+});
+
+it("labels an empty followed lineage's extinction time unknown when no milestone was observed", () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  state.guild.fill(0);
+  const evidence = { ...createRunEvidence(state), lineageExtinction: [] };
+  render(<RunResults state={{ ...state, outcome: "surviving" }} evidence={evidence} followedLineage={24} question="" onEdit={vi.fn()} onNew={vi.fn()} onReplay={vi.fn()} onInspect={vi.fn()} />);
+  expect(screen.getByRole("status", { name: "Followed lineage outcome" })).toHaveTextContent("extinction time unknown from retained observations");
+});
+
 it("shows separate configured species trajectories rather than hiding them in a total", () => {
   const state = createSimulation({ seed: 7, config: defaultConfig() });
   const evidence = createRunEvidence(state);
@@ -26,6 +56,7 @@ it("renders an accessible, compact observation summary without treating survivor
   expect(screen.getByRole("region", { name: "Run results" })).toHaveAttribute("id", "run-results");
   expect(screen.getByRole("region", { name: "Run results" })).toHaveAttribute("tabindex", "-1");
   expect(screen.getByRole("heading", { name: "Observation complete" })).toBeInTheDocument();
+  expect(screen.queryByRole("status", { name: "Followed lineage outcome" })).toBeNull();
   expect(screen.getByText(/toy model, not biological proof/i)).toBeInTheDocument();
   expect(screen.getByText(/Your question:/)).toBeInTheDocument();
   expect(screen.getByLabelText("Whole-run population history").tagName.toLowerCase()).toBe("svg");
@@ -48,6 +79,16 @@ it("retains the first observed species-extinction generation in completed result
   expect(screen.getByText("Species A first observed extinct at generation 7")).toBeInTheDocument();
 });
 
+it("shows supplied species names with canonical identities throughout results", () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  const evidence = { ...createRunEvidence(state), firstExtinction: [{ speciesId: "A" as const, generation: 7 }] };
+  render(<RunResults state={{ ...state, outcome: "surviving" }} evidence={evidence} question="" speciesNames={{ A: "Algae & friends" }} onEdit={vi.fn()} onNew={vi.fn()} onReplay={vi.fn()} onInspect={vi.fn()} />);
+  expect(screen.getAllByText(/Algae & friends/).length).toBeGreaterThan(0);
+  expect(screen.getByText(/Species A.*first observed extinct at generation 7/)).toHaveTextContent("Algae & friends");
+  expect(screen.getByRole("img", { name: /Whole-run species population history.*Algae & friends.*Species A/i })).toBeInTheDocument();
+  expect(document.querySelectorAll(".run-results__legend")[1]?.textContent).toContain("Algae & friends");
+});
+
 it("distinguishes empty worlds and wires replay and inspection actions", () => {
   const base = createSimulation({ seed: 8, config: defaultConfig(), initialPopulation: [], initialResources: [] });
   const onReplay = vi.fn(), onInspect = vi.fn();
@@ -58,4 +99,43 @@ it("distinguishes empty worlds and wires replay and inspection actions", () => {
   fireEvent.click(screen.getByRole("button", { name: "Inspect final world" }));
   expect(onReplay).toHaveBeenCalledOnce();
   expect(onInspect).toHaveBeenCalledOnce();
+});
+
+it('keeps player-change observations before raw trajectories, alongside the ending payoff', () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  render(<RunResults state={state} evidence={createRunEvidence(state)} question="" onEdit={vi.fn()} onNew={vi.fn()} onReplay={vi.fn()} onInspect={vi.fn()} interventions={<section aria-label="Intervention observations">Observed change, not proof of cause</section>} />);
+  const observations = screen.getByRole('region', { name: 'Intervention observations' });
+  expect(observations.compareDocumentPosition(screen.getByRole('img', { name: 'Whole-run population history' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+it('offers recorded observations only when an inspect or review callback is supplied', () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  const evidence = createRunEvidence(state);
+  const { rerender } = render(<RunResults state={state} evidence={evidence} question="" onNew={vi.fn()} onInspect={vi.fn()} />);
+  expect(screen.queryByLabelText('Recorded moment to investigate')).not.toBeInTheDocument();
+  rerender(<RunResults state={state} evidence={evidence} question="" onNew={vi.fn()} onInspect={vi.fn()} onInspectMoment={vi.fn()} />);
+  expect(screen.getByLabelText('Recorded moment to investigate')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Inspect recorded moment' })).toBeInTheDocument();
+});
+
+it('routes the legacy Edit this world action through the selected recorded moment', () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  const evidence = { ...createRunEvidence(state), lineageExtinction: [{ lineage: 24, generation: 0 }] };
+  const onEditMoment = vi.fn();
+  render(<RunResults state={state} evidence={evidence} followedLineage={24} question="" onNew={vi.fn()} onInspect={vi.fn()} onEditMoment={onEditMoment} />);
+  const picker = screen.getByLabelText('Recorded moment to investigate');
+  expect(picker).toHaveValue('family:24');
+  fireEvent.change(picker, { target: { value: 'population' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit this world' }));
+  expect(onEditMoment).toHaveBeenCalledWith(expect.objectContaining({ id: 'population', reference: 'population' }));
+});
+
+it('resets the chosen recorded moment when a different trial is supplied', () => {
+  const state = createSimulation({ seed: 7, config: defaultConfig() });
+  const evidence = { ...createRunEvidence(state), lineageExtinction: [{ lineage: 24, generation: 0 }] };
+  const { rerender } = render(<RunResults state={state} evidence={evidence} followedLineage={24} question="" onNew={vi.fn()} onInspect={vi.fn()} onInspectMoment={vi.fn()} />);
+  const picker = screen.getByLabelText('Recorded moment to investigate');
+  fireEvent.change(picker, { target: { value: 'population' } });
+  rerender(<RunResults state={state} evidence={{ ...evidence, peakPopulation: evidence.peakPopulation + 1 }} followedLineage={24} question="" onNew={vi.fn()} onInspect={vi.fn()} onInspectMoment={vi.fn()} />);
+  expect(screen.getByLabelText('Recorded moment to investigate')).toHaveValue('family:24');
 });

@@ -35,7 +35,7 @@ test("real SDK keeps replay, campaign and persisted acquisition data out of ever
     if (url.pathname.startsWith("/api/")) { await route.abort(); return; }
     await route.continue();
   });
-  await page.goto(`/play?private=${sentinel}&utm_source=${sentinel}&gclid=${sentinel}#private=${sentinel}`);
+  await page.goto(`/experiment?private=${sentinel}&utm_source=${sentinel}&gclid=${sentinel}#private=${sentinel}`);
   await expect.poll(() => bodies.some(row => row.body.includes("$pageview"))).toBe(true);
   await page.goto("/learn");
   await expect.poll(() => bodies.filter(row => row.body.includes("$pageview")).length).toBeGreaterThanOrEqual(2);
@@ -98,7 +98,7 @@ test("real SDK captures actual deterministic LifePot terminal completion without
     if (url.pathname.startsWith("/api/")) { await route.abort(); return; }
     await route.continue();
   });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: /Explore deterministic preset/ }).click();
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await expect(page.getByRole("status").filter({ hasText: /Running|Waiting for a bounded/ })).toBeVisible();
@@ -137,7 +137,8 @@ test("real SDK captures setup failure from an actual failed setup request", asyn
     if (url.pathname.endsWith("/api/judge") && request.method() === "POST") setupRequests++;
     await route.continue();
   });
-  await page.goto("/play");
+  await page.goto("/experiment");
+
   const panel = page.locator(".question-panel");
   for (let question = 0; question < 3; question++) {
     await panel.getByRole("textbox").fill(["A stable test ecosystem", "Predators may threaten grazers", "I want to observe persistence"][question]);

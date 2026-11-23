@@ -2,6 +2,8 @@
 
 This guide describes the implementation in this repository, not a supported external SDK. LifePot's supported interface is the web game. `/api/judge` is an internal application endpoint; its request shapes are implementation contracts, not a public service promise.
 
+Jev's adaptive decisions and reproducible execution are separate responsibilities. Runtime decisions can select supported environmental pressures and scheduled rule changes, plus species-level strategies, mutation targets and mutation tempos. `birth` in `src/game/world.ts` applies strategy and mutation directives to offspring; the model has no direct cell-edit or individual-action interface. A fresh adaptive run obtains new decisions at bounded triggers, while replay executes the recorded ledger without inference. Fixed-rule worlds do not request runtime decisions, and runtime fallback abstains from new intervention.
+
 ## Quick local verification
 
 With Node/npm installed, run the real project checks:
@@ -98,7 +100,7 @@ The simulation's seeded PRNG drives resource initialization, placement, movement
 
 ### Engine contracts
 
-A replay names the engine contract it was recorded under, and `createSimulation({engineVersion})` runs that contract. `SUPPORTED_ENGINE_VERSIONS` lists them; `usesCa9Mechanics(version)` gates everything introduced with ca-9, and the `CA9` constant in `src/game/world.ts` holds its tuning values in one place. `src/game/engine-versions.test.ts` pins a full-run hash for ca-7 and ca-8, so a change that would alter an old recording fails there.
+A replay names the engine contract it was recorded under, and `createSimulation({engineVersion})` runs that contract. `SUPPORTED_ENGINE_VERSIONS` lists them; `usesCa9Mechanics(version)` gates everything introduced with ca-9, and the `CA9` constant in `src/game/world.ts` holds its tuning values in one place. `src/game/engine-versions.test.ts` pins a full-run hash for ca-7 and ca-8, so a change that would alter an old recording fails there. Fixed habitats, saved habitat checkpoints and player-directed (replay version 4) recordings are accepted under ca-8 and ca-9 (`FEATURE_ENGINE_VERSIONS`): a world saved under ca-8 resumes and replays under ca-8, and only newly created worlds use ca-9.
 
 What ca-9 changes relative to ca-8:
 

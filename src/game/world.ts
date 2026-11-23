@@ -31,6 +31,18 @@ export const CA8_ENGINE_VERSION = "lifepot-ca-8";
 export const LEGACY_ENGINE_VERSION = "lifepot-ca-7";
 export const SUPPORTED_ENGINE_VERSIONS = [LEGACY_ENGINE_VERSION, CA8_ENGINE_VERSION, ENGINE_VERSION] as const;
 export type EngineVersion = (typeof SUPPORTED_ENGINE_VERSIONS)[number];
+/**
+ * Contracts that carry fixed habitats, saved habitat checkpoints and player-directed events.
+ * Those features arrived with ca-8; a world saved under ca-8 keeps running under ca-8.
+ */
+export const FEATURE_ENGINE_VERSIONS = [CA8_ENGINE_VERSION, ENGINE_VERSION] as const;
+export function supportsHabitatFeatures(version: EngineVersion) {
+  return version !== LEGACY_ENGINE_VERSION;
+}
+/** Largest variant label: 32 hash buckets before ca-9, one phenotype class per rule species from ca-9. */
+export function maxVariantLabel(version: EngineVersion) {
+  return usesCa9Mechanics(version) ? 4 * 3125 : MAX_SPECIES;
+}
 /** True for the mechanics introduced with ca-9 (everything newer than the two recorded legacy contracts). */
 export function usesCa9Mechanics(version: EngineVersion) {
   return version !== LEGACY_ENGINE_VERSION && version !== CA8_ENGINE_VERSION;
@@ -120,6 +132,7 @@ export type OrganismEvent = {
 };
 export type SimulationState = {
   engineVersion: EngineVersion;
+  fixedHabitat?: { version: 1; observationLimit: number };
   everPopulatedSlots: number[];
   organismId: Uint32Array;
   parentId: Uint32Array;
@@ -158,9 +171,38 @@ export type CreateSimulationOptions = {
   seed: number;
   config: LifeConfig;
   engineVersion?: EngineVersion;
+  fixedHabitat?: { version: 1; observationLimit: number };
   initialPopulation?: readonly OrganismSeed[];
   initialResources?: readonly ResourceSeed[];
 };
+export const MAX_FIXED_HABITAT_GENERATIONS = 1800;
+function validateFixedHabitatContract(value: unknown): asserts value is { version: 1; observationLimit: number } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid fixed habitat contract");
+  const contract = value as { version?: unknown; observationLimit?: unknown };
+  const keys = Object.keys(contract);
+  if (
+    keys.length !== 2 ||
+    !keys.every((key) => key === "version" || key === "observationLimit") ||
+    contract.version !== 1 ||
+    typeof contract.observationLimit !== "number" ||
+    !Number.isInteger(contract.observationLimit) ||
+    contract.observationLimit < 1 ||
+    contract.observationLimit > MAX_FIXED_HABITAT_GENERATIONS
+  )
+    throw new Error("Invalid fixed habitat observation contract");
+}
+export function getSimulationObservationLimit(state: SimulationState): number {
+  if (state.fixedHabitat === undefined) return DEFAULT_GENERATIONS;
+  validateFixedHabitatContract(state.fixedHabitat);
+  if (
+    !supportsHabitatFeatures(state.engineVersion) ||
+    state.activeRuleChange ||
+    state.appliedRuleChanges.length ||
+    state.maintainedRuleChanges.length
+  )
+    throw new Error("Fixed habitats cannot contain unsupported engines or adaptive rule changes");
+  return state.fixedHabitat.observationLimit;
+}
 const PREY = ["efficient_grazing", "early_brood", "armored", "swarming", "dispersal"] as const;
 const PRED = ["ambush", "pursuit", "pack_hunting", "efficient_kill", "brood_hunting"] as const;
 export function strategyCode(value: PreyStrategy | PredatorStrategy) {
@@ -342,6 +384,11 @@ function totals(state: SimulationState): SimulationStats {
   };
 }
 export function createSimulation(o: CreateSimulationOptions): SimulationState {
+  if (o.fixedHabitat !== undefined) {
+    validateFixedHabitatContract(o.fixedHabitat);
+    if (!supportsHabitatFeatures(o.engineVersion ?? ENGINE_VERSION))
+      throw new Error("Fixed habitats require the ca8 engine or later");
+  }
   const config = { ...structuredClone(o.config), rules: validateRuleGraph(o.config.rules ?? defaultRuleGraph()) };
   const engineVersion = o.engineVersion ?? ENGINE_VERSION;
   const guild = new Uint8Array(GRID_CELLS),
@@ -384,6 +431,7 @@ export function createSimulation(o: CreateSimulationOptions): SimulationState {
   for (let i = 0; i < GRID_CELLS; i++) if (guild[i]) organismId[i] = nextOrganismId++;
   const state: SimulationState = {
     engineVersion,
+    ...(o.fixedHabitat ? { fixedHabitat: { ...o.fixedHabitat } } : {}),
     everPopulatedSlots: [
       ...new Set(pop.map((v) => v.ruleSpecies ?? (v.guild === "prey" ? 1 : Math.min(2, config.rules!.species.length)))),
     ],
@@ -821,8 +869,12 @@ export function stepSimulation(
   s: SimulationState,
   d?: EvolutionDecision,
   scheduleLedger: readonly EvolutionDecision[] = d ? [d] : [],
+  pressureOverride?: { pressure: EnvironmentPressure; power: number },
 ): SimulationState {
-  if (s.outcome !== "running" || s.generation >= DEFAULT_GENERATIONS) return s;
+  const observationLimit = getSimulationObservationLimit(s);
+  if (s.fixedHabitat && (d || scheduleLedger.length || pressureOverride))
+    throw new Error("Fixed habitats do not accept adaptive decisions or active rule changes");
+  if (s.outcome !== "running" || s.generation >= observationLimit) return s;
   if (d) validateSpeciesDirectives(d, s.config.rules!);
   const n: SimulationState = {
     ...s,
@@ -863,7 +915,7 @@ export function stepSimulation(
   const environmentalDecision = n.activeRuleChange
     ? (scheduleLedger.find((candidate) => candidate.generation === n.activeRuleChange!.sourceGeneration) ?? d)
     : d;
-  const effect = graphPressureEffect(n, environmentalDecision),
+  const effect = pressureOverride ?? graphPressureEffect(n, environmentalDecision),
     cap = resourceCap(n.config);
   for (let i = 0; i < GRID_CELLS; i++) {
     const environment = n.config.rules!.environment,
@@ -1141,15 +1193,16 @@ export function stepSimulation(
   for (let i = 0; i < GRID_CELLS; i++) if (n.ruleSpecies[i] > 0 && n.guild[i] > 0) populated.add(n.ruleSpecies[i]);
   n.everPopulatedSlots = [...populated];
   if (n.stats.population === 0) n.outcome = "extinct";
-  else if (n.generation >= DEFAULT_GENERATIONS)
+  else if (n.generation >= observationLimit)
     n.outcome = n.stats.prey >= 50 && n.stats.predators > 0 ? "thriving" : "surviving";
   return n;
 }
 export function runSimulation(initial: SimulationState, generations = DEFAULT_GENERATIONS) {
   let s = initial;
-  const target = Math.min(DEFAULT_GENERATIONS, s.generation + Math.max(0, Math.floor(generations)));
+  const limit = getSimulationObservationLimit(s);
+  const target = Math.min(limit, s.generation + Math.max(0, Math.floor(generations)));
   while (s.generation < target && s.outcome === "running") s = stepSimulation(s);
-  if (s.outcome === "running")
+  if (s.outcome === "running" && (!s.fixedHabitat || s.generation >= limit))
     s = { ...s, outcome: s.stats.prey >= 50 && s.stats.predators > 0 ? "thriving" : "surviving" };
   return s;
 }

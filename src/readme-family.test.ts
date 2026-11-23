@@ -9,7 +9,7 @@ test("README uses a 600px hero and links to the ModePot family", () => {
   expect(resource).toContain('Part of <a href="https://modepot.io/">ModePot</a>.');
   expect(resource).toContain('<a href="https://lifepot.modepot.io/">Project website</a>');
   expect(resource).toContain('<a href="https://tugrul.modepot.io/">Created by Tugrul Guner</a>');
-  expect(readme.slice(0, 1800)).toContain("Three answers shape your world.");
+  expect(readme.slice(0, 1800)).toContain("Shape a world and watch life unfold.");
   expect(readme.slice(0, 1800)).toContain('href="https://lifepot.modepot.io/learn/player-guide"');
   expect(readme.slice(0, 1800)).toContain('href="https://lifepot.modepot.io/learn/developer-reference"');
   expect(readme.slice(0, 1800)).toContain("not a biological forecast");

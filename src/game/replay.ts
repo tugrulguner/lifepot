@@ -3,6 +3,7 @@ import {
   DEFAULT_GENERATIONS,
   ENGINE_VERSION,
   CA8_ENGINE_VERSION,
+  FEATURE_ENGINE_VERSIONS,
   SUPPORTED_ENGINE_VERSIONS,
   type EngineVersion,
   createSimulation,
@@ -12,7 +13,15 @@ import {
   type SimulationState,
 } from "./world";
 import type { EvolutionLedger } from "./decisions";
-import { runWithDecisionLedger, validateEvolutionLedger } from "./runtime";
+import {
+  detectDecisionTriggerForRun,
+  runWithDecisionLedger,
+  runWithPlayerEvents,
+  stepWithPlayerEvents,
+  validateEvolutionLedger,
+} from "./runtime";
+import { createRunEvidence, observeRun, type RunEvidence } from "./run-evidence";
+import { playerEventSchema, validatePlayerEvents, type AcceptedPlayerEvent } from "./player-proposal";
 import {
   canonicalAnswers,
   hashReplayPayload,
@@ -33,8 +42,14 @@ const base = z
     contractHash: z.string().regex(/^replay_[a-z0-9]+$/),
   })
   .strict();
-export type ReplayData = {
-  version: 3;
+const playerBase = base
+  .extend({
+    version: z.literal(4),
+    engineVersion: z.enum(FEATURE_ENGINE_VERSIONS),
+    playerEvents: z.array(playerEventSchema).min(1).max(8),
+  })
+  .strict();
+type Common = {
   engineVersion: EngineVersion;
   answers: SetupAnswers;
   config: LifeConfig;
@@ -43,10 +58,20 @@ export type ReplayData = {
   ledger: EvolutionLedger;
   contractHash: string;
 };
-type Body = Omit<ReplayData, "contractHash">;
-function body(v: Body): Body {
-  return {
-    version: 3,
+export type ReplayData = Common &
+  ({ version: 3; playerEvents?: never } | { version: 4; playerEvents: AcceptedPlayerEvent[] });
+type ReplayInput = {
+  answers: SetupAnswers;
+  config: LifeConfig;
+  seed: number;
+  requestHash: string;
+  ledger: EvolutionLedger;
+  engineVersion?: EngineVersion;
+  playerEvents?: AcceptedPlayerEvent[];
+};
+function body(v: Omit<Common, "contractHash"> & { version: 3 | 4; playerEvents?: AcceptedPlayerEvent[] }) {
+  const common = {
+    version: v.version,
     engineVersion: v.engineVersion,
     answers: canonicalAnswers(v.answers),
     config: v.config,
@@ -54,6 +79,7 @@ function body(v: Body): Body {
     requestHash: v.requestHash,
     ledger: v.ledger,
   };
+  return v.version === 4 ? { ...common, playerEvents: v.playerEvents } : common;
 }
 // Proving a replay means re-running all of its generations. A replay object that was already
 // proven is not simulated again as long as its contract hash still matches its content, so
@@ -61,44 +87,40 @@ function body(v: Body): Body {
 const proven = new WeakMap<object, { contractHash: string; state: SimulationState }>();
 function validate(input: unknown): { replay: ReplayData; state: SimulationState } {
   try {
-    const p = base.parse(input);
-    const ledger = validateEvolutionLedger(p.ledger);
-    const r = { ...p, ledger } as ReplayData;
-    const b = body(r);
-    if (r.requestHash !== hashSetupRequest(r.answers) || r.contractHash !== hashReplayPayload(b))
+    const p = z.discriminatedUnion("version", [base, playerBase]).parse(input),
+      ledger = validateEvolutionLedger(p.ledger);
+    const r = (
+      p.version === 4 ? { ...p, ledger, playerEvents: validatePlayerEvents(p.playerEvents) } : { ...p, ledger }
+    ) as ReplayData;
+    if (r.requestHash !== hashSetupRequest(r.answers) || r.contractHash !== hashReplayPayload(body(r)))
       throw new Error("tampered");
     const known = typeof input === "object" && input !== null ? proven.get(input) : undefined;
-    const state =
-      known?.contractHash === r.contractHash
-        ? known.state
-        : runWithDecisionLedger(
-            createSimulation({ seed: r.seed, config: r.config, engineVersion: r.engineVersion }),
-            ledger,
-            DEFAULT_GENERATIONS,
-            r.answers,
-          );
+    let state: SimulationState;
+    if (known?.contractHash === r.contractHash) state = known.state;
+    else {
+      const initial = createSimulation({ seed: r.seed, config: r.config, engineVersion: r.engineVersion });
+      state =
+        r.version === 4
+          ? runWithPlayerEvents(initial, ledger, r.playerEvents, r.answers)
+          : runWithDecisionLedger(initial, ledger, DEFAULT_GENERATIONS, r.answers);
+    }
     proven.set(r, { contractHash: r.contractHash, state });
     return { replay: r, state };
   } catch {
-    throw new Error("Invalid, tampered, or unsupported LifePot replay v3");
+    throw new Error("Invalid, tampered, or unsupported LifePot replay");
   }
 }
-export function createReplay(input: {
-  answers: SetupAnswers;
-  config: LifeConfig;
-  seed: number;
-  requestHash: string;
-  ledger: EvolutionLedger;
-  engineVersion?: EngineVersion;
-}): ReplayData {
+export function createReplay(input: ReplayInput): ReplayData {
+  const events = input.playerEvents?.length ? validatePlayerEvents(input.playerEvents) : undefined;
   const b = body({
-    version: 3,
+    version: events ? 4 : 3,
     engineVersion: input.engineVersion ?? ENGINE_VERSION,
     answers: input.answers,
     config: lifeConfigSchema.parse(input.config),
     seed: input.seed,
     requestHash: input.requestHash,
     ledger: validateEvolutionLedger(input.ledger),
+    ...(events ? { playerEvents: events } : {}),
   });
   if (b.requestHash !== hashSetupRequest(b.answers)) throw new Error("Invalid request hash");
   return validate({ ...b, contractHash: hashReplayPayload(b) }).replay;
@@ -190,16 +212,49 @@ export async function playReplay(input: ReplayData, _interpreter?: (...args: nev
   const { replay, state } = validate(input);
   return { replay, state, snapshot: snapshotSimulation(state) };
 }
-// Counterfactual only: retain recorded proposal timing/content, but intentionally skip
-// ca7 observation-hash matching because corrected mechanics alter those observations.
+export type ReplayInspection = { state: SimulationState; evidence: RunEvidence };
+/** Reconstruct one inclusive generation from validated recorded inputs, with only observed run evidence. */
+export function inspectReplayAtGeneration(input: ReplayData, generation: number): ReplayInspection {
+  if (!Number.isInteger(generation) || generation < 0 || generation > DEFAULT_GENERATIONS)
+    throw new Error("Generation is outside this recording");
+  // Full validation is intentional: future entries must also be canonical, reachable, and executed.
+  const { replay, state: terminal } = validate(input);
+  if (generation > terminal.generation) throw new Error("Generation is outside this recording");
+  let state = createSimulation({ seed: replay.seed, config: replay.config, engineVersion: replay.engineVersion });
+  let evidence = createRunEvidence(state),
+    decisionIndex = 0,
+    eventIndex = 0;
+  const accepted: EvolutionLedger = [],
+    acceptedEvents: AcceptedPlayerEvent[] = [];
+  while (state.generation < generation && state.outcome === "running") {
+    const trigger = detectDecisionTriggerForRun(state, accepted, acceptedEvents);
+    if (trigger) {
+      const decision = replay.ledger[decisionIndex];
+      if (!decision) throw new Error("Invalid replay decision prefix");
+      accepted.push(decision);
+      decisionIndex++;
+    }
+    const events = replay.version === 4 ? replay.playerEvents : [];
+    if (events[eventIndex]?.acceptedGeneration === state.generation) {
+      acceptedEvents.push(events[eventIndex]);
+      eventIndex++;
+    }
+    state = stepWithPlayerEvents(state, accepted, acceptedEvents);
+    evidence = observeRun(evidence, state, events);
+  }
+  if (state.generation !== generation) throw new Error("Generation is outside this recording");
+  return { state, evidence };
+}
+// Counterfactual only; supported v3 records retain the original explicit behavior.
 // Pinned to ca-8, the energy-accounting correction this comparison was written for, so a
 // saved counterfactual stays stable when a later contract becomes current.
 export function replayCounterfactual(input: ReplayData) {
-  const replay = base.parse(input);
-  const ledger = validateEvolutionLedger(replay.ledger);
+  if (input.version !== 3) throw new Error("Player-directed recordings are not supported by this counterfactual");
+  const replay = base.parse(input),
+    ledger = validateEvolutionLedger(replay.ledger);
   let state = createSimulation({ seed: replay.seed, config: replay.config, engineVersion: CA8_ENGINE_VERSION });
   while (state.outcome === "running" && state.generation < DEFAULT_GENERATIONS) {
-    const active = ledger.filter((decision) => decision.generation <= state.generation).at(-1);
+    const active = ledger.filter((d) => d.generation <= state.generation).at(-1);
     state = stepSimulation(state, active, ledger);
   }
   return state;

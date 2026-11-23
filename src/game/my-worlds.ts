@@ -2,8 +2,9 @@ import { z } from "zod";
 import { decodeReplay, encodeReplay, type ReplayData } from "./replay";
 import { createRunEvidence, observeRun, type RunEvidence } from "./run-evidence";
 import { setupNamedIntentSchema, type SetupNamedIntent } from "./setup-review";
-import { createSimulation, stepSimulation } from "./world";
-import { activeDecisionForGeneration } from "./runtime";
+import { createSimulation } from "./world";
+import { stepWithPlayerEvents } from "./runtime";
+import { ENVIRONMENT_PRESSURES } from "./rules";
 
 const DB_NAME = "lifepot-my-worlds";
 export const MAX_WORLD_EXPORT_BYTES = 512_000;
@@ -16,6 +17,7 @@ const evidenceSchema = z.object({
   peakPopulation: integer.max(2500), lineageExtinction: z.array(z.object({ lineage: integer.min(1), generation }).strict()).max(100),
   ruleEvents: z.array(z.discriminatedUnion("kind", [z.object({ kind: z.literal("activated"), generation, sourceGeneration: generation, revertAt: integer.nullable() }).strict(), z.object({ kind: z.literal("reverted"), generation }).strict()])).max(360),
   observedRuleVersion: integer.min(1), followedFamily: z.object({ lineage: integer.min(1), population: integer.max(2500) }).strict().nullable(), activeRuleIdentity: z.string().max(100).nullable().optional(),
+  playerChanges: z.array(z.object({ acceptedGeneration: generation, activatedAt: generation.nullable(), restoredAt: generation.nullable(), pressure: z.enum(ENVIRONMENT_PRESSURES), previousPressure: z.enum(ENVIRONMENT_PRESSURES) }).strict()).max(8).optional(),
 }).strict();
 const idSchema = z.string().uuid();
 const provenanceSchema = z.object({ source: z.enum(["jev", "fallback"]), model: z.string().max(100).optional(), namedIntent: setupNamedIntentSchema.optional() }).strict();
@@ -78,8 +80,8 @@ function replayArtifact(input: ReplayData | string): ReplayArtifact {
   };
   countFamilies();
   while (state.outcome === "running") {
-    state = stepSimulation(state, activeDecisionForGeneration(replay.ledger, state.generation), replay.ledger);
-    evidence = observeRun(evidence, state); countFamilies();
+    state = stepWithPlayerEvents(state, replay.ledger, replay.version === 4 ? replay.playerEvents : []);
+    evidence = observeRun(evidence, state, replay.version === 4 ? replay.playerEvents : []); countFamilies();
   }
   const artifact = { replay, encoded, evidence, outcome: state.outcome, families };
   if (replayCache.size >= 64) replayCache.clear();
@@ -88,7 +90,7 @@ function replayArtifact(input: ReplayData | string): ReplayArtifact {
 }
 function validateRecord(input: unknown): WorldRecord {
   const parsed = portableSchema.parse(input), canonical = replayArtifact(parsed.replay);
-  for (const key of ["samples", "firstExtinction", "peakPopulation", "ruleEvents", "observedRuleVersion", "activeRuleIdentity"] as const) {
+  for (const key of ["samples", "firstExtinction", "peakPopulation", "ruleEvents", "observedRuleVersion", "activeRuleIdentity", "playerChanges"] as const) {
     if (JSON.stringify(parsed.evidence[key] ?? null) !== JSON.stringify(canonical.evidence[key] ?? null)) throw new Error("Saved evidence does not match the recorded replay.");
   }
   if (canonical.outcome !== parsed.outcome || parsed.stopReason !== (parsed.outcome === "extinct" ? "World empty" : "Observation horizon reached")) throw new Error("Saved outcome does not match the recorded replay.");

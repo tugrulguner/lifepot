@@ -2,8 +2,8 @@ import { test, expect } from "@playwright/test";
 import { defaultConfig } from "../src/game/setup";
 const answers = ["A: algae producer. B eats A. C eats B, not A.", "Moderate drought", "Observe coexistence"];
 async function setup(page: import("@playwright/test").Page) {
- await page.goto("/play");
- for (const answer of answers) { await page.locator(".question-panel input").fill(answer); await page.getByRole("button", { name: /Continue|Review ecosystem/ }).click(); }
+ await page.goto("/experiment");
+ for (const answer of answers) { await page.locator(".answer-field").getByRole("textbox").fill(answer); await page.getByRole("button", { name: /Continue|Review ecosystem/ }).click(); }
 }
 test("unresolved corrected setup identifies one review focus and preserves original answers", async ({ page }) => {
  await page.route("**/api/judge", async route => { const input = route.request().postDataJSON(); await route.fulfill({ json: { config: defaultConfig(), source: "jev", requestHash: input.requestHash, model: "jev-test", fidelity: { verdict: "needs_clarification", repairAttempted: true, focus: "feeding_links", model: "jev-test", usage: { input_tokens: 10, output_tokens: 1 } } } }); });
@@ -11,7 +11,7 @@ test("unresolved corrected setup identifies one review focus and preserves origi
  await expect(page.getByText("Who eats whom? Confirm each feeding direction using the species names.")).toBeVisible();
  await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeDisabled();
  await page.getByRole("button", { name: "Edit setup answers" }).click();
- await expect(page.locator(".question-panel input")).toHaveValue(answers[0]);
+ await expect(page.locator(".answer-field").getByRole("textbox")).toHaveValue(answers[0]);
 });
 test("a corrected and approved proposal is reviewable and seedable without rewriting", async ({ page }) => {
  await page.route("**/api/judge", async route => { const input = route.request().postDataJSON(); await route.fulfill({ json: { config: defaultConfig(), source: "jev", requestHash: input.requestHash, model: "jev-test", fidelity: { verdict: "approve", repairAttempted: true, model: "jev-test", usage: { input_tokens: 10, output_tokens: 1 } } } }); });
@@ -26,7 +26,7 @@ test("failed corrected council selection stays blocked and is explained without 
  await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeDisabled();
  await expect(page.getByText(/Jev corrected its proposed food web/)).not.toBeVisible();
  await page.getByRole("button", { name: "Edit setup answers" }).click();
- await expect(page.locator(".question-panel input")).toHaveValue(answers[0]);
+ await expect(page.locator(".answer-field").getByRole("textbox")).toHaveValue(answers[0]);
 });
 test("shows concrete contract conflicts while keeping seed blocked", async ({ page }) => {
  await page.route("**/api/judge", async route => { const input = route.request().postDataJSON(); await route.fulfill({ json: { config: defaultConfig(), source: "jev", requestHash: input.requestHash, fidelity: { verdict: "reselect", model: "jev-test", usage: {input_tokens:1,output_tokens:1}, repairAttempted:true, mismatches:["hunter (C) role: grazer; intended hunter"] } } }); });
@@ -39,11 +39,31 @@ test("shows the source-grounded organism names in setup review", async ({ page }
  await setup(page);
  await expect(page.getByText("Established organism intent: A — algae (producer); B — grazers (grazer); C — hunters (hunter).")).toBeVisible();
 });
-test("safe setup failure stage reaches the browser without being replaced by generic fallback", async ({ page }) => {
- await page.route("**/api/judge", async route => { const input = route.request().postDataJSON(); await route.fulfill({ json: { config: defaultConfig(), source: "fallback", requestHash: input.requestHash, fallbackReason: "invalid_response", failure: { stage: "initial_council", code: "invalid_response" } } }); });
+test("legacy API fallback response is a failed interpretation, not the manual preset", async ({ page }) => {
+ await page.route("**/api/judge", async route => { const input = route.request().postDataJSON(); await route.fulfill({ json: { config: defaultConfig(), source: "fallback", requestHash: input.requestHash, fallbackReason: "invalid_response" } }); });
+ await setup(page);
+ await expect(page.locator(".setup-error[role=alert]")).toContainText("not approved to seed");
+ await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeDisabled();
+ await expect(page.getByRole("button", { name: "Retry interpretation" })).toBeVisible();
+ await page.getByRole("button", { name: "Edit setup answers" }).click();
+ await expect(page.locator(".answer-field").getByRole("textbox")).toHaveValue(answers[0]);
+ await page.getByRole("button", { name: "Explore deterministic preset", exact: true }).click();
+ await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeEnabled();
+ await expect(page.locator(".setup-error")).toHaveCount(0);
+});
+
+test("failed setup stays blocked, reports the issue, retries, and preserves answers", async ({ page }) => {
+ let requests = 0;
+ await page.route("**/api/judge", async route => { requests++; const input = route.request().postDataJSON(); await route.fulfill({ json: { config: defaultConfig(), source: "fallback", requestHash: input.requestHash, fallbackReason: "invalid_response", failure: { stage: "initial_council", code: "invalid_response" } } }); });
  await setup(page);
  await expect(page.getByText("Setup failure stage: initial council.")).toBeVisible();
- await expect(page.getByText(/This preview is a fallback/)).toBeVisible();
+ await expect(page.locator(".setup-error[role=alert]")).toContainText("Your answers are preserved, but this preview is not approved to seed.");
+ await expect(page.getByRole("link", { name: "Report setup issue ↗" })).toBeVisible();
+ await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeDisabled();
+ await page.getByRole("button", { name: "Retry interpretation" }).click();
+ await expect.poll(() => requests).toBe(2);
+ await expect(page.getByRole("button", { name: /Seed ecosystem/ })).toBeDisabled();
+ await expect(page.getByText(/This preview is a fallback/)).not.toBeVisible();
  await page.getByRole("button", { name: "Edit setup answers" }).click();
- await expect(page.locator(".question-panel input")).toHaveValue(answers[0]);
+ await expect(page.locator(".answer-field").getByRole("textbox")).toHaveValue(answers[0]);
 });

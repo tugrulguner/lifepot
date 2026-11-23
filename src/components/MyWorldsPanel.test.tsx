@@ -13,7 +13,7 @@ beforeEach(() => { vi.clearAllMocks(); storage.list.mockResolvedValue([]); stora
 afterEach(cleanup);
 it("excludes world names and actions from PostHog autocapture", () => {
   const html = renderToStaticMarkup(<MyWorldsPanel current={current} onOpen={() => {}} />);
-  expect(html).toContain('class="my-worlds ph-no-capture"');
+  expect(html).toContain('class="my-worlds ph-no-capture is-empty"');
   expect(html).toContain('data-ph-no-capture="true"');
 });
 it("makes a changed experiment an explicit review action, not an automatic replay", async () => {
@@ -45,6 +45,12 @@ it("shows storage failure without falsely reporting a saved world", async () => 
   fireEvent.click(screen.getByRole("button", { name: "Save completed world" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/storage.*full/i);
   expect(saved).not.toHaveBeenCalled();
+});
+it("renders a clear empty library state with import available", async () => {
+  render(<MyWorldsPanel onOpen={() => {}} />);
+  expect(await screen.findByText(/No saved worlds in this browser yet/)).toBeVisible();
+  expect(screen.getByRole("button", { name: "Import world export" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Saved worlds" })).toBeVisible();
 });
 it("offers a first-screen generic saved-world shortcut and count when saves exist", async () => {
   storage.list.mockResolvedValue([record]);

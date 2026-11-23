@@ -7,7 +7,7 @@ async function preset(page: Page) {
     if (payload.kind === "evolution") await route.fulfill({ json: deterministicEvolutionDecision(payload.summary) });
     else await route.abort();
   });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
 }
@@ -45,13 +45,13 @@ test("an optional question is not sent to the judge and fixed-rule play requests
   test.setTimeout(210_000);
   const requests: unknown[] = [];
   await page.route("**/api/judge", async route => { requests.push(route.request().postDataJSON()); await route.abort(); });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("textbox", { name: "Your question or prediction (optional)" }).fill("Will hunters disappear? This is a prediction, not an instruction.");
   await page.getByLabel("World policy").selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
-  await expect(page.getByRole("heading", { name: "Observation complete", exact: true })).toBeVisible({ timeout: 180_000 });
+  await expect(page.getByRole("region", { name: "Run results", exact: true }).getByRole("heading", { name: "Observation complete", exact: true })).toBeVisible({ timeout: 180_000 });
   expect(requests).toEqual([]);
   await expect(page.getByRole("region", { name: "Run results" })).toContainText("Will hunters disappear?");
 });
@@ -61,7 +61,7 @@ test("fixed-rule replay and a changed-condition trial preserve evidence without 
   const errors: string[] = [], calls: unknown[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.route("**/api/judge", async route => { calls.push(route.request().postDataJSON()); await route.abort(); });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByLabel("World policy").selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
@@ -86,11 +86,14 @@ test("ending is visible on mobile, explains the horizon, preserves inspection an
   await page.setViewportSize({ width: 390, height: 850 });
   await preset(page);
   await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
-  await expect(page.getByRole("heading", { name: "Observation complete", exact: true })).toBeVisible({ timeout: 180_000 });
+  await expect(page.getByRole("region", { name: "Run results", exact: true }).getByRole("heading", { name: "Observation complete", exact: true })).toBeVisible({ timeout: 180_000 });
   const results = page.getByRole("region", { name: "Run results" });
   await expect(results).toContainText("180");
   await expect(results).toContainText(/not.*biological|toy model/i);
-  const heading = page.getByRole("heading", { name: "Observation complete", exact: true });
+  // Completion stays with the habitat; opening the detailed report is now explicit.
+  await expect(page.getByRole("group", { name: "Watching progress" })).toContainText("Observation complete");
+  await page.getByRole("button", { name: "Investigate this outcome", exact: true }).click();
+  const heading = page.getByRole("region", { name: "Run results", exact: true }).getByRole("heading", { name: "Observation complete", exact: true });
   const box = await heading.boundingBox();
   expect(box!.y).toBeGreaterThanOrEqual(64);
   expect(box!.y).toBeLessThan(850);

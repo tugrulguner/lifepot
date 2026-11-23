@@ -1,10 +1,12 @@
 "use client";
+import { CreatorSocialLinks } from "./CreatorSocialLinks";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { publicDocuments } from "@/app/project-docs/content";
 import { z } from "zod";
 import {
   createReplay,
+  decodeReplay,
   decodeReplayLink,
   encodeReplayLink,
   type ReplayData,
@@ -24,7 +26,6 @@ import {
   type SimulationState,
 } from "@/game/world";
 import {
-  detectEvolutionTrigger,
   deterministicEvolutionDecision,
   summarizeEcology,
   validateSpeciesDirectives,
@@ -34,12 +35,30 @@ import {
 import {
   activeDecisionForGeneration,
   advanceUntilDecisionTrigger,
+  detectDecisionTriggerForRun,createPlayerProposalBinding,acceptPlayerProposal,playerProposalAvailability,
+  type PlayerProposalBinding,type AcceptedPlayerEvent,
 } from "@/game/runtime";
+import type {PlayerProposal} from '@/game/player-proposal';
+import {PlayerChangeDialog} from './PlayerChangeDialog';
+import {PlayerChangeHistory,PlayerChangeStatus} from './PlayerChangeStatus';
 import { CreatureInspector } from "./CreatureInspector";
+import { WatchingOrganism } from "./WatchingOrganism";
 import { SpeciesFocus } from "./SpeciesFocus";
 import WorldPreview from "./WorldPreview";
+import gameplayStyles from "./GameCanvasGameplay.module.css";
+import setupStyles from "./GameSetup.module.css";
+import historyStyles from "./ObservedHistory.module.css";
 import { RunResults } from "./RunResults";
+import { WorldOutcome } from "./WorldOutcome";
+import { RecordedMomentViewer } from "./RecordedMomentViewer";
+import { ExperimentReview } from "./ExperimentReview";
+import type { RecordedMoment } from "@/game/recorded-moments";
+import { describeEvidenceReference } from "@/game/run-journey";
 import { MyWorldsPanel } from "./MyWorldsPanel";
+import { createFixedHabitat, extendFixedHabitat, getObservationLimit, advanceFixedHabitat, MAX_FIXED_HABITAT_GENERATIONS } from "@/game/fixed-habitat";
+import { HabitatLibrary } from "./HabitatLibrary";
+import { createHabitatCheckpoint, type HabitatCheckpoint } from "@/game/habitat-checkpoint";
+import { saveHabitat } from "@/game/habitat-storage";
 import { listWorlds, type WorldRecord } from "@/game/my-worlds";
 import { RunReflectionPanel } from "./RunReflectionPanel";
 import { RunComparison } from "./RunComparison";
@@ -49,16 +68,21 @@ import { createRunEvidence, followRunLineage, observeRun, type RunEvidence } fro
 import type { SpeciesId } from "@/game/rules";
 import { FamilyHeader } from "./FamilyHeader";
 import { cellAtPoint } from "@/game/inspection";
-import { boundCamera, followCamera, NEUTRAL_CAMERA, screenToWorld, type Camera, type FollowTarget } from "@/game/camera";
-import { updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
+import { boundCamera, cameraViewportRects, followCamera, NEUTRAL_CAMERA, screenToWorld, type Camera, type FollowTarget } from "@/game/camera";
+import { visualProgress, spriteCullExtent, crossedWorldEdge } from "@/game/visual-transition";
+import { selectEventEffects, traceEventMark, updateEventEffects, EVENT_LIFETIME, type TimedOrganismEvent } from "@/game/event-effects";
 import { WorldObservatory } from "./WorldObservatory";
-import { GameplayObservation } from "./GameplayObservation";
+import { CanvasMarkKey, GameplayObservation } from "./GameplayObservation";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
 import { setupFidelitySchema, setupFailureSchema, setupNamedIntentSchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity, type SetupFailure, type SetupNamedIntent } from "@/game/setup-review";
-import { speciesColor } from "@/game/species-colors";
-import { organismPath, organismSprite, traceOrganism } from "@/game/organism-glyphs";
+import { roleColor } from "@/game/world-presentation";
+import { organismSprite, paintOrganism } from "@/game/organism-glyphs";
+import { microscopicSprite, paintResourceField } from "@/game/microscopic-renderer";
+import OrganismArtwork from "./OrganismArtwork";
 import { gameplayAnalytics } from "@/app/gameplay-analytics";
 import { isSurvivingNewborn, relationshipLabel, triggerLabel } from "@/game/visuals";
+import StarterWorldPicker from "./StarterWorldPicker";
+import type { StarterWorld } from "@/game/starter-worlds";
 export type LifePotViewModel = {
   answers: SetupAnswers;
   config: LifeConfig;
@@ -79,7 +103,7 @@ const QUESTIONS: Array<{
 }> = [
   {
     key: "world",
-    title: "What exists in this world?",
+    title: "What exists in your world?",
     note: "Describe resources and founder balance.",
     examples: [
       "Rich mineral pools with abundant prey",
@@ -138,7 +162,7 @@ function seedFromHash(hash: string) {
 function title(v: string) {
   return v.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase());
 }
-function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: number | null, followed: number | null, effects: TimedOrganismEvent[] = [], now = 0, focusedSpecies: SpeciesId | null = null, camera: Camera = NEUTRAL_CAMERA) {
+function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: number | null, followed: number | null, effects: TimedOrganismEvent[] = [], now = 0, focusedSpecies: SpeciesId | null = null, camera: Camera = NEUTRAL_CAMERA, showHazards = true, previous: ReadonlyMap<number, readonly [number, number]> = new Map(), progress = 1, eventProgress = progress) {
   const rect = canvas.getBoundingClientRect(),
     dpr = Math.min(devicePixelRatio || 1, 2);
   // Detached or hidden boards have no drawable interior; resize will repaint.
@@ -148,91 +172,62 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   const c = canvas.getContext("2d");
   if (!c) return;
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
-  // The ecosystem remains a dark, low-glare observation surface in either site theme.
-  c.fillStyle = getComputedStyle(canvas).getPropertyValue("--mp-canvas").trim() || "#020a09";
+  // Calm, cool-neutral material field; all habitat variation below is measured
+  // from this world's current resource and hazard arrays.
+  c.fillStyle = "#9baba4";
   c.fillRect(0, 0, rect.width, rect.height);
-  if (camera.zoom !== 1) {
-    c.beginPath(); c.rect(18, 18, rect.width - 36, rect.height - 36); c.clip();
-    c.setTransform(dpr * camera.zoom, 0, 0, dpr * camera.zoom,
-      dpr * ((1 - camera.zoom) * rect.width / 2 + camera.x * (rect.width - 36)),
-      dpr * ((1 - camera.zoom) * rect.height / 2 + camera.y * (rect.height - 36)));
-  }
   const pad = 18,
     cw = (rect.width - pad * 2) / GRID_SIZE,
     ch = (rect.height - pad * 2) / GRID_SIZE;
-  // A quiet coordinate lattice gives the board a readable habitat map without
-  // suggesting routes or terrain the simulation does not encode.
-  c.save();
-  c.strokeStyle = "rgba(141, 190, 163, .025)";
-  c.lineWidth = 0.5;
-  c.beginPath();
-  for (let cell = 0; cell <= GRID_SIZE; cell += 5) {
-    const x = pad + cell * cw, y = pad + cell * ch;
-    c.moveTo(x, pad); c.lineTo(x, rect.height - pad);
-    c.moveTo(pad, y); c.lineTo(rect.width - pad, y);
-  }
-  c.stroke();
-  c.restore();
-  // A coarse resource field keeps habitat shading bounded to 100 gradients.
-  // Exact cell resources and hazards remain visible in the marks below.
-  for (let row = 0; row < GRID_SIZE; row += 5) {
-    for (let col = 0; col < GRID_SIZE; col += 5) {
-      let total = 0;
-      for (let y = row; y < row + 5; y++) for (let x = col; x < col + 5; x++) total += state.resources[y * GRID_SIZE + x];
-      const resource = total / (25 * 255);
-      if (resource <= .08) continue;
-      const x = pad + (col + 2.5) * cw, y = pad + (row + 2.5) * ch;
-      const glow = c.createRadialGradient(x, y, 0, x, y, Math.max(cw, ch) * 4);
-      glow.addColorStop(0, `rgba(117, 210, 142, ${resource * .12})`);
-      glow.addColorStop(1, "rgba(117, 210, 142, 0)");
-      c.fillStyle = glow;
-      c.fillRect(x - cw * 4, y - ch * 4, cw * 8, ch * 8);
-    }
-  }
-  for (let i = 0; i < state.resources.length; i++) {
-    const x = i % 50,
-      y = Math.floor(i / 50),
-      r = state.resources[i] / 255;
-    const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
-    if (r > 0.08) {
-      // Small, cell-centered resource beads read as a field, not as organisms.
-      // Their area and opacity encode the existing resource amount only.
-      c.globalAlpha = .12 + r * .32;
-      c.fillStyle = "#83d99a";
-      c.beginPath();
-      c.arc(cx, cy, Math.max(.55, Math.min(cw, ch) * (.08 + r * .2)), 0, Math.PI * 2);
-      c.fill();
-    }
-    const hazard = state.hazards[i] / 255;
-    if (hazard > .025) {
-      // A compact coral chevron is distinct from circular resources and keeps
-      // the established semantic hazard palette at narrow mobile cell pitches.
-      c.globalAlpha = .14 + hazard * .3;
-      c.strokeStyle = "#ff806d";
-      c.lineWidth = Math.max(.55, Math.min(cw, ch) * .12);
-      c.beginPath();
-      const d = Math.min(cw, ch) * .22;
-      c.moveTo(cx - d, cy - d); c.lineTo(cx, cy + d);
-      c.lineTo(cx + d, cy - d);
-      c.stroke();
-    }
-  }
+  // Sample the visible world span before applying the organism transform.
+  // This is the inverse of the existing production camera/hit-test mapping.
+  paintResourceField(c, pad, cw, ch, rect.width, rect.height, state.resources, state.hazards, showHazards,
+    { x: 25 - 50 * camera.x / camera.zoom, y: 25 - 50 * camera.y / camera.zoom, span: 50 / camera.zoom });
+  c.beginPath(); c.rect(pad, pad, rect.width - 2 * pad, rect.height - 2 * pad); c.clip();
+  c.setTransform(dpr * camera.zoom, 0, 0, dpr * camera.zoom,
+    dpr * ((1 - camera.zoom) * rect.width / 2 + camera.x * (rect.width - 36)),
+    dpr * ((1 - camera.zoom) * rect.height / 2 + camera.y * (rect.height - 36)));
   c.globalAlpha = 1;
+  const importantActors = new Set<number>();
+  const transitionEvents = new Map(state.events.filter(e => e.kind === "feeding" || e.kind === "birth").map(e => [e.organismId, e.kind]));
+  const focusedSlot = state.config.rules?.species.findIndex(species => species.id === focusedSpecies) ?? -1;
+  const focusHasLife = !focusedSpecies || state.guild.some((alive, index) => alive > 0 && state.ruleSpecies[index] === focusedSlot + 1);
+  // Keep a lost focus as the player’s choice, without making surviving life
+  // look absent. Explicit selected/pinned subjects still receive full contrast.
+  const contextAlpha = focusHasLife ? .15 : .45;
   for (let i = 0; i < state.guild.length; i++) {
     if (!state.guild[i]) continue;
-    c.globalAlpha = focusedSpecies && state.config.rules?.species[state.ruleSpecies[i] - 1]?.id !== focusedSpecies ? .15 : 1;
+    // Explicit observation targets remain legible across a species filter.
+    // This changes paint only; the selected cell and lineage pin keep their authority.
+    c.globalAlpha = focusedSpecies && state.config.rules?.species[state.ruleSpecies[i] - 1]?.id !== focusedSpecies && i !== selected && state.lineage[i] !== followed ? contextAlpha : 1;
     const x = i % GRID_SIZE, y = Math.floor(i / GRID_SIZE), species = state.config.rules?.species[state.ruleSpecies[i] - 1];
-    const pitch = Math.min(cw, ch), color = speciesColor(species?.id ?? "");
-    const cx = pad + (x + .5) * cw, cy = pad + (y + .5) * ch;
-    const sprite = organismSprite(species?.role, color, pitch, dpr * camera.zoom);
-    if (sprite) c.drawImage(sprite, cx - pitch / 2, cy - pitch / 2, pitch, pitch);
-    else {
-      c.fillStyle = color; traceOrganism(c, species?.role, cx, cy, pitch * .44); c.fill();
-      const previousJoin = c.lineJoin; c.lineJoin = "round";
-      c.strokeStyle = "#07100f"; c.lineWidth = pitch * .07; c.stroke();
-      c.strokeStyle = "rgba(241,248,237,.94)"; c.lineWidth = pitch * .035; c.stroke(); c.lineJoin = previousJoin;
+    const pitch = Math.min(cw, ch), color = roleColor(species?.role, species?.id ?? "");
+    const id = state.organismId[i], old = previous.get(id);
+    const delta = (a: number, b: number) => ((b - a + 75) % 50) - 25;
+    const dx = old ? delta(old[0], x + .5) : 0, dy = old ? delta(old[1], y + .5) : 0;
+    const px = old ? old[0] + dx * progress : x + .5, py = old ? old[1] + dy * progress : y + .5;
+    const cx = pad + px * cw, cy = pad + py * ch;
+    const angle = Math.hypot(dx, dy) > .02 ? Math.atan2(dy, dx) : id % 11 * .57, size = pitch * 1.18;
+    const event = eventProgress < 1 ? transitionEvents.get(id) : undefined;
+    const pulse = event === "feeding" ? Math.sin(Math.PI * eventProgress) * .09 : 0;
+    const birthScale = event === "birth" ? .65 + .35 * Math.sin(eventProgress * Math.PI / 2) : 1;
+    const sprite = microscopicSprite(species?.role, color, id % 12, pitch, dpr * camera.zoom) ?? organismSprite(species?.role, color, pitch, dpr * camera.zoom, camera.zoom);
+    for (const ox of [-50, 0, 50]) for (const oy of [-50, 0, 50]) {
+      // Reject only copies whose rotated sprite bounds cannot touch the clipped
+      // viewport. Keep edge-overlapping copies (including wrapped organisms).
+      const copyX = cx + ox * cw, copyY = cy + oy * ch;
+      const screenX = (1 - camera.zoom) * rect.width / 2 + camera.x * (rect.width - 36) + camera.zoom * copyX;
+      const screenY = (1 - camera.zoom) * rect.height / 2 + camera.y * (rect.height - 36) + camera.zoom * copyY;
+      const extent = spriteCullExtent(size, camera.zoom);
+      if (screenX + extent < pad || screenX - extent > rect.width - pad || screenY + extent < pad || screenY - extent > rect.height - pad) continue;
+      c.save(); c.translate(copyX, copyY); c.rotate(angle);
+      c.scale(birthScale * (1 + pulse), birthScale * (1 - pulse * .4));
+      if (sprite) c.drawImage(sprite, -size / 2, -size / 2, size, size);
+      else paintOrganism(c, species?.role, color, 0, 0, pitch, camera.zoom);
+      c.restore();
     }
     if (i === selected || state.lineage[i] === followed) {
+      importantActors.add(state.organismId[i]);
       const isSelected = i === selected;
       c.save();
       const focusRadius = pitch * .32;
@@ -248,23 +243,70 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
       c.restore();
     }
     if (isSurvivingNewborn(state.generation, state.age[i], state.organismGeneration[i], state.guild[i])) {
-      c.strokeStyle = "#ffffff"; c.lineWidth = 1; c.beginPath(); c.arc(cx, cy, pitch * .62, 0, Math.PI * 2); c.stroke();
+      // A static birth dot remains readable under reduced motion, distinct from selection.
+      c.fillStyle = "#ffffff"; c.beginPath(); c.arc(cx + pitch * .3, cy - pitch * .3, pitch * .08, 0, Math.PI * 2); c.fill();
     }
   }
-  for(const event of effects){
-    const remaining=Math.max(0,(event.expiresAt-now)/EVENT_LIFETIME);
-    if(!remaining)continue;
-    const x=pad+(event.at%GRID_SIZE+.5)*cw,y=pad+(Math.floor(event.at/GRID_SIZE)+.5)*ch;
-    c.globalAlpha=remaining;c.lineWidth=1.5;c.strokeStyle=event.kind==="birth"?"#ffffff":event.kind==="death"?"#ff8877":"#ffd65c";
-    c.beginPath();
-    if(event.kind==="death"){const r=Math.min(cw,ch)*.7;c.moveTo(x-r,y-r);c.lineTo(x+r,y+r);c.moveTo(x+r,y-r);c.lineTo(x-r,y+r);}
-    else c.arc(x,y,Math.min(cw,ch)*(event.source==="resource"?.2:(.5+(1-remaining))),0,Math.PI*2);
-    c.stroke();
+  // Approved transient glints/rings are tied to native event locations only.
+  if (eventProgress < 1) {
+    const pitch = Math.min(cw, ch);
+    const projectPoint = (point: readonly [number, number]) => {
+      const centerX = 25 - 50 * camera.x / camera.zoom, centerY = 25 - 50 * camera.y / camera.zoom;
+      const near = (value: number, center: number) => center + ((value - center + 75) % 50) - 25;
+      return [pad + near(point[0], centerX) * cw, pad + near(point[1], centerY) * ch];
+    };
+    c.save();
+    for (const event of state.events) {
+      const [x, y] = projectPoint([event.at % GRID_SIZE + .5, Math.floor(event.at / GRID_SIZE) + .5]);
+      if (event.kind === "feeding" && event.source === "resource") {
+        c.globalAlpha = Math.sin(Math.PI * eventProgress) * Math.min(.9, .25 + event.energy / 24);
+        c.fillStyle = "#f7e6a5";
+        for (let j = 0; j < 3; j++) {
+          const angle = event.organismId * .71 + j * Math.PI * 2 / 3, radius = pitch * (.65 - eventProgress * .42);
+          c.beginPath(); c.arc(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius, Math.max(.65 / camera.zoom, Math.min(2 / camera.zoom, pitch * .045)), 0, Math.PI * 2); c.fill();
+        }
+      }
+      c.globalAlpha = (1 - eventProgress) * .55;
+      c.strokeStyle = event.kind === "death" ? "#9d625a" : event.kind === "birth" ? "#487f64" : "#b9953c";
+      c.lineWidth = 1 / camera.zoom;
+      c.beginPath(); c.arc(x, y, pitch * (.34 + eventProgress * .18), 0, Math.PI * 2); c.stroke();
+    }
+    // Recorded crossings mark both endpoints, as in the approved HTML.
+    c.globalAlpha = 1 - eventProgress;
+    c.strokeStyle = "#356abd";
+    c.lineWidth = 2 / camera.zoom;
+    for (let i = 0; i < state.guild.length; i++) {
+      if (!state.guild[i]) continue;
+      const from = previous.get(state.organismId[i]), to: readonly [number, number] = [i % GRID_SIZE + .5, Math.floor(i / GRID_SIZE) + .5];
+      if (!from || !crossedWorldEdge(from, to)) continue;
+      for (const point of [from, to]) {
+        const [x, y] = projectPoint(point);
+        c.strokeRect(x - pitch * .36, y - pitch * .36, pitch * .72, pitch * .72);
+      }
+    }
+    c.restore();
+  }
+  for (const event of selectEventEffects(effects, importantActors, followed)) {
+    const remaining = Math.max(0, (event.expiresAt - now) / EVENT_LIFETIME);
+    if (!remaining) continue;
+    const x = pad + (event.at % GRID_SIZE + .5) * cw, y = pad + (Math.floor(event.at / GRID_SIZE) + .5) * ch;
+    const pitch = Math.min(cw, ch);
+    c.globalAlpha = remaining * .85;
+    c.lineCap = "round"; c.lineJoin = "round";
+    traceEventMark(c, event, x, y, pitch, 1 - remaining);
+    // A cell-bounded dark keyline separates the recorded event from the body.
+    c.strokeStyle = "#07100f"; c.lineWidth = pitch * .16; c.stroke();
+    c.strokeStyle = event.kind === "birth" ? "#ffffff" : event.kind === "death" ? "#ff8877" : "#ffd65c";
+    c.lineWidth = pitch * .08; c.stroke();
   }
   c.globalAlpha=1;
 }
-function World({ state, selected, followed, focusedSpecies, onInspect, onCameraUpdate }: { state: SimulationState; selected: number | null; followed: number | null; focusedSpecies: SpeciesId | null; onInspect: (index: number) => void; onCameraUpdate: (message: string) => void }) {
+function World({ state, selected, followed, focusedSpecies, onInspect, onCameraUpdate, idPrefix = "world", showMeasurements = true }: { state: SimulationState; selected: number | null; followed: number | null; focusedSpecies: SpeciesId | null; onInspect: (index: number) => void; onCameraUpdate: (message: string) => void; idPrefix?: string; showMeasurements?: boolean }) {
+  const cameraHintId = `${idPrefix}-camera-hint`, cameraOptionsId = `${idPrefix}-camera-options`;
+  const [viewOptionsOpen, setViewOptionsOpen] = useState(false);
   const ref = useRef<HTMLCanvasElement>(null);
+  const overviewRef = useRef<HTMLCanvasElement>(null);
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [camera, setCamera] = useState<Camera>(NEUTRAL_CAMERA);
   const [target, setTarget] = useState<FollowTarget | null>(null);
   const [releasedNotice, setReleasedNotice] = useState("");
@@ -276,30 +318,44 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
     setReleasedNotice("Family pin changed. Full world restored.");
   }
   const [dragEnabled, setDragEnabled] = useState(false);
+  const [showHazards, setShowHazards] = useState(false);
   const drag = useRef<{ id: number; x: number; y: number; start: Camera; moved: boolean } | null>(null);
   const suppressClick = useRef(false);
   const validTarget = target?.kind === "family" && target.id !== followed ? null : target;
   const tracked = validTarget ? followCamera(camera, state, validTarget) : null;
-  const view = target ? tracked ?? NEUTRAL_CAMERA : camera;
+  const [lastTrackedView, setLastTrackedView] = useState<Camera | null>(null);
+  if (tracked && (!lastTrackedView || tracked.zoom !== lastTrackedView.zoom || tracked.x !== lastTrackedView.x || tracked.y !== lastTrackedView.y)) setLastTrackedView(tracked);
+  const view = target ? tracked ?? lastTrackedView ?? NEUTRAL_CAMERA : camera;
   const lost = !!target && !tracked;
-  const cameraUpdate = lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Full world restored.` : "Family pin changed. Full world restored." : releasedNotice;
+  const canFollowFamily = followed !== null && state.lineage.some((id, i) => id === followed && !!state.guild[i]);
+  const cameraUpdate = lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Last camera position retained.` : "Family pin changed. Full world restored." : releasedNotice;
   useEffect(() => onCameraUpdate(cameraUpdate), [cameraUpdate, onCameraUpdate]);
   // Only deliberate panel actions return to the watching view. Engine ticks,
   // target loss, resize and theme changes must preserve later user scrolling.
-  const returnToWorld = () => { window.scrollTo(0, 0); ref.current?.focus({ preventScroll: true }); };
+  const returnToWorld = () => { if (idPrefix === "world") window.scrollTo(0, 0); else ref.current?.closest("dialog")?.scrollTo(0, 0); ref.current?.focus({ preventScroll: true }); };
   const zoom = (delta: number) => { setReleasedNotice(""); if (lost) setTarget(null); setCamera(boundCamera({ ...view, zoom: view.zoom + delta })); };
   const pan = (x: number, y: number) => { setReleasedNotice(""); setTarget(null); setCamera(boundCamera({ ...view, x: view.x + x, y: view.y + y })); };
   const reset = () => { setReleasedNotice(""); setTarget(null); setCamera(NEUTRAL_CAMERA); setDragEnabled(false); };
   const follow = (next: FollowTarget) => { setReleasedNotice(""); setCamera({ ...view, zoom: Math.max(2, view.zoom) }); setTarget(next); };
   const effects=useRef<TimedOrganismEvent[]>([]),last=useRef<SimulationState|null>(null);
+  const previousPositions = useRef(new Map<number, readonly [number, number]>()), transitionStart = useRef(-Infinity);
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas?.parentElement) return;
     // Fit the watching view from actual content height, including retained notices.
     // Document coordinates keep later deliberate scrolling from resizing the world.
     const fit = () => {
+      // A queued ResizeObserver callback can outlive the canvas on replay/review.
+      if (!canvas.isConnected || !canvas.parentElement) return;
       const top = canvas.getBoundingClientRect().top + window.scrollY;
-      canvas.style.setProperty("--board-available-height", `${Math.max(1, window.innerHeight - top - 12)}px`);
+      // Short windows cannot contain every surface above the fold. Preserve a
+      // drawable habitat and allow normal page scrolling instead of collapsing it.
+      const minimum = Math.min(300, canvas.parentElement.clientWidth);
+      const available = window.innerHeight - top - 12;
+      // Keep fitting legitimate smaller boards after notices grow. Fall back to
+      // vertical scrolling only when less than half a readable habitat fits.
+      const height = available >= minimum / 2 ? available : minimum;
+      canvas.style.setProperty("--board-available-height", `${height}px`);
     };
     const observer = new ResizeObserver(fit);
     observer.observe(canvas.parentElement);
@@ -311,21 +367,63 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
     return () => { observer.disconnect(); window.removeEventListener("resize", fit); };
   }, []);
   useEffect(() => {
+    const canvas = overviewRef.current, context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+    const scale = canvas.width / GRID_SIZE;
+    context.fillStyle = "#dce3df";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < state.resources.length; i++) {
+      const x = i % GRID_SIZE * scale, y = Math.floor(i / GRID_SIZE) * scale;
+      const resource = state.resources[i] / 255, hazard = state.hazards[i] / 255;
+      if (resource > 0) {
+        context.fillStyle = `rgba(27, 126, 101, ${resource * .48})`;
+        context.fillRect(x, y, scale, scale);
+      }
+      if (showHazards && hazard > 0) {
+        context.fillStyle = `rgba(213, 77, 70, ${hazard * .5})`;
+        context.fillRect(x, y, scale, scale);
+      }
+      if (!state.guild[i]) continue;
+      const species = state.config.rules?.species[state.ruleSpecies[i] - 1];
+      context.beginPath(); context.arc(x + scale / 2, y + scale / 2, scale * .31, 0, Math.PI * 2);
+      context.fillStyle = roleColor(species?.role, species?.id ?? ""); context.fill();
+      if (i === selected) {
+        context.strokeStyle = "#9b302b"; context.lineWidth = Math.max(1.4, scale * .2);
+        context.beginPath(); context.arc(x + scale / 2, y + scale / 2, scale * .44, 0, Math.PI * 2); context.stroke();
+      }
+    }
+    context.strokeStyle = "#173e3a"; context.lineWidth = Math.max(1.1, scale * .15);
+    for (const rect of cameraViewportRects(view)) context.strokeRect(rect.x * scale + .5, rect.y * scale + .5, rect.width * scale - 1, rect.height * scale - 1);
+  }, [state, view, selected, showHazards]);
+  useEffect(() => {
     if (!ref.current) return;
     const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
     if(last.current!==state){
+      previousPositions.current = new Map();
+      if (last.current && state.generation === last.current.generation + 1 && !reduced) {
+        for (let i = 0; i < last.current.guild.length; i++) if (last.current.guild[i]) previousPositions.current.set(last.current.organismId[i], [i % GRID_SIZE + .5, Math.floor(i / GRID_SIZE) + .5]);
+        transitionStart.current = performance.now();
+      } else transitionStart.current = -Infinity;
       if(!last.current||state.generation<=last.current.generation)effects.current=[];
-      effects.current=updateEventEffects(effects.current,state.recentEvents.filter(e=>e.generation>(last.current?.generation??-1)),performance.now(),reduced);
+      // Event-only identity metadata survives an observed family member's death.
+      // It never enters simulation state or the replay ledger.
+      const lineages = new Map<number, number>();
+      for (const snapshot of [last.current, state]) if (snapshot) {
+        for (let i = 0; i < snapshot.guild.length; i++) if (snapshot.guild[i]) {
+          lineages.set(snapshot.organismId[i], snapshot.lineage[i]);
+        }
+      }
+      effects.current=updateEventEffects(effects.current,state.recentEvents.filter(e=>e.generation>(last.current?.generation??-1)),performance.now(),reduced,lineages);
       last.current=state;
     }
-    let frame=0;
-    const paint=()=>{const now=performance.now();effects.current=updateEventEffects(effects.current,[],now,reduced);if(ref.current)draw(ref.current,state,validTarget?.kind === "organism" && tracked ? state.organismId.findIndex(id => id === validTarget.id) : selected,followed,effects.current,now,focusedSpecies,view);if(effects.current.length)frame=requestAnimationFrame(paint);};
+    let frame=0, disposed=false;
+    const paint=()=>{if(disposed)return;cancelAnimationFrame(frame);frame=0;const now=performance.now();effects.current=updateEventEffects(effects.current,[],now,reduced);if(ref.current)draw(ref.current,state,validTarget?.kind === "organism" && tracked ? state.organismId.findIndex(id => id === validTarget.id) : selected,followed,effects.current,now,focusedSpecies,view,showHazards,previousPositions.current,visualProgress(now-transitionStart.current).movement,visualProgress(now-transitionStart.current).event);if(effects.current.length || now-transitionStart.current<450)frame=requestAnimationFrame(paint);};
     paint();
     const o = new ResizeObserver(paint);o.observe(ref.current);
     const themeObserver = new MutationObserver(() => paint());
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    return () => {o.disconnect();themeObserver.disconnect();cancelAnimationFrame(frame);};
-  }, [state, selected, followed, focusedSpecies, view, validTarget, tracked]);
+    return () => {disposed=true;o.disconnect();themeObserver.disconnect();cancelAnimationFrame(frame);};
+  }, [state, selected, followed, focusedSpecies, view, validTarget, tracked, showHazards]);
   return (
     <>
     <canvas
@@ -381,27 +479,72 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
       role="img"
       aria-label={`Ecosystem generation ${state.generation}; ${state.stats.population} organisms`}
     />
-    <section className="camera-tools" aria-label="World camera">
+    <aside className={`world-overview${overviewExpanded ? " is-expanded" : ""}`} aria-label="World overview"><button type="button" aria-label={overviewExpanded ? "Collapse world overview" : "Expand world overview"} aria-expanded={overviewExpanded} onClick={() => setOverviewExpanded(value => !value)}><canvas ref={overviewRef} width={GRID_SIZE} height={GRID_SIZE} aria-hidden="true" /></button><span>Overview</span></aside>
+    <section className="camera-tools camera-primary" aria-label="World camera">
+      {idPrefix === "world" && <button type="button" className={gameplayStyles.viewOptions} aria-expanded={viewOptionsOpen} onClick={() => setViewOptionsOpen(open => !open)}>View options</button>}
+      <div className="watching-progress" role="group" aria-label="Watching progress"><span>{state.outcome !== "running" && <strong>{state.stats.population === 0 ? "World empty" : "Observation complete"} · </strong>}Generation {state.generation} / {state.fixedHabitat ? getObservationLimit(state) : DEFAULT_GENERATIONS} · {state.stats.population} living</span>{showMeasurements && <a href="#live-measurements">Measurements</a>}</div>
       <div className="camera-buttons">
         <button aria-label="Zoom out" disabled={view.zoom <= 1} onClick={() => { zoom(-.5); returnToWorld(); }}>−</button>
         <output aria-label="Camera zoom">{view.zoom}×</output>
-        <button aria-label="Zoom in" disabled={view.zoom >= 3} onClick={() => { zoom(.5); returnToWorld(); }}>+</button>
-        <button onClick={() => { reset(); returnToWorld(); }}>Full world</button>
-        <button aria-pressed={dragEnabled} disabled={view.zoom <= 1} onClick={() => { setDragEnabled(!dragEnabled); returnToWorld(); }}>Drag to pan</button>
+        <button aria-label="Zoom in" disabled={view.zoom >= 10} onClick={() => { zoom(.5); returnToWorld(); }}>+</button>
+        <button aria-label="Close-up view" aria-pressed={view.zoom === 2} title="2× close-up of the current view; simulation unchanged" onClick={() => { zoom(2 - view.zoom); returnToWorld(); }}>Close-up</button>
+        <button aria-label="Full world" onClick={() => { reset(); returnToWorld(); }}>Full world</button>
+        <button aria-label="Follow pinned family with camera" aria-describedby={cameraHintId} title="Follow the pinned family" disabled={!canFollowFamily} onClick={() => { if (followed !== null) { follow({ kind: "family", id: followed }); returnToWorld(); } }}>Follow family</button>
+        <button aria-label="More camera options" onClick={() => { const options = document.getElementById(cameraOptionsId); options?.scrollIntoView({ block: "start" }); options?.focus({ preventScroll: true }); }}>Options</button>
       </div>
+      <p id={cameraHintId} className="camera-hint">{canFollowFamily ? `Family #${followed} pinned. Follow family keeps it in view.` : followed !== null ? `Family #${followed} has no living members. Inspect another creature to pin a family.` : "Pause and inspect a creature, then pin its family to follow."}</p>
+    </section>
+    <section id={cameraOptionsId} className="camera-tools camera-options" aria-label="Camera options" tabIndex={-1}>
       <div className="camera-buttons">
+        {[2, 5, 10].map(magnification => <button key={magnification} aria-label={`${magnification}× magnification`} aria-pressed={view.zoom === magnification} onClick={() => { zoom(magnification - view.zoom); returnToWorld(); }}>{magnification}×</button>)}
+        <button aria-pressed={showHazards} onClick={() => setShowHazards(!showHazards)}>Hazard shading</button>
+        <button aria-pressed={dragEnabled} disabled={view.zoom <= 1} onClick={() => { setDragEnabled(!dragEnabled); returnToWorld(); }}>Drag to pan</button>
         <button aria-label="Follow organism with camera" disabled={selected === null || !state.guild[selected]} onClick={() => { if (selected !== null && state.guild[selected]) { follow({ kind: "organism", id: state.organismId[selected] }); returnToWorld(); } }}>Follow organism</button>
-        <button aria-label="Follow pinned family with camera" disabled={followed === null || !state.lineage.some((id, i) => id === followed && !!state.guild[i])} onClick={() => { if (followed !== null) { follow({ kind: "family", id: followed }); returnToWorld(); } }}>Follow pinned family</button>
         {target && <button onClick={() => { setReleasedNotice(""); setCamera(view); setTarget(null); returnToWorld(); }}>Stop camera follow</button>}
       </div>
-      <p role="status">{lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Full world restored.` : "Family pin changed. Full world restored." : tracked ? `Camera follows ${validTarget!.kind} #${validTarget!.id}${validTarget!.kind === "family" ? " through its oldest living member" : ""}.` : releasedNotice || "Camera is free. Zoom and drag to explore; the simulation is unchanged."}</p>
+      <p role="status">{lost ? validTarget ? `${target!.kind === "organism" ? "Organism" : "Family"} #${target!.id} is no longer living. Last camera position retained.` : "Family pin changed. Full world restored." : tracked ? `Camera follows ${validTarget!.kind} #${validTarget!.id}${validTarget!.kind === "family" ? " through its oldest living member" : ""}.` : releasedNotice || "Camera is free. Zoom and drag to explore; the simulation is unchanged."}</p>
       <details><summary>Camera controls</summary><p>Mouse: drag while zoomed. Touch: enable Drag to pan; turn it off to scroll the page over the board. Tap without dragging to inspect. Keyboard on the board: +/− zoom, Shift+arrows pan, 0 restores the full world. Following tracks identity through movement. At a wrapping edge the camera moves to the other side; family following switches to the oldest surviving member.</p></details>
+      <a className="advanced-return-link" href="/play">Back to observatory</a>
     </section>
     </>
   );
 }
-export function GameCanvas() {
+export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" | "example" } = {}) {
+  const [recordedMoment, setRecordedMoment] = useState<{ moment: RecordedMoment; replay: ReplayData } | null>(null);
+  const [recordedCell, setRecordedCell] = useState<number | null>(null);
+  const [recordedFamily, setRecordedFamily] = useState<number | null>(null);
+  const [recordedCamera, setRecordedCamera] = useState("");
+  const [habitatOptIn, setHabitatOptIn] = useState(false);
+  const habitatIdentity = useRef<{id: string; createdAt: number; savedAt: number | null; parentId: string | null} | null>(null);
+  const [habitatSaving, setHabitatSaving] = useState(false);
+  const [habitatRefreshKey, setHabitatRefreshKey] = useState(0);
+  const habitatSavingRef = useRef(false);
+  const [habitatMessage, setHabitatMessage] = useState("");
+  const [habitatError, setHabitatError] = useState("");
   const [cameraUpdate, setCameraUpdate] = useState("");
+  const [playerEvents,setPlayerEvents]=useState<AcceptedPlayerEvent[]>([]);
+  const playerEventsRef=useRef<AcceptedPlayerEvent[]>([]);
+  const [playerBinding,setPlayerBinding]=useState<PlayerProposalBinding|null>(null);
+  const [isExample, setIsExample] = useState(initialEntry === "example");
+  const [exampleLoadError, setExampleLoadError] = useState("");
+  const [exampleRetry, setExampleRetry] = useState(0);
+  const exampleJourney = useRef(0);
+  const setupJourney = useRef(0);
+  const [customSetup, setCustomSetup] = useState(true);
+  const focusReturningEditor = useRef(false);
+  const mountAnswer = useCallback((field: HTMLTextAreaElement | null) => {
+    if (field && focusReturningEditor.current) {
+      focusReturningEditor.current = false;
+      field.focus({ preventScroll: true });
+    }
+  }, []);
+  const exampleRequest = useRef<AbortController | null>(null);
+  const cancelExample = useCallback(() => {
+    exampleJourney.current++;
+    exampleRequest.current?.abort();
+    exampleRequest.current = null;
+  }, []);
+  const [exampleTips, setExampleTips] = useState(true);
   const [question, setQuestion] = useState("");
   const [initialConfig, setInitialConfig] = useState<LifeConfig | null>(null);
   const [decisionReasons, setDecisionReasons] = useState<Record<number, FailureReason>>({});
@@ -409,7 +552,7 @@ export function GameCanvas() {
   const [fixedBaselineReview, setFixedBaselineReview] = useState(false);
   const [evidence, setEvidence] = useState<RunEvidence | null>(null);
   const evidenceRef = useRef<RunEvidence | null>(null);
-  const [baseline, setBaseline] = useState<{ evidence: RunEvidence; config: LifeConfig; seed: number; decisions: EvolutionLedger; policy: "adaptive" | "fixed" | "recorded" } | null>(null);
+  const [baseline, setBaseline] = useState<{ evidence: RunEvidence; config: LifeConfig; seed: number; decisions: EvolutionLedger; policy: "adaptive" | "fixed" | "recorded"; focus?: RecordedMoment; question?: string } | null>(null);
   const [showResults, setShowResults] = useState(true);
   const [parentWorldId, setParentWorldId] = useState<string | null>(null);
   const [originWorldId, setOriginWorldId] = useState<string | null>(null);
@@ -441,19 +584,21 @@ export function GameCanvas() {
     const dark = choice === "dark" || (choice === "auto" && isDark);
     document.documentElement.dataset.theme = dark ? "dark" : "light";
   };
-  const [stage, setStage] = useState<Stage>("questions"),
+  const [stage, setStage] = useState<Stage>(initialEntry === "example" ? "simulation" : "questions"),
     [arrivalRevision, setArrivalRevision] = useState(0),
     [answers, setAnswers] = useState(EMPTY),
     [qi, setQi] = useState(0),
     [config, setConfig] = useState<LifeConfig | null>(null),
     [proof, setProof] = useState<{
       source: "jev" | "fallback";
+      starter?: boolean;
       model?: string;
       usage?: { input_tokens: number; output_tokens: number };
       fidelity?: SetupFidelity;
       fallbackReason?: FailureReason;
       failure?: SetupFailure;
       namedIntent?: SetupNamedIntent;
+      requestFailed?: boolean;
     } | null>(null),
     [seed, setSeed] = useState(0),
     [simulation, setSimulation] = useState<SimulationState | null>(null),
@@ -476,6 +621,7 @@ export function GameCanvas() {
     analyticsProof = useRef<typeof proof>(null),
     analyticsBaseline = useRef(false),
     acceptedFollowup = useRef(false);
+  // Keep setup entry intentional: mounting never moves focus or scrolls.
   useEffect(() => { analyticsProof.current = proof; analyticsBaseline.current = Boolean(baseline); }, [proof, baseline]);
   const complete = simulation && simulation.outcome !== "running";
   const completedReplay = currentReplay;
@@ -484,8 +630,8 @@ export function GameCanvas() {
     if (!completionSeen.current) {
     completionSeen.current = true;
     if (!replayMode && simulation) gameplayAnalytics.runCompleted(`run-${runId.current}`, { reason: simulation.outcome, generations: simulation.generation, interpretation: analyticsProof.current?.source ?? "fallback" });
-    document.getElementById("run-results")?.focus();
-      document.getElementById("run-results")?.scrollIntoView({ block: "start" });
+    // Completion announces the stopping point without taking the habitat away.
+    document.getElementById("world-outcome")?.focus({ preventScroll: true });
     }
   }, [complete, stage, replayMode, simulation]);
   useLayoutEffect(() => {
@@ -494,16 +640,23 @@ export function GameCanvas() {
     window.scrollTo(0, 0);
   }, [stage, arrivalRevision]);
   const begin = useCallback(
-    (a: SetupAnswers, c: LifeConfig, s: number, replay?: ReplayData) => {
-      const initial = createSimulation({ seed: s, config: c, engineVersion: replay?.engineVersion }),
+    (a: SetupAnswers, c: LifeConfig, s: number, replay?: ReplayData, fixedHabitat = false) => {
+      cancelExample();
+      setRecordedMoment(null); setRecordedCell(null); setRecordedFamily(null); setRecordedCamera("");
+      const initial = fixedHabitat && !replay ? createFixedHabitat({ seed: s, config: c }) : createSimulation({ seed: s, config: c, engineVersion: replay?.engineVersion }),
         l = replay?.ledger ?? [];
       runId.current++;
+      habitatIdentity.current = initial.fixedHabitat ? { id: crypto.randomUUID(), createdAt: Date.now(), savedAt: null, parentId: null } : null;
+      setHabitatMessage(""); setHabitatError("");
+      setHabitatOptIn(false);
+      playerEventsRef.current=replay?.playerEvents??[];
+      setPlayerEvents(playerEventsRef.current);setPlayerBinding(null);
       ledgerRef.current = l;
       simRef.current = initial;
       initialConfigRef.current = structuredClone(c);
       replayRef.current = replay ?? null;
       setCurrentReplay(replay ?? null);
-      if (!replay) { setOriginWorldId(null); setArchivedEvidence(null); }
+      if (!replay) { setIsExample(false); setOriginWorldId(null); setArchivedEvidence(null); }
       const analyticsRunId = `run-${runId.current}`;
       if (replay) gameplayAnalytics.replayStarted(analyticsRunId, "local", replay.engineVersion);
       else {
@@ -534,16 +687,18 @@ export function GameCanvas() {
       pending.current = null;
       setEvent(
         replay
-          ? "Replay v3 loaded — zero live Jev calls"
+          ? `Replay v${replay.version} loaded — zero live Jev calls`
           : `${initial.stats.population} founders seeded across ${initial.config.rules!.species.length} configured species`,
       );
       pendingArrival.current = true;
       setArrivalRevision(revision => revision + 1);
       setStage("simulation");
     },
-    [],
+    [cancelExample],
   );
   async function openSavedWorld(record: WorldRecord) {
+    cancelExample();
+    setIsExample(false);
     setOriginWorldId(record.id); setParentWorldId(record.parentId);
     setLocalWorldName(record.name); setArchivedEvidence(record.evidence);
     setBaseline(null);
@@ -562,6 +717,7 @@ export function GameCanvas() {
     if (missingParent) setNotice("Saved follow-up parent is missing; its original comparison is unavailable.");
   }
   function reviewSavedWorld(record: WorldRecord) {
+    cancelExample();
     setLocalWorldName(record.name); setArchivedEvidence(null);
     const original = structuredClone(record.replay.config);
     setParentWorldId(record.id); setOriginWorldId(null);
@@ -574,15 +730,39 @@ export function GameCanvas() {
     setStage("review"); window.scrollTo(0, 0);
   }
   useEffect(() => {
+    let cancelled = false;
+    if (initialEntry === "example" || location.hash === "#example") {
+      const journey = exampleJourney.current;
+      const controller = new AbortController();
+      exampleRequest.current = controller;
+      const current = () => !cancelled && !controller.signal.aborted && exampleJourney.current === journey && (initialEntry === "example" || location.hash === "#example");
+      const navigate = () => { if (location.hash !== "#example") cancelExample(); };
+      window.addEventListener("hashchange", navigate);
+      void fetch("/example-world.json", { signal: controller.signal }).then(response => {
+        if (!response.ok) throw new Error("Example unavailable");
+        return response.json();
+      }).then(example => {
+        if (!current()) return;
+        const r = decodeReplay(example.replay);
+        if (!current()) return;
+        exampleRequest.current = null;
+        begin(r.answers, r.config, r.seed, r);
+        setIsExample(true); setSpeed("normal"); setExampleTips(true);
+      }).catch(() => { if (current()) { if (initialEntry === "example") setExampleLoadError("The recorded example could not be loaded."); else setNotice("The example could not be loaded. You can still create your own world."); } });
+      return () => {
+        cancelled = true; controller.abort();
+        if (exampleRequest.current === controller) exampleRequest.current = null;
+        window.removeEventListener("hashchange", navigate);
+      };
+    }
     const p = new URLSearchParams(location.hash.slice(1)).get("replay") ?? new URL(location.href).searchParams.get("replay");
     if (!p) return;
-    let cancelled = false;
     decodeReplayLink(p).then(
       (r) => { if (!cancelled) begin(r.answers, r.config, r.seed, r); },
       () => { if (!cancelled) setNotice("Invalid or legacy replay rejected"); },
     );
     return () => { cancelled = true; };
-  }, [begin]);
+  }, [begin, cancelExample, initialEntry, exampleRetry]);
   useEffect(() => {
     if (
       !simulation ||
@@ -590,20 +770,21 @@ export function GameCanvas() {
       simulation.outcome !== "running"
     )
       return;
-    const trigger = detectEvolutionTrigger(simulation, ledgerRef.current);
+    if(playerBinding)return;
+    const trigger = detectDecisionTriggerForRun(simulation, ledgerRef.current,playerEventsRef.current);
     if (
       !trigger ||
       ledgerRef.current.some((d) => d.generation === simulation.generation)
     )
       return;
-    if (replayMode) return;
+    if (replayMode || simulation.fixedHabitat) return;
     if (pending.current === simulation.generation) return;
     const id = runId.current,
       summary = summarizeEcology(simulation, answers, trigger);
     pending.current = simulation.generation;
     setDeciding(true);
     setEvent(
-      `Jev evaluating ${triggerLabel(trigger)} at generation ${simulation.generation}`,
+      `${policy === "fixed" ? "Local observation of" : "Jev evaluating"} ${triggerLabel(trigger)} at generation ${simulation.generation}`,
     );
     void (async () => {
       let d: EvolutionDecision;
@@ -643,7 +824,7 @@ export function GameCanvas() {
         ledgerRef.current = l;
         setLedger(l);
         setEvent(
-          d.source === "fallback" ? "Offline observation: no intervention; inherited strategies continue" : `Jev decision recorded: ${d.speciesDirectives?.length ?? 0} species policies${d.scheduledRuleChange ? "; rule change scheduled" : ""}`,
+          d.source === "fallback" ? policy === "fixed" ? "Fixed-rule observation: no intervention; inherited strategies continue" : "Offline observation: no intervention; inherited strategies continue" : `Jev decision recorded: ${d.speciesDirectives?.length ?? 0} species policies${d.scheduledRuleChange ? "; rule change scheduled" : ""}`,
         );
       }
     })().finally(() => {
@@ -652,19 +833,17 @@ export function GameCanvas() {
         setDeciding(false);
       }
     });
-  }, [answers, replayMode, simulation, stage, policy]);
+  }, [answers, replayMode, simulation, stage, policy,playerBinding,playerEvents]);
   useEffect(() => {
-    if (!simulation || paused || deciding || simulation.outcome !== "running")
+    if (!simulation || paused || playerBinding || deciding || habitatSavingRef.current || simulation.outcome !== "running")
       return;
     const timer = setTimeout(
       () => {
         try {
-          const next = advanceUntilDecisionTrigger(
-            simulation,
-            ledgerRef.current,
-            speed === "fast" ? 3 : 1,
-            step => { if (evidenceRef.current) evidenceRef.current = observeRun(evidenceRef.current, step); },
-          );
+          const onStep = (step: SimulationState) => { if (evidenceRef.current) evidenceRef.current = observeRun(evidenceRef.current, step, playerEventsRef.current); };
+          const next = simulation.fixedHabitat
+            ? advanceFixedHabitat(simulation, speed === "fast" ? 3 : 1, onStep)
+            : advanceUntilDecisionTrigger(simulation, ledgerRef.current, speed === "fast" ? 3 : 1, onStep, playerEventsRef.current);
           if (next === simulation) return;
           simRef.current = next;
           setSimulation(next);
@@ -681,9 +860,9 @@ export function GameCanvas() {
       speed === "slow" ? 1000 : simulation.generation === 0 ? 450 : speed === "fast" ? 35 : 220,
     );
     return () => clearTimeout(timer);
-  }, [deciding, ledger, paused, simulation, speed]);
+  }, [deciding, ledger, paused, simulation, speed,playerBinding,playerEvents]);
   useEffect(() => {
-    if (replayMode || !simulation || simulation.outcome === "running") return;
+    if (replayMode || !simulation || simulation.fixedHabitat || simulation.outcome === "running") return;
     try {
       replayRef.current = createReplay({
         answers,
@@ -692,6 +871,7 @@ export function GameCanvas() {
         requestHash: hashSetupRequest(answers),
         ledger: ledgerRef.current,
         engineVersion: simulation.engineVersion,
+        playerEvents:playerEventsRef.current,
       });
       const completed = replayRef.current;
       queueMicrotask(() => setCurrentReplay(completed));
@@ -701,8 +881,34 @@ export function GameCanvas() {
       );
     }
   }, [answers, replayMode, simulation]);
+  function chooseStarter(world: StarterWorld) {
+    cancelExample();
+    setupJourney.current++;
+    setInterpreting(false);
+    setCustomSetup(false);
+    setQuestion("");
+    setAnswers(world.answers);
+    setConfig(structuredClone(world.config));
+    setInitialConfig(structuredClone(world.config));
+    setProof({ source: "fallback", starter: true });
+    setSeed(world.seed);
+    setPolicy("fixed");
+    setReplayMode(false);
+    setManuallyEdited(false);
+    setFixedBaselineReview(false);
+    setSimulation(null);
+    setStage("review");
+    window.scrollTo(0, 0);
+  }
+  function abandonInterpretation() {
+    setupJourney.current++;
+    setInterpreting(false);
+  }
   async function interpret(a: SetupAnswers) {
+    cancelExample();
     if (interpreting) return;
+    const journey = ++setupJourney.current;
+    const isCurrent = () => setupJourney.current === journey;
     setInterpreting(true);
     const ca = canonicalAnswers(a),
       hash = hashSetupRequest(ca);
@@ -737,12 +943,14 @@ export function GameCanvas() {
         failureCategory = "invalid_response";
         throw new Error("Setup response did not match its request");
       }
+      if (!isCurrent()) return;
       const namedIntent = setupNamedIntentSchema.safeParse(p.evidence?.establishedIntent);
       setConfig(p.config);
       setProof({ source: p.source, model: p.model, usage: p.usage, fidelity: p.fidelity, fallbackReason: p.fallbackReason, failure: p.failure, namedIntent: namedIntent.success ? namedIntent.data : undefined });
       if (p.fidelity && p.fidelity.verdict !== "approve") gameplayAnalytics.setupFailed("setup_rejected");
       if (p.source === "fallback") {
         const reason = p.fallbackReason ?? p.failure?.code ?? p.fidelity?.failure?.code ?? p.provenance?.reason;
+        setProof(current => current ? { ...current, requestFailed: true, fallbackReason: reason ?? "unknown" } : current);
         if (reason) {
           const category = reason === "rate_limited" ? "rate_limited"
             : reason === "unavailable" || reason === "missing_credentials" ? "provider_unavailable"
@@ -751,10 +959,12 @@ export function GameCanvas() {
         }
       }
     } catch {
+      if (!isCurrent()) return;
       gameplayAnalytics.setupFailed(failureCategory);
       setConfig(deterministicSetup(ca));
-      setProof({ source: "fallback" });
+      setProof({ source: "fallback", requestFailed: true, fallbackReason: failureCategory === "provider_unavailable" ? "unavailable" : failureCategory === "rate_limited" ? "rate_limited" : failureCategory === "invalid_response" ? "invalid_response" : "unknown" });
     }
+    if (!isCurrent()) return;
     setAnswers(ca);
     setSeed(seedFromHash(hash));
     setInterpreting(false);
@@ -762,6 +972,9 @@ export function GameCanvas() {
     setStage("review");
   }
   function loadDeterministicPreset() {
+    cancelExample();
+    setupJourney.current++;
+    setInterpreting(false);
     const preset = canonicalAnswers(RECORDED_PRESET), hash = hashSetupRequest(preset);
     setAnswers(preset);
     setConfig(deterministicSetup(preset));
@@ -771,23 +984,139 @@ export function GameCanvas() {
     setManuallyEdited(false);
     setStage("review");
   }
+  function openSavedHabitat(checkpoint: HabitatCheckpoint) {
+    cancelExample();
+    setRecordedMoment(null); setRecordedCell(null); setRecordedFamily(null); setRecordedCamera("");
+    setupJourney.current++;
+    setInterpreting(false);
+    runId.current++;
+    pending.current = null;
+    habitatSavingRef.current = false;
+    setHabitatSaving(false);
+    habitatIdentity.current = { id: checkpoint.id, createdAt: checkpoint.createdAt, savedAt: checkpoint.savedAt, parentId: checkpoint.parentId };
+    const restored = checkpoint.state;
+    simRef.current = restored;
+    evidenceRef.current = checkpoint.evidence;
+    ledgerRef.current = [];
+    playerEventsRef.current = [];
+    initialConfigRef.current = structuredClone(restored.config);
+    replayRef.current = null;
+    setCurrentReplay(null);
+    setIsExample(false);
+    setOriginWorldId(null);
+    setParentWorldId(null);
+    setArchivedEvidence(null);
+    setBaseline(null);
+    setLocalWorldName(checkpoint.name);
+    setQuestion("");
+    setAnswers(EMPTY);
+    setProof(checkpoint.setup ?? null);
+    setConfig(restored.config);
+    setInitialConfig(structuredClone(restored.config));
+    setSeed(restored.seed);
+    setSimulation(restored);
+    setEvidence(checkpoint.evidence);
+    setLedger([]);
+    setPlayerEvents([]);
+    setPlayerBinding(null);
+    setDecisionReasons({});
+    setPolicy("fixed");
+    setRecordedPolicy("fixed");
+    setReplayMode(false);
+    acceptedFollowup.current = false;
+    analyticsBaseline.current = false;
+    setShowResults(true);
+    setFixedBaselineReview(false);
+    setManuallyEdited(false);
+    setHabitatOptIn(false);
+    setHabitatMessage("");
+    setHabitatError("");
+    setNotice("");
+    setSelected(null);
+    setFollowed(checkpoint.evidence.followedFamily?.lineage ?? null);
+    setFocusedSpecies(null);
+    setDeciding(false);
+    setEvent(`Saved fixed habitat opened paused at generation ${restored.generation}.`);
+    setPaused(true);
+    completionSeen.current = false;
+    pendingArrival.current = true;
+    setArrivalRevision(revision => revision + 1);
+    setStage("simulation");
+  }
+  async function saveCurrentHabitat() {
+    const state = simRef.current, observations = evidenceRef.current, identity = habitatIdentity.current;
+    if (!state?.fixedHabitat || !observations || !identity || habitatSavingRef.current) return;
+    setPaused(true); habitatSavingRef.current = true; setHabitatSaving(true);
+    setHabitatError(""); setHabitatMessage("");
+    const session = runId.current;
+    try {
+      const checkpoint = createHabitatCheckpoint({ id: identity.id, name: localWorldName.trim() || "Unnamed habitat", createdAt: identity.createdAt, savedAt: Math.max(Date.now(), (identity.savedAt ?? identity.createdAt) + 1), parentId: identity.parentId, state, evidence: observations, ...(proof ? { setup: { source: proof.source, ...(proof.starter !== undefined ? { starter: proof.starter } : {}), ...(proof.model !== undefined ? { model: proof.model } : {}), ...(proof.namedIntent ? { namedIntent: proof.namedIntent } : {}) } } : {}) });
+      const saved = await saveHabitat(checkpoint, identity.savedAt);
+      if (session !== runId.current) return;
+      habitatIdentity.current = { id: saved.id, createdAt: saved.createdAt, savedAt: saved.savedAt, parentId: saved.parentId };
+      setLocalWorldName(saved.name);
+      setHabitatRefreshKey(value => value + 1);
+      setHabitatMessage(`Habitat saved at generation ${saved.state.generation}. It will reopen paused; nothing advances while closed.`);
+    } catch (error) {
+      if (session === runId.current) setHabitatError(error instanceof Error ? error.message : "Habitat could not be saved. Your world remains paused and unchanged.");
+    } finally {
+      if (session === runId.current) {
+        habitatSavingRef.current = false;
+        setHabitatSaving(false);
+      }
+    }
+  }
   function stepOnce() {
-    if (!simulation || !paused || deciding || complete) return;
+    if (!simulation || !paused || playerBinding || deciding || complete || habitatSavingRef.current) return;
     setPaused(true);
     setSelected(null);
-    const next = advanceUntilDecisionTrigger(simulation, ledgerRef.current, 1, step => { if (evidenceRef.current) evidenceRef.current = observeRun(evidenceRef.current, step); });
+    const onStep = (step: SimulationState) => { if (evidenceRef.current) evidenceRef.current = observeRun(evidenceRef.current, step, playerEventsRef.current); };
+    const next = simulation.fixedHabitat
+      ? advanceFixedHabitat(simulation, 1, onStep)
+      : advanceUntilDecisionTrigger(simulation, ledgerRef.current, 1, onStep, playerEventsRef.current);
     simRef.current = next;
     setSimulation(next);
     setEvidence(evidenceRef.current);
     setEvent(`Generation ${next.generation}: ${next.stats.births - simulation.stats.births} births · ${next.stats.deaths - simulation.stats.deaths} deaths. Select an organism to inspect recorded feeding.`);
   }
+  function extendHabitatWindow() {
+    const state = simRef.current;
+    if (!state?.fixedHabitat || state.outcome === "extinct" || getObservationLimit(state) >= MAX_FIXED_HABITAT_GENERATIONS || habitatSavingRef.current) return;
+    try {
+      const extended = extendFixedHabitat(state, Math.min(getObservationLimit(state) + 180, MAX_FIXED_HABITAT_GENERATIONS));
+      simRef.current = extended;
+      setSimulation(extended);
+      setPaused(true);
+      setHabitatError("");
+      setHabitatMessage(`Observation window extended to generation ${getObservationLimit(extended)}. The habitat remains paused.`);
+    } catch (error) {
+      setHabitatError(error instanceof Error ? error.message : "Observation window could not be extended.");
+    }
+  }
+  function openPlayerChange(){
+    const state=simRef.current;if(!state||replayMode||deciding||pending.current!==null||state.outcome!=='running'||policy!=='adaptive')return;
+    const reason=playerProposalAvailability({state,ledger:ledgerRef.current,playerEvents:playerEventsRef.current});
+    if(reason){setNotice(reason);return}
+    setPaused(true);setPlayerBinding(createPlayerProposalBinding({runId:runId.current,state,intent:answers,ledger:ledgerRef.current,playerEvents:playerEventsRef.current}));
+    const habitat=document.querySelector<HTMLCanvasElement>('.life-canvas');
+    if(habitat)window.scrollTo(0,Math.max(0,window.scrollY+habitat.getBoundingClientRect().top-80));
+  }
+  function acceptPlayerChange(proposal:PlayerProposal){
+    const state=simRef.current;if(!state||!paused||!playerBinding||replayMode||deciding||pending.current!==null)throw new Error('Player proposal is no longer current');
+    const accepted=acceptPlayerProposal({binding:playerBinding,runId:runId.current,state,intent:answers,ledger:ledgerRef.current,playerEvents:playerEventsRef.current,proposal});
+    playerEventsRef.current=[...playerEventsRef.current,accepted];setPlayerEvents(playerEventsRef.current);setPlayerBinding(null);
+    setEvent(`Player accepted ${title(proposal.pressure)}; starts at generation ${accepted.generation}. The world remains paused.`);
+  }
+  if (initialEntry === "example" && stage === "simulation" && !simulation) return <main className="simulation-shell" aria-busy={!exampleLoadError}><section id="play-content" tabIndex={-1} className="run-status" aria-label="Recorded example"><h1>The little pond</h1>{exampleLoadError ? <><p role="alert">{exampleLoadError}</p><button type="button" onClick={() => { setExampleLoadError(""); setExampleRetry(value => value + 1); }}>Retry loading example</button><p><a href="/experiment">Open the experiment workspace</a></p></> : <p role="status" aria-live="polite">Loading the recorded world…</p>}</section></main>;
   if (stage === "questions") {
     const q = QUESTIONS[qi];
     return (
-      <main className="setup-shell">
-        <FamilyHeader><span className="header-detail">Co-evolution laboratory</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
-        <section className="question-panel">
+      <main className={`setup-shell ${setupStyles.shell}`}>
+        <FamilyHeader feedbackPath="/experiment" skipTarget="play-content"><span className="header-detail">{proof?.starter ? "Designed starter" : "Co-evolution laboratory"}</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
+        <section id="play-content" tabIndex={-1} className={`question-panel ${setupStyles.panel} ${customSetup ? setupStyles.custom : ""}`} style={!customSetup ? { width: "min(1000px, calc(100% - 40px))", maxWidth: "1000px" } : undefined} onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
           <div id="my-worlds-entry" />
+          {!customSetup && <StarterWorldPicker onChoose={chooseStarter} onDescribeOwn={() => { focusReturningEditor.current = true; setCustomSetup(true); }} />}
+          {customSetup && <>
           <div className="step-label">QUESTION {qi + 1} / 3</div>
           <div className="progress-track">
             <i style={{ width: `${((qi + 1) / 3) * 100}%` }} />
@@ -798,19 +1127,30 @@ export function GameCanvas() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              setCustomSetup(true);
               if (qi < 2) setQi(qi + 1);
               else void interpret(answers);
             }}
           >
             <div className="answer-field">
-              <input
-                autoFocus
+              <textarea
+                rows={5}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                    event.preventDefault();
+                    if (answers[q.key].trim() && !interpreting) event.currentTarget.form?.requestSubmit();
+                  }
+                }}
+                ref={mountAnswer}
+                onFocus={cancelExample}
                 aria-label={q.title}
                 maxLength={140}
                 value={answers[q.key]}
-                onChange={(e) =>
-                  setAnswers({ ...answers, [q.key]: e.target.value })
-                }
+                onChange={(e) => {
+                  if (interpreting) abandonInterpretation();
+                  setCustomSetup(true);
+                  setAnswers({ ...answers, [q.key]: e.target.value });
+                }}
               />
               <span>{answers[q.key].length}/140</span>
             </div>
@@ -819,7 +1159,7 @@ export function GameCanvas() {
                 <button
                   type="button"
                   key={x}
-                  onClick={() => setAnswers({ ...answers, [q.key]: x })}
+                  onClick={() => { if (interpreting) abandonInterpretation(); setAnswers({ ...answers, [q.key]: x }); }}
                 >
                   {x}
                 </button>
@@ -832,7 +1172,7 @@ export function GameCanvas() {
                   <button
                     type="button"
                     className="back-button"
-                    onClick={() => setQi(qi - 1)}
+                    onClick={() => { abandonInterpretation(); setQi(qi - 1); }}
                   >
                     Back
                   </button>
@@ -846,14 +1186,18 @@ export function GameCanvas() {
               </div>
             </div>
           </form>
+          <button type="button" className={setupStyles.starterLink} onClick={() => { abandonInterpretation(); setCustomSetup(false); }}>Use a starter world instead</button>
           {qi === 0 && (
             <details className="setup-intro">
               <summary>How LifePot works · guides & credits</summary>
+              <div className="creator-row"><p className="creator-attribution">Created by <a aria-label="Created by Tugrul Guner" href="https://tugrul.modepot.io/">Tugrul Guner</a></p><CreatorSocialLinks /></div>
               <p>
-                Three answers shape your world. Jev proposes ecology, LifePot turns
-                validated rules into a deterministic artificial-life simulation
-                you can inspect and replay. A deterministic fallback is available
-                when Jev is not.
+                Three answers shape your world. In adaptive worlds, Jev responds
+                to the ecology through supported environmental changes and
+                evolutionary policies, not direct control of individual organisms.
+                Replay reuses recorded decisions without asking Jev again.
+                If runtime inference is unavailable, the fallback abstains
+                from new intervention.
               </p>
               <p className="setup-boundary">
                 An experimental game, not a biological forecast.{' '}
@@ -861,20 +1205,27 @@ export function GameCanvas() {
                 {publicDocuments.some((document) => document.slug === "roadmap") && <><Link href="/project-docs/roadmap">Roadmap ↗</Link>{' · '}</>}
                 <a href="https://github.com/tugrulguner/lifepot/tree/main/docs" target="_blank" rel="noopener noreferrer">About LifePot ↗</a>
               </p>
-              <p className="creator-attribution">Created by <a aria-label="Created by Tugrul Guner" href="https://tugrul.modepot.io/">Tugrul Guner</a></p>
             </details>
           )}
-          {qi === 0 && <button type="button" className="back-button" onClick={loadDeterministicPreset}>Explore deterministic preset</button>}
+          </>}
+          {(!customSetup || qi === 0) && <button type="button" className="back-button" onClick={loadDeterministicPreset}>Explore deterministic preset</button>}
         </section>
-        <MyWorldsPanel entryShortcut onOpen={openSavedWorld} onReview={reviewSavedWorld} />
+        <section className="your-library" aria-labelledby="your-library-title">
+          <header className="your-library-heading"><div><p className="your-library-kicker">EXPERIMENT ARCHIVE</p><h2 id="your-library-title">Your library</h2></div><p>Pick up a saved habitat or revisit a recorded world.</p></header>
+          <div className="your-library-items">
+            <HabitatLibrary onOpen={openSavedHabitat} refreshKey={habitatRefreshKey} />
+            <MyWorldsPanel entryShortcut onOpen={openSavedWorld} onReview={reviewSavedWorld} />
+          </div>
+        </section>
+        <p className="observatory-return"><a className="advanced-return-link" href="/play">Back to observatory</a></p>
       </main>
     );
   }
   if (stage === "review" && config)
     return (
-      <main className={`review-shell${parentWorldId ? " ph-no-capture" : ""}`} data-ph-no-capture={parentWorldId ? true : undefined}>
-        <FamilyHeader><span className="header-detail">Interpretation complete</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
-        <section className="review-card">
+      <main className={`review-shell${parentWorldId ? " ph-no-capture" : ""}${proof?.starter ? ` ${gameplayStyles.starterReview}` : ""}`} data-ph-no-capture={parentWorldId ? true : undefined}>
+        <FamilyHeader feedbackPath="/experiment" skipTarget="play-content"><span className="header-detail">{proof?.starter ? "Review starting conditions" : "Interpretation complete"}</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
+        <section id="play-content" tabIndex={-1} className="review-card">
           <p className="eyebrow">Founder ecology</p>
           {localWorldName && <p className="world-identity">Experiment: <strong>{localWorldName}</strong></p>}
           <h1>World conditions</h1>
@@ -888,9 +1239,11 @@ export function GameCanvas() {
             data-testid="interpreter-source"
           >
             <span />
-            {parentWorldId ? "Saved setup provenance · " : ""}{proof?.source === "jev"
-              ? `Jev API · ${proof.model ?? "jev-latest"}`
-              : "Deterministic fallback"}
+            {parentWorldId ? "Saved setup provenance · " : ""}{proof?.starter
+              ? "Designed starter · deterministic setup"
+              : proof?.source === "jev"
+                ? `Jev API · ${proof.model ?? "jev-latest"}`
+                : "Deterministic fallback"}
           </p>
           {proof?.fidelity?.verdict === "approve" && proof.fidelity.repairAttempted && <p role="status">Jev corrected its proposed food web and checked it again against your original answers. Review the corrected world below before seeding.</p>}
           {proof?.fidelity && proof.fidelity.verdict !== "approve" && <section aria-label="Setup needs clarification" role="alert">
@@ -899,17 +1252,20 @@ export function GameCanvas() {
             <button disabled={interpreting} onClick={() => interpret(answers)}>Ask Jev to reinterpret</button>
             <button disabled={interpreting} onClick={loadDeterministicPreset}>Explore deterministic preset instead</button>
           </section>}
-          {proof?.fallbackReason && <p role="status">Setup interpretation unavailable: {failureLabels[proof.fallbackReason]}. This preview is a fallback, not a Jev-approved interpretation.</p>}
+          {proof?.requestFailed && <section className="setup-error" role="alert"><p>Jev could not interpret this setup ({failureLabels[proof.fallbackReason ?? "unknown"]}). Your answers are preserved, but this preview is not approved to seed.</p><div><button disabled={interpreting} onClick={() => interpret(answers)}>Retry interpretation</button><a className="setup-report" href="https://github.com/tugrulguner/lifepot/issues/new?title=LifePot%20setup%20interpretation%20issue&body=Page%3A%20%2Fplay%0A%0APlease%20describe%20what%20happened.%20Avoid%20including%20private%20answers%2C%20replay%20data%2C%20saved-world%20names%2C%20or%20personal%20information.">Report setup issue ↗</a></div></section>}
           {(proof?.failure ?? proof?.fidelity?.failure) && <p role="status">Setup failure stage: {(proof?.failure ?? proof?.fidelity?.failure)!.stage.replaceAll("_", " ")}.</p>}
           {proof?.fidelity?.mismatches?.length ? <section aria-label="Food-web contract conflicts"><p>The corrected proposal conflicts with the established food web:</p><ul>{proof.fidelity.mismatches.map((message, index) => <li key={index}>{message}</li>)}</ul></section> : null}
           {proof?.namedIntent && <p>Established organism intent: {proof.namedIntent.species.map(species => `${species.id} — ${species.name} (${species.role})`).join("; ")}.</p>}
           {parentWorldId && <p role="status">Review these saved conditions and choose your changes before seeding a new experiment. Recorded setup provenance is not a new Jev approval.</p>}
-          <WorldPreview config={config} answers={answers} onChange={next => { setConfig(next); setManuallyEdited(true); }} />
+          {baseline && <ExperimentReview reference={baseline} config={config} seed={seed} policy={policy} onChange={next => { setConfig(next); setManuallyEdited(true); }} />}
+          <WorldPreview starter={proof?.starter ?? false} config={config} answers={answers} onChange={next => { setConfig(next); setManuallyEdited(true); }} />
           <div className="experiment-intent">
             <label>Your question or prediction (optional)<input aria-label="Your question or prediction (optional)" value={question} maxLength={240} placeholder="What would you like to investigate?" onChange={event => setQuestion(event.target.value)}/></label>
             <p>This stays in this session. It is not sent to Jev, does not change the mechanics, and is not automatically scored.</p>
-            <label>World policy<select aria-label="World policy" value={policy} onChange={event => setPolicy(event.target.value as "adaptive" | "fixed")}><option value="adaptive">Adaptive ecology — Jev may change bounded rules</option><option value="fixed">Fixed world rules — no runtime AI interventions</option></select></label>
+            <label>World policy<select aria-label="World policy" value={policy} onChange={event => { setPolicy(event.target.value as "adaptive" | "fixed"); setHabitatOptIn(false); }}><option value="adaptive">Adaptive ecology — Jev may change bounded rules</option><option value="fixed">Fixed world rules — no runtime AI interventions</option></select></label>
             <p>{policy === "fixed" ? "Initial conditions still evolve through feeding, reproduction, mutation and death. No new AI policy is applied during play." : "At ecological triggers, Jev may propose birth policies or change supported world rules. Actual changes remain inspectable."}</p>
+            {policy === "fixed" && !replayMode && <label className={gameplayStyles.habitatChoice}><input type="checkbox" checked={habitatOptIn} onChange={event => setHabitatOptIn(event.target.checked)} />Enable same-world save and continuation</label>}
+            {habitatOptIn && policy === "fixed" && <p>Start a new fixed habitat with a 180-generation window. Save it on this device and explicitly extend observation up to 1,800 generations. No offline evolution or runtime AI. Existing completed runs are not converted.</p>}
           </div>
           <details className="setup-evidence"><summary>Validated mechanics and original setup evidence</summary>
           {manuallyEdited && <p>Conditions were edited by you. Original AI evidence below is not a confirmation of those edits.</p>}
@@ -922,44 +1278,74 @@ export function GameCanvas() {
           {config.rules && <SetupCouncil rules={config.rules}/>}
           {proof?.usage && <p>Setup total: {proof.usage.input_tokens} input / {proof.usage.output_tokens} output tokens (interpretation, fidelity review, any bounded correction, and council selection).</p>}
           </details>
-          <button className="back-button" onClick={() => { setQi(0); setStage("questions"); }}>Edit setup answers</button>
+          <button className="back-button" onClick={() => { setQi(0); setCustomSetup(true); setStage("questions"); }}>Edit setup answers</button>
           <p className="review-note">These are the validated mechanics, not unrestricted interpretations of your prose. Roles do not imply feeding links: consumption follows the relationship graph. Extinct species are not automatically restored.</p>
           <button
-            className="primary-button seed-button"
-            disabled={!!proof?.fidelity && proof.fidelity.verdict !== "approve"}
-            onClick={() => { if (proof?.fidelity && proof.fidelity.verdict !== "approve") { gameplayAnalytics.setupFailed("setup_rejected"); return; } acceptedFollowup.current = Boolean(baseline); begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined); }}
+            className={`primary-button seed-button${proof?.starter ? ` ${gameplayStyles.starterSeed}` : ""}`}
+            disabled={!!proof?.requestFailed || (!!proof?.fidelity && proof.fidelity.verdict !== "approve")}
+            onClick={() => { if (proof?.requestFailed || (proof?.fidelity && proof.fidelity.verdict !== "approve")) { gameplayAnalytics.setupFailed("setup_rejected"); return; } acceptedFollowup.current = Boolean(baseline); begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined, habitatOptIn && policy === "fixed"); }}
           >
             Seed ecosystem <span>→</span>
           </button>
+          <p className="observatory-return"><a className="advanced-return-link" href="/play">Back to observatory</a></p>
         </section>
       </main>
     );
   if (!simulation || !config) return null;
+  const followLineage = (lineage: number | null) => {
+    setFollowed(lineage);
+    if (evidenceRef.current) {
+      evidenceRef.current = followRunLineage(evidenceRef.current, simulation, lineage);
+      setEvidence(evidenceRef.current);
+    }
+  };
+  const inspectLiving = () => {
+    const index = simulation.guild.findIndex(value => value > 0);
+    if (index < 0) return;
+    setSelected(index); setPaused(true);
+    window.scrollTo(0, 0);
+    document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus({ preventScroll: true });
+  };
+  const inspectDetails = () => document.getElementById("creature-inspector")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const investigateOutcome = () => {
+    setShowResults(true);
+    requestAnimationFrame(() => {
+      document.getElementById("run-results")?.scrollIntoView({ block: "start" });
+      document.getElementById("run-results")?.focus({ preventScroll: true });
+    });
+  };
+  const reviewOutcome = (moment: RecordedMoment) => {
+    if (!evidence) return;
+    setRecordedMoment(null);
+    setParentWorldId(originWorldId ?? parentWorldId);
+    setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy, focus: moment, question });
+    setConfig(structuredClone(initialConfigRef.current ?? config));
+    setSeed(simulation.seed); setReplayMode(false); setManuallyEdited(false);
+    setStage("review"); window.scrollTo(0, 0);
+  };
   const active = activeDecisionForGeneration(ledger, simulation.generation),
     resources = Math.round(simulation.stats.resources / 2500);
   return (
-    <main className={`simulation-shell${originWorldId || parentWorldId ? " ph-no-capture" : ""}`} data-ph-no-capture={originWorldId || parentWorldId ? true : undefined}>
-      <section className="run-status" aria-label="Run status"><strong role="status">{complete ? simulation.stats.population === 0 ? "World empty" : "Observation complete" : deciding ? "Waiting for a bounded ecology decision — the world is held still" : paused ? "Paused — inspect life or step one generation" : "Running — watch, inspect, or pause"}</strong><span>{localWorldName ? `Experiment: ${localWorldName} · ` : ""}{replayMode ? "Exact recorded replay · no inference" : policy === "fixed" ? "Fixed world rules" : "Adaptive ecology"}{question ? ` · Your question: ${question}` : ""}</span></section>
+    <main className={`simulation-shell ${gameplayStyles.shell}${complete ? ` ${gameplayStyles.completed}` : ""}${playerBinding ? ` ${gameplayStyles.proposing}` : ""}${simulation.fixedHabitat || originWorldId || parentWorldId ? " ph-no-capture" : ""}`} data-ph-no-capture={simulation.fixedHabitat || originWorldId || parentWorldId ? true : undefined}>
+      <section id="play-content" tabIndex={-1} className="run-status" aria-label="Run status"><strong role="status">{complete ? simulation.stats.population === 0 ? "World empty" : "Observation complete" : deciding ? "Waiting for a bounded ecology decision — the world is held still" : paused ? "Paused — inspect life or step one generation" : "Running — watch, inspect, or pause"}</strong><div className="run-context">{isExample ? "Recorded example · The little pond · " : ""}{localWorldName ? `Experiment: ${localWorldName} · ` : ""}{replayMode ? "Exact recorded replay · no inference" : policy === "fixed" ? "Fixed world rules" : "Adaptive ecology"}{question ? ` · Your question: ${question}` : ""}{isExample && <><a href="/experiment">Create your own world</a>{exampleTips && <><details className="example-tips"><summary>Three ways to explore</summary><ol><li>Pause to look closer.</li><li>Use “Inspect a living organism” to see its age and energy.</li><li>Choose “Follow founder lineage” to highlight its family.</li></ol></details><button type="button" className="example-dismiss" aria-label="Dismiss example tips" onClick={() => setExampleTips(false)}>Dismiss tips</button></>}</>}</div></section>
       {notice && <p className="run-notice" role="status">{notice}</p>}
       {archivedEvidence && <section className="archived-highlights" aria-label="Recorded highlights"><h2>Recorded highlights</h2><p>Validated from this saved replay; these are archived observations, not newly observed replay events.</p>{archivedEvidence.lineageExtinction.length ? <ul>{archivedEvidence.lineageExtinction.map((item, index) => <li key={`${item.lineage}-${item.generation}-${index}`}>Founder family {item.lineage} disappeared at generation {item.generation} (recorded).</li>)}</ul> : <p>No followed-family extinction milestone was recorded in this save.</p>}</section>}
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
       <World key={arrivalRevision} state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onCameraUpdate={setCameraUpdate} onInspect={index => { setSelected(index); setPaused(true); }} />
       <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
-      <GameplayObservation cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
-      <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={lineage => {
-        setFollowed(lineage);
-        if (evidenceRef.current) {
-          evidenceRef.current = followRunLineage(evidenceRef.current, simulation, lineage);
-          setEvidence(evidenceRef.current);
-        }
-      }} onClear={() => setSelected(null)} onPick={() => { const index = simulation.guild.findIndex(value => value > 0); if (index >= 0) { setSelected(index); setPaused(true); } }} />
-      <FamilyHeader><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
+      <div className={gameplayStyles.mobileMarkKey}><CanvasMarkKey /></div>
+      <div className={gameplayStyles.worldContext}>
+      <GameplayObservation playerChange={playerEvents.some(e=>e.acceptedGeneration<=simulation.generation&&(!active||active.generation<e.generation+6))?<PlayerChangeStatus events={playerEvents} generation={simulation.generation} outcome={simulation.outcome} evidence={evidence}/>:undefined} inspection={selected === null ? undefined : context => <WatchingOrganism state={simulation} index={selected} followed={followed} onFollow={followLineage} onDetails={inspectDetails} context={context} />} cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} policy={replayMode ? "recorded" : policy} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
+      {complete && evidence && <WorldOutcome state={simulation} evidence={evidence} followed={followed} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} onInvestigate={investigateOutcome} onReview={!simulation.fixedHabitat ? reviewOutcome : undefined} />}
+      </div>
+      <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={followLineage} onClear={() => setSelected(null)} onPick={inspectLiving} />
+      <FamilyHeader feedbackPath="/experiment" skipTarget="play-content"><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
       <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} evidence={evidence} /></div>
-      <section className="stats-strip" aria-label="Live ecosystem statistics">
+      <section id="live-measurements" tabIndex={-1} className="stats-strip" aria-label="Live ecosystem statistics">
         <Stat
           id="generation"
           label="Generation"
-          value={`${simulation.generation} / ${DEFAULT_GENERATIONS}`}
+          value={`${simulation.generation} / ${simulation.fixedHabitat ? getObservationLimit(simulation) : DEFAULT_GENERATIONS}`}
         />
         <Stat id="prey" label="Foragers" hint="Producers, grazers and scavengers" value={simulation.stats.prey} />
         <Stat
@@ -979,23 +1365,25 @@ export function GameCanvas() {
         <Stat id="kills" label="Kills · total" value={simulation.stats.kills} />
         <Stat id="resources" label="Resource mean" value={resources} />
       </section>
-      <aside className="decision-overlay" aria-label="Jev evolution state">
+      <aside className="decision-overlay" aria-label={!replayMode && policy === "fixed" ? "Local ecology rules" : "Jev evolution state"}>
         <div className="decision-heading">
-          <p>JEV EVOLUTION LAYER</p>
+          <p>{!replayMode && policy === "fixed" ? "LOCAL ECOLOGY RULES" : "JEV EVOLUTION LAYER"}</p>
           <span
-            className={`decision-source ${deciding ? "is-deciding" : active?.source === "jev" ? "is-jev" : "is-fallback"}`}
+            className={`decision-source ${!replayMode && policy === "fixed" ? gameplayStyles.fixedStatus : deciding ? "is-deciding" : active?.source === "jev" ? "is-jev" : "is-fallback"}`}
           >
-            {deciding
-              ? "Jev deciding…"
-              : replayMode
-                ? "Replay v3"
-                : active
-                  ? active.source === "fallback" ? "Offline · no intervention" : "Jev policies"
-                  : "Observing ecology"}
+            {!replayMode && policy === "fixed"
+              ? "Fixed rules · no runtime AI interventions"
+              : deciding
+                ? "Jev deciding…"
+                : replayMode
+                  ? `Replay v${currentReplay?.version??3}`
+                  : active
+                    ? active.source === "fallback" ? "Offline · no intervention" : "Jev policies"
+                    : "Observing ecology"}
           </span>
         </div>
         <p className="decision-brief">Observed: {active ? triggerLabel(active.trigger) : "awaiting an ecological trigger"}. Current graph pressure: {title(simulation.config.rules!.environment.pressure)}. Observations do not establish which pressure caused a population change.</p>
-        <details className="council-details"><summary>Jev input, policies & council evidence</summary>
+        <details className="council-details"><summary>{!replayMode && policy === "fixed" ? "World input, policies & council evidence" : "Jev input, policies & council evidence"}</summary>
         <p>World: {answers.world}<br/>Threat: {answers.threat}<br/>Objective: {answers.reward}</p>
         <dl className="decision-meta">
           <div>
@@ -1022,11 +1410,11 @@ export function GameCanvas() {
             return <div key={species.id}><span>Species {species.id} · {title(species.role)}</span>{directive ? <div><strong>Next births: {title(directive.strategy.choice)}</strong><p>Undirected variation · {directive.mutationTempo.choice} rate. Target suggestion is advisory, not gene editing.</p><details><summary>Decision probabilities</summary>{[directive.strategy, directive.mutationTarget, directive.mutationTempo].map((answer, index) => <p key={index}>{title(answer.choice)} · confidence {Math.round(answer.confidence * 100)}%<br/>{Object.entries(answer.probabilities).map(([choice, probability]) => `${title(choice)} ${Math.round(probability * 100)}%`).join(" · ")}</p>)}</details></div> : <strong>{active?.speciesDirectives === undefined && active ? "Legacy cohort policy (replay)" : "Inherited · no new policy"}</strong>}</div>;
           })}
         </div>
-        <p className="decision-usage">Policies affect subsequent births, not every living organism. Offline observations do not introduce species or rescue extinct lineages.</p>
+        <p className="decision-usage">{!replayMode && policy === "fixed" ? "Fixed rules continue locally; no runtime AI interventions are requested." : "Policies affect subsequent births, not every living organism. Offline observations do not introduce species or rescue extinct lineages."}</p>
         <RuntimeCouncil decision={active} state={simulation} ledger={ledger} replay={replayMode}/>
         {active?.usage && <p className="decision-usage">Latest decision: {active.usage.input_tokens} input / {active.usage.output_tokens} output tokens</p>}
         <p className="decision-usage">
-          {ledger.length} / 8 decisions · ≥12 generation cooldown
+          {ledger.length+playerEvents.filter(e=>e.acceptedGeneration<=simulation.generation).length} / 8 shared decisions · ecological decisions have ≥12 generation cooldown
           <br />
           {replayMode ? "zero live API calls" : "event-driven observations"}
         </p>
@@ -1034,21 +1422,22 @@ export function GameCanvas() {
       </aside>
       <div className="legend">
         <span><i className="resource-key" />Resource field</span>
-        {(["producer", "grazer", "scavenger", "hunter", "omnivore"] as const).map(role => <span key={role}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><path d={organismPath(role)} fill="#a9d878" stroke="#f1f8ed" strokeWidth="2" strokeLinejoin="round" /></svg>{({ producer: "Producer rosette", grazer: "Grazer capsule", scavenger: "Scavenger segments", hunter: "Hunter spindle", omnivore: "Omnivore clover" })[role]}</span>) }
-        <span>Coral chevrons = local hazard intensity</span>
+        {simulation.config.rules!.species.map(species => <span key={species.id}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={roleColor(species.role, species.id)} /></svg><i style={{ backgroundColor: roleColor(species.role, species.id) }} />Species {species.id} · {title(species.role)}</span>)}
+        <span>Teal = producer, grazer, or scavenger · coral = hunter or omnivore</span>
+        <span>coral shading = hazards (when Hazard shading is enabled) · cell detail at 2× zoom</span>
         <span>White ring = selected · dashed gold ring = followed family</span>
-        <span>White = birth · gold = feeding · red = death</span>
-        <span>Color = species in observatory</span>
+        <span>White rays/dot = birth · gold circle = feeding · gold diamond = prey capture · red cross = death · marks show event locations; pulses are sampled</span>
       </div>
       <div className="ticker">
         <span>EVENT</span>
         <p>{event}</p>
       </div>
       <div className="controls">
-        {!complete && <button onClick={() => { if (paused) setSelected(null); setPaused(!paused); }}>
+        {simulation.fixedHabitat && <button type="button" disabled={habitatSaving} onClick={() => void saveCurrentHabitat()}>Pause and save habitat</button>}
+        {!complete && <button disabled={habitatSaving} onClick={() => { if (paused) setSelected(null); setPaused(!paused); }}>
           {paused ? "Resume" : "Pause"}
         </button>}
-        {!complete && <button aria-label="Step one generation" disabled={!paused || deciding} onClick={stepOnce}>Step</button>}
+        {!complete && <button aria-label="Step one generation" disabled={!paused || deciding || habitatSaving} onClick={stepOnce}>Step</button>}
         <label className="playback-speed">Speed
           <select aria-label="Playback speed" value={speed} onChange={event => setSpeed(event.target.value as PlaybackSpeed)}>
             <option value="slow">Slow</option>
@@ -1056,16 +1445,36 @@ export function GameCanvas() {
             <option value="fast">Fast</option>
           </select>
         </label>
-        <button onClick={() => begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined)}>{replayMode ? "Restart replay" : "Restart trial"}</button>
-        {complete && <button onClick={() => { setShowResults(true); completionSeen.current = false; queueMicrotask(() => { document.getElementById("run-results")?.scrollIntoView({ block: "start" }); document.getElementById("run-results")?.focus(); }); }}>View results</button>}
-        <button onClick={() => { const index = simulation.guild.findIndex(value => value > 0); if (index >= 0) { setSelected(index); setPaused(true); document.getElementById("creature-inspector")?.scrollIntoView({ behavior: "smooth", block: "start" }); } }}>Inspect living organism</button>
+        {!simulation.fixedHabitat && <button onClick={() => begin(answers, config, seed, replayMode ? replayRef.current ?? undefined : undefined)}>{replayMode ? "Restart replay" : "Restart trial"}</button>}
+        {complete && <button onClick={investigateOutcome}>View results</button>}
+        <button onClick={inspectLiving}>Inspect living organism</button>
         <button onClick={() => document.getElementById("world-observatory")?.scrollIntoView({ behavior: "smooth", block: "start" })}>World observatory</button>
+        {!complete&&!replayMode&&policy==='adaptive'&&<button type="button" aria-label="Ask Jev to change this world" disabled={deciding} onClick={openPlayerChange}>Ask Jev</button>}
       </div>
-      {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} question={question}
+      {simulation.fixedHabitat && <section className={`${gameplayStyles.habitatContinuity} ph-no-capture`} data-ph-no-capture="true" aria-label="Habitat continuity">
+        <h2>Keep this habitat</h2>
+        {simulation.fixedHabitat && simulation.outcome !== "extinct" && getObservationLimit(simulation) < MAX_FIXED_HABITAT_GENERATIONS && <button type="button" disabled={habitatSaving} onClick={extendHabitatWindow}>Extend observation window to generation {Math.min(getObservationLimit(simulation) + 180, MAX_FIXED_HABITAT_GENERATIONS)}</button>}
+        <p>Same world · generation {simulation.generation} of {getObservationLimit(simulation)} · hard cap 1,800. Saving pauses this world. Reopening never advances it while the browser is closed.</p>
+        {simulation.outcome !== "extinct" && getObservationLimit(simulation) < MAX_FIXED_HABITAT_GENERATIONS && <p>Observation ends at the current window unless you explicitly extend it by 180 generations. No extension is automatic.</p>}
+        <label>Habitat name<input aria-label="Habitat name" value={localWorldName} maxLength={80} disabled={habitatSaving} onChange={event => setLocalWorldName(event.target.value)} /></label>
+        <p>Stored only on this device. Browser storage may be cleared or evicted; keep a portable backup. Private questions and setup prose are not saved.</p>
+        {habitatMessage && <p role="status">{habitatMessage}</p>}
+        {habitatError && <p role="alert">{habitatError}</p>}
+      </section>}
+      {simulation.fixedHabitat && <HabitatLibrary onOpen={openSavedHabitat} refreshKey={habitatRefreshKey} />}
+      {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} followedLineage={followed} question={simulation.fixedHabitat ? "" : question} interventions={!simulation.fixedHabitat ? <PlayerChangeHistory events={playerEvents} generation={simulation.generation} outcome={simulation.outcome} evidence={evidence}/> : undefined} comparison={!simulation.fixedHabitat && baseline ? <RunComparison speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} before={baseline} after={{ evidence, config: initialConfig ?? config, seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }} /> : undefined} speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])}
         onInspect={() => { setShowResults(false); document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus(); }}
-        onReplay={() => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); }}
-        onEdit={() => { setParentWorldId(originWorldId ?? parentWorldId); setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); }}
-        onNew={() => { setLocalWorldName(""); setArchivedEvidence(null); setOriginWorldId(null); setParentWorldId(null); setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setStage("questions"); window.scrollTo(0, 0); }}>
+        onInspectMoment={!simulation.fixedHabitat && completedReplay ? moment => {
+          setRecordedCell(null);
+          setRecordedFamily(moment.kind === "family" ? Number(moment.reference.split(":")[1]) : null);
+          setRecordedCamera("");
+          setRecordedMoment({ moment, replay: completedReplay });
+        } : undefined}
+        onEditMoment={!simulation.fixedHabitat ? reviewOutcome : undefined}
+        onReplay={!simulation.fixedHabitat ? () => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); } : undefined}
+        onEdit={!simulation.fixedHabitat ? () => { setParentWorldId(originWorldId ?? parentWorldId); setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); } : undefined}
+        onNew={() => { setRecordedMoment(null); setLocalWorldName(""); setArchivedEvidence(null); setOriginWorldId(null); setParentWorldId(null); setBaseline(null); setAnswers(EMPTY); setQuestion(""); setQi(0); setCustomSetup(true); setStage("questions"); window.scrollTo(0, 0); }}>
+        {!simulation.fixedHabitat && <>
         <button type="button" onClick={() => {
           setParentWorldId(originWorldId ?? parentWorldId);
           setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy });
@@ -1073,8 +1482,13 @@ export function GameCanvas() {
           setSeed(simulation.seed); setPolicy("fixed"); setReplayMode(false);
           setFixedBaselineReview(true); setStage("review"); window.scrollTo(0, 0);
         }}>Review fixed-rule baseline</button>
-        {baseline && <RunComparison before={baseline} after={{ evidence, config: initialConfig ?? config, seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }} />}
-        <RunReflectionPanel key={`reflection-${simulation.seed}-${simulation.generation}`} evidence={evidence} config={initialConfig ?? config} onExperiment={experiment => {
+        <RunReflectionPanel key={`reflection-${simulation.seed}-${simulation.generation}`} evidence={evidence} config={initialConfig ?? config} speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} onInspectReference={completedReplay ? reference => {
+          const fact = describeEvidenceReference(reference, evidence, initialConfig ?? config, Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? []));
+          if (!fact || fact.generation === undefined) return;
+          const kind = reference.startsWith("family:") ? "family" : reference.startsWith("species:") || reference.startsWith("extinction:") ? "species" : "end";
+          setRecordedCell(null); setRecordedFamily(kind === "family" ? Number(reference.split(":")[1]) : null); setRecordedCamera("");
+          setRecordedMoment({ moment: { ...fact, id: reference, generation: fact.generation, kind }, replay: completedReplay });
+        } : undefined} onExperiment={experiment => {
           setParentWorldId(originWorldId ?? parentWorldId);
           const next = structuredClone(initialConfigRef.current ?? config);
           for (const change of experiment.changes) {
@@ -1089,9 +1503,16 @@ export function GameCanvas() {
         }}/>
 
         <ResultImageShare key={`${simulation.seed}-${simulation.generation}`} state={simulation} question={question} evidence={evidence}/>
-        <button className="back-button" onClick={async () => { try { if (!replayRef.current) return setNotice("Replay not ready"); const url = new URL(location.origin + location.pathname); url.hash = new URLSearchParams({ replay: await encodeReplayLink(replayRef.current) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
+        <button className="back-button" onClick={async () => { try { if (!replayRef.current) return setNotice("Replay not ready"); const url = new URL("/experiment", location.origin); url.hash = new URLSearchParams({ replay: await encodeReplayLink(replayRef.current) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
+        </>}
       </RunResults>}
       {complete && simulation.outcome !== "running" && showResults && evidence && completedReplay && <MyWorldsPanel current={{ replay: completedReplay, evidence, outcome: simulation.outcome, stopReason: simulation.stats.population === 0 ? "World empty" : "Observation horizon reached", parentId: parentWorldId, policy: replayMode ? recordedPolicy : policy, setup: proof ? { source: proof.source, model: proof.model, namedIntent: proof.namedIntent } : undefined }} onOpen={openSavedWorld} onReview={reviewSavedWorld} onSaved={record => { setOriginWorldId(record.id); setLocalWorldName(record.name); }} />}
+      {recordedMoment && <RecordedMomentViewer key={`${arrivalRevision}-${recordedMoment.moment.id}`} replay={recordedMoment.replay} generation={recordedMoment.moment.generation} label={recordedMoment.moment.description} onClose={() => setRecordedMoment(null)} renderScene={(frame, observations) => <div className={`${historyStyles.historicalScene} ph-no-capture`} data-ph-no-capture="true">
+        <World idPrefix="recorded-world" showMeasurements={false} state={frame} selected={recordedCell} followed={recordedFamily} focusedSpecies={null} onInspect={setRecordedCell} onCameraUpdate={setRecordedCamera} />
+        {recordedCamera && <p role="status">{recordedCamera}</p>}
+        <CreatureInspector historical state={frame} evidence={observations} index={recordedCell} followed={recordedFamily} onFollow={setRecordedFamily} onClear={() => setRecordedCell(null)} onPick={() => { const cell = frame.guild.findIndex(alive => alive !== 0); setRecordedCell(cell < 0 ? null : cell); }} />
+      </div>} />}
+      {playerBinding&&<PlayerChangeDialog bindingKey={playerBinding.token} enabled={paused&&!deciding&&!replayMode} config={simulation.config} generation={simulation.generation} onClose={()=>setPlayerBinding(null)} onAccept={acceptPlayerChange}/>}
     </main>
   );
 }

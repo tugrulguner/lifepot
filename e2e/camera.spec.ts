@@ -25,6 +25,13 @@ async function expectWatchingView(page: Page) {
   })).toBe(true);
 }
 import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
+
+async function screenshot(page: Page, testInfo: import("@playwright/test").TestInfo, filename: string) {
+  const directory = process.env.LIFEPOT_EVIDENCE_DIR ?? testInfo.outputDir;
+  await mkdir(directory, { recursive: true });
+  await page.screenshot({ path: join(directory, filename) });
+}
 
 for (const width of [1280, 390]) test(`camera transforms inspection and follows identities at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 850 });
@@ -32,11 +39,12 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   page.on("pageerror", error => errors.push(error.message));
   let inference = 0;
   await page.route("**/api/judge", route => { inference++; return route.abort(); });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
+  if (width <= 600) await page.getByRole("button", { name: "View options", exact: true }).click();
   const board = page.locator("canvas.life-canvas");
   const camera = page.getByRole("region", { name: "World camera", exact: true });
   const gen = await page.getByTestId("generation").textContent();
@@ -46,7 +54,9 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   await page.getByRole("button", { name: "Inspect a living organism", exact: true }).click();
   const inspector = page.getByRole("region", { name: "Creature inspector" });
   const identity = await inspector.getByText(/^Organism #\d+$/).textContent();
-  await camera.getByRole("button", { name: "Follow organism with camera" }).click();
+  await page.getByRole("button", { name: "More camera options" }).click();
+  await expect(page.getByRole("region", { name: "Camera options", exact: true })).toBeFocused();
+  await page.getByRole("region", { name: "Camera options", exact: true }).getByRole("button", { name: "Follow organism with camera" }).click();
   await expect(board).toHaveAttribute("data-camera-follow", "organism");
   await expect(board).toHaveAttribute("data-camera-zoom", "2");
   // Click the rendered selected cell through the inverse camera transform.
@@ -64,7 +74,7 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   await inspector.getByRole("button", { name: /Follow founder lineage/ }).click();
   await camera.getByRole("button", { name: "Follow pinned family with camera" }).click();
   await expect(board).toHaveAttribute("data-camera-follow", "family");
-  await expect(camera.locator('p[role="status"]')).toContainText("oldest living member");
+  await expect(page.getByRole("region", { name: "Camera options", exact: true }).locator('p[role="status"]')).toContainText("oldest living member");
   await expectWatchingView(page);
   const pinLabel = await inspector.getByRole("button", { name: /Follow founder lineage/ }).textContent();
   await inspector.getByRole("button", { name: "Stop following", exact: true }).click();
@@ -83,9 +93,9 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   expect(await page.evaluate(() => scrollY)).toBe(deliberateScroll);
   await board.scrollIntoViewIfNeeded();
   await mkdir(testInfo.outputDir, { recursive: true });
-  await page.screenshot({ path: testInfo.outputPath(`camera-running-${width}.png`) });
+  await screenshot(page, testInfo, `camera-running-${width}.png`);
   await page.getByRole("button", { name: "Pause", exact: true }).click();
-  await camera.getByRole("button", { name: "Stop camera follow" }).click();
+  await page.getByRole("region", { name: "Camera options", exact: true }).getByRole("button", { name: "Stop camera follow" }).click();
   await expect(board).toHaveAttribute("data-camera-follow", "none");
   await board.focus();
   await page.keyboard.press("Shift+ArrowRight");
@@ -97,7 +107,7 @@ for (const width of [1280, 390]) test(`camera transforms inspection and follows 
   await page.mouse.move(b.x + b.width / 2 + 40, b.y + b.height / 2 + 20, { steps: 6 });
   await page.mouse.up();
   await expect(board).not.toHaveAttribute("data-camera-x", afterKeyboard!);
-  await page.screenshot({ path: testInfo.outputPath(`camera-paused-${width}.png`) });
+  await screenshot(page, testInfo, `camera-paused-${width}.png`);
   await camera.getByRole("button", { name: "Full world" }).click();
   await expect(board).toHaveAttribute("data-camera-zoom", "1");
   await expect(board).toHaveAttribute("data-camera-x", "0");
@@ -125,13 +135,14 @@ for (const width of [1280, 390]) test.describe.serial(`linked camera completion 
   test.afterAll(async () => { await page?.close(); });
 
   test("fresh run releases its lost target and starts replay from visible results", async () => {
-    await page.goto("/play");
+    await page.goto("/experiment");
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     await page.getByRole("button", { name: "Pause", exact: true }).click();
     // Pick a founder the engine removes within ten generations, before the first decision pause.
     await clickCell(page, founderLostWithin(presetWorld(), 10));
+    if (width <= 600) await page.getByRole("button", { name: "View options", exact: true }).click();
     await page.getByRole("button", { name: "Follow organism with camera" }).click();
     await page.getByLabel("Playback speed").selectOption("normal");
     await page.getByRole("button", { name: "Resume", exact: true }).click();
@@ -140,9 +151,9 @@ for (const width of [1280, 390]) test.describe.serial(`linked camera completion 
     await expect(page.getByRole("status", { name: "Camera update" })).toBeVisible();
     await expectWatchingView(page);
     await expect(board).toHaveAttribute("data-camera-follow", "none");
-    await expect(board).toHaveAttribute("data-camera-zoom", "1");
+    await expect(board).toHaveAttribute("data-camera-zoom", "2");
     await page.getByRole("button", { name: "Zoom in", exact: true }).click();
-    await expect(board).toHaveAttribute("data-camera-zoom", "1.5");
+    await expect(board).toHaveAttribute("data-camera-zoom", "2.5");
     await page.getByRole("button", { name: "Pause", exact: true }).click();
     await page.emulateMedia({ reducedMotion: "reduce" });
     await completeWithRealSteps(page);
@@ -180,11 +191,12 @@ test("touch panning is opt-in and does not inspect a dragged cell", async ({ bro
   try {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
-    await page.goto(test.info().project.use.baseURL + "/play");
+    await page.goto(test.info().project.use.baseURL + "/experiment");
     await page.getByRole("button", { name: "Explore deterministic preset" }).click();
     await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     await page.getByRole("button", { name: "Pause", exact: true }).click();
+    await page.getByRole("button", { name: "View options", exact: true }).click();
     const board = page.locator("canvas.life-canvas");
     await page.getByRole("button", { name: "Zoom in", exact: true }).click();
     await expect(board).toHaveCSS("touch-action", "pan-y");

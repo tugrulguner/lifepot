@@ -1,10 +1,14 @@
 import { lineageCells } from "./inspection";
 import { GRID_CELLS, type SimulationState } from "./world";
+import type { AcceptedPlayerEvent } from "./player-proposal";
+import { validatePlayerEvents } from "./player-proposal";
+import { ENVIRONMENT_PRESSURES } from "./rules";
 
 export type SpeciesSample = { speciesId: string; role: string; population: number };
 export type RunSample = { generation: number; population: number; prey: number; predators: number; resources: number; births: number; deaths: number; kills: number; species: SpeciesSample[] };
 export type RunRuleEvent = { kind: "activated"; generation: number; sourceGeneration: number; revertAt: number | null } | { kind: "reverted"; generation: number };
-export type RunEvidence = { samples: RunSample[]; followedFamily: { lineage: number; population: number } | null; lineageExtinction: Array<{ lineage: number; generation: number }>; firstExtinction: Array<{ speciesId: string; generation: number }>; peakPopulation: number; ruleEvents: RunRuleEvent[]; observedRuleVersion: number; activeRuleIdentity?: string | null };
+export type PlayerChangeEvidence = { acceptedGeneration: number; activatedAt: number | null; restoredAt: number | null; pressure: typeof ENVIRONMENT_PRESSURES[number]; previousPressure: typeof ENVIRONMENT_PRESSURES[number] };
+export type RunEvidence = { samples: RunSample[]; followedFamily: { lineage: number; population: number } | null; lineageExtinction: Array<{ lineage: number; generation: number }>; firstExtinction: Array<{ speciesId: string; generation: number }>; peakPopulation: number; ruleEvents: RunRuleEvent[]; observedRuleVersion: number; activeRuleIdentity?: string | null; playerChanges?: PlayerChangeEvidence[] };
 
 function sample(state: SimulationState): RunSample {
   const species = state.config.rules!.species.map((rule, slot) => {
@@ -20,7 +24,9 @@ export function createRunEvidence(initial: SimulationState): RunEvidence {
   return { samples: [first], followedFamily: null, lineageExtinction: [], firstExtinction: [], peakPopulation: first.population, ruleEvents: [], observedRuleVersion: initial.config.rules!.version, activeRuleIdentity: null };
 }
 
-export function observeRun(evidence: RunEvidence, state: SimulationState): RunEvidence {
+export function observeRun(evidence: RunEvidence, state: SimulationState): RunEvidence;
+export function observeRun(evidence: RunEvidence, state: SimulationState, playerEvents: AcceptedPlayerEvent[]): RunEvidence;
+export function observeRun(evidence: RunEvidence, state: SimulationState, playerEvents?: AcceptedPlayerEvent[]): RunEvidence {
   const previous = evidence.samples[evidence.samples.length - 1];
   if (previous?.generation === state.generation) return evidence;
   if (previous && state.generation < previous.generation) return evidence;
@@ -39,7 +45,8 @@ export function observeRun(evidence: RunEvidence, state: SimulationState): RunEv
   const activeIdentity = change ? `${change.sourceGeneration}:${change.activatedAt}` : null;
   if (change && activeIdentity !== evidence.activeRuleIdentity) ruleEvents.push({ kind: "activated", generation: change.activatedAt, sourceGeneration: change.sourceGeneration, revertAt: change.revertAt });
   if (!change && evidence.activeRuleIdentity) ruleEvents.push({ kind: "reverted", generation: state.generation });
-  return { ...evidence, followedFamily, lineageExtinction, samples: [...evidence.samples, current], firstExtinction, peakPopulation: Math.max(evidence.peakPopulation, current.population), ruleEvents, observedRuleVersion: state.config.rules!.version, activeRuleIdentity: activeIdentity };
+  const changes = playerEvents?.length ? validatePlayerEvents(playerEvents).filter(event => event.acceptedGeneration <= state.generation).map(event => ({ acceptedGeneration: event.acceptedGeneration, activatedAt: state.generation >= event.generation ? event.generation : null, restoredAt: state.generation >= event.generation + 6 ? event.generation + 6 : null, pressure: event.proposal.pressure, previousPressure: event.previousPressure })) : undefined;
+  return { ...evidence, ...(changes ? { playerChanges: changes } : {}), followedFamily, lineageExtinction, samples: [...evidence.samples, current], firstExtinction, peakPopulation: Math.max(evidence.peakPopulation, current.population), ruleEvents, observedRuleVersion: state.config.rules!.version, activeRuleIdentity: activeIdentity };
 }
 
 export function followRunLineage(evidence: RunEvidence, state: SimulationState, lineage: number | null): RunEvidence {

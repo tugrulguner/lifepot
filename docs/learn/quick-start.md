@@ -4,17 +4,23 @@ LifePot is a bounded, replayable artificial-life game—not a biological forecas
 
 ## Open the game
 
-From the [LifePot overview](/), choose **Play the game**, or open [/play](/play) directly. Choose **Explore deterministic preset** for a reproducible starting example. This is a labeled deterministic preset, not evidence of a live Jev interpretation.
+From the [LifePot overview](/), choose **Explore this example** to enter the recorded pond immediately, with no setup questions or new inference. The landing preview is real recorded gameplay, not a live simulation. Its video stays unloaded under reduced-motion or data-saving preferences until you choose Play preview. Inside the example, optional tips explain pausing, inspection and family following; you can dismiss them.
 
-Review the proposed resources, hazard, species roles and food web before selecting **Seed ecosystem**. Initial conditions do not guarantee survival. For your own question, answer the three setup prompts instead; review the interpretation and its provenance before seeding. An unresolved fidelity review remains blocked rather than being silently approved.
+Open [/play](/play) to preview three authored ecologies: **Resource competition**, **Hunters and prey**, and **Recurring scarcity**. The square habitat preview shows the selected starter's actual generation-0 founders and resource field. These are deliberate starting configurations, not Jev interpretations or guaranteed outcomes.
+
+Select **Review this world** to open its editable conditions. Starters default to **Fixed world rules**, so previewing, reviewing and playing them makes no inference requests. **Seed ecosystem** starts the observation only after review. Changing the policy to adaptive explicitly enables the existing runtime council path.
+
+Choose **Describe your own world** for the three-question creation path. Review the interpretation and its provenance before seeding. An unresolved or failed interpretation remains blocked rather than being silently approved. **Explore deterministic preset** remains available as a separate reviewable configuration.
+
+Review the actual resources, hazard, species roles and food web before starting. Resource competition has two resource-feeding species without a predation link; hunters and prey has a directed feeding link; recurring scarcity uses scarce resources and pulsed drought settings. Initial conditions do not guarantee survival, and these starters change several conditions rather than representing a one-condition experiment.
 
 ## Observe a generation
 
-Playback starts at **Slow**, targeting one generation per second. Use the **Speed** selector to choose Normal or Fast when you want to move through the run more quickly. Speed changes timing only; it does not change the world rules or replayed result.
+New worlds start at **Slow**, targeting one generation per second; the landing example starts at **Normal**. Use the **Speed** selector to choose Normal or Fast when you want to move through the run more quickly. Speed changes timing only; it does not change the world rules or replayed result.
 
 Watch population, resources and the generation counter. Pause before selecting a living organism in the Creature Inspector. Follow its family to examine lineage context, or use the World Observatory for aggregate measurements. Resume to watch what changes. Selection observes the world; it does not change its rules.
 
-The deterministic engine owns movement, feeding, reproduction, mutation and death. Jev can propose only bounded, validated choices. A fallback or abstention is not a live model decision. The run ends at extinction or its observation horizon; completion is not proof that your idea succeeded.
+Local simulation rules govern movement, feeding, reproduction, mutation and death. In adaptive worlds, Jev can respond to the ecology with validated environmental changes, species strategies and mutation policies, not direct control of individual organisms. A fallback or abstention is not a live model decision. The run ends at extinction or its observation horizon; completion is not proof that your idea succeeded.
 
 ## Try a second experiment
 

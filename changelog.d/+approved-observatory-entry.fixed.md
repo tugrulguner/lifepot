@@ -1,0 +1,1 @@
+Open Play directly into the approved seeded, paused microscopic observatory, preserving its layout and immediate controls. Retain advanced setup and saved-world experiments at `/experiment`, including compatibility for existing example and replay links. Generate the production document and portable HTML from the same native-engine-backed source.

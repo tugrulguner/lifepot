@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { detectEvolutionTrigger, deterministicEvolutionDecision } from "./decisions";
 import { createReplay, decodeReplay, encodeReplay } from "./replay";
+import { assertFixedHabitat } from "./fixed-habitat";
 import { runFreshWithDecisions } from "./runtime";
 import { defaultConfig, hashReplayPayload, hashSetupRequest } from "./setup";
 import { interpretWorldPreview } from "./world-preview";
@@ -12,6 +13,7 @@ import {
   createSimulation,
   founderCount,
   indexOf,
+  maxVariantLabel,
   phenotypeClass,
   snapshotSimulation,
   stepSimulation,
@@ -100,6 +102,22 @@ describe("recorded engine contracts stay bit-identical", () => {
       });
       expect(decodeReplay(encodeReplay(replay)).engineVersion).toBe(engineVersion);
     }
+  });
+});
+
+describe("worlds saved under ca-8 keep their habitat features", () => {
+  it("runs a ca-8 fixed habitat under ca-8 and still refuses ca-7", () => {
+    const fixedHabitat = { version: 1 as const, observationLimit: 200 };
+    const saved = createSimulation({ seed: 4, config: defaultConfig(), engineVersion: CA8_ENGINE_VERSION, fixedHabitat });
+    expect(() => assertFixedHabitat(saved)).not.toThrow();
+    const next = stepSimulation(saved);
+    expect([next.generation, next.engineVersion]).toEqual([1, CA8_ENGINE_VERSION]);
+    // The ca-8 world keeps ca-8 founders and variant labels rather than adopting ca-9 mechanics.
+    expect([saved.stats.prey, saved.stats.predators]).toEqual([18, 8]);
+    expect(Math.max(...saved.species)).toBeLessThanOrEqual(maxVariantLabel(CA8_ENGINE_VERSION));
+    expect(() =>
+      createSimulation({ seed: 4, config: defaultConfig(), engineVersion: LEGACY_ENGINE_VERSION, fixedHabitat }),
+    ).toThrow(/ca8 engine or later/);
   });
 });
 

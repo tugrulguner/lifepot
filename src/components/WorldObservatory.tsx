@@ -6,7 +6,7 @@ import { buildWorldReport } from "@/game/observatory";
 import type { SimulationState } from "@/game/world";
 import type { RunEvidence } from "@/game/run-evidence";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
-import { speciesColor } from "@/game/species-colors";
+import { roleColor } from "@/game/world-presentation";
 import { relationshipLabel, triggerLabel } from "@/game/visuals";
 
 type Tab = "overview" | "lineages" | "environment" | "timeline";
@@ -46,7 +46,7 @@ export function WorldObservatory({ state, ledger, replay = false, evidence = nul
   // keeps only a short rolling window, which is the fallback when no samples were recorded.
   const samples = evidence?.samples ?? [];
   const series: Series[] = samples.length > 1
-    ? state.config.rules!.species.map((species) => ({ id: species.id, label: `Species ${species.id}`, color: speciesColor(species.id), values: samples.map((sample) => sample.species.find((item) => item.speciesId === species.id)?.population ?? 0) }))
+    ? state.config.rules!.species.map((species) => ({ id: species.id, label: `Species ${species.id}`, color: roleColor(species.role, species.id), values: samples.map((sample) => sample.species.find((item) => item.speciesId === species.id)?.population ?? 0) }))
     : [{ id: "total", label: "Total population", color: "var(--acid)", values: report.history.map((frame) => frame.population) }];
   const span = samples.length > 1 ? `generations ${samples[0].generation}–${samples[samples.length - 1].generation}` : `last ${report.history.length} frames`;
 
@@ -82,14 +82,14 @@ export function WorldObservatory({ state, ledger, replay = false, evidence = nul
         </section>
         <section className="observatory-section">
           <div className="observatory-section-title"><span>Living ecology</span><b>{report.species.filter((row) => row.population).length} active</b></div>
-          <div className="species-list">{report.species.map((species) => <div className="species-row" key={species.id}><i data-species={species.id} style={{ backgroundColor: speciesColor(species.id) }}/><div><strong>Species {species.id}</strong><small>{title(species.role)} · {species.lineages} lineages</small></div><b>{species.population}</b></div>)}</div>
+          <div className="species-list">{report.species.map((species) => <div className="species-row" key={species.id}><i data-species={species.id} style={{ backgroundColor: roleColor(species.role, species.id) }}/><div><strong>Species {species.id}</strong><small>{title(species.role)} · {species.lineages} lineages</small></div><b>{species.population}</b></div>)}</div>
         </section>
       </>}
 
       {tab === "lineages" && <section className="observatory-section is-flush">
         <div className="observatory-section-title"><span>Heritable phenotype</span><b>population means</b></div>
         {report.species.map((species) => <article className="lineage-card" key={species.id}>
-          <header><div><strong><i className="species-swatch" style={{ backgroundColor: speciesColor(species.id) }}/>Species {species.id}</strong><span>{title(species.role)}</span></div><b>{species.population} alive</b></header>
+          <header><div><strong><i className="species-swatch" style={{ backgroundColor: roleColor(species.role, species.id) }}/>Species {species.id}</strong><span>{title(species.role)}</span></div><b>{species.population} alive</b></header>
           <dl><div><dt>Mean energy</dt><dd>{species.meanEnergy}</dd></div><div><dt>Descendant generation</dt><dd>{species.meanGeneration}</dd></div><div><dt>Living lineages</dt><dd>{species.lineages}</dd></div></dl>
           <div className="trait-stack">{Object.entries(species.traits).map(([trait, value]) => <div key={trait}><span>{title(trait)}</span><i><b style={{ width: `${value * 100}%` }}/></i><em>{Math.round(value * 100)}</em></div>)}</div>
         </article>)}

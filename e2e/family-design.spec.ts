@@ -9,7 +9,8 @@ async function settle(page: import("@playwright/test").Page) {
 
 test("family foundation renders shared typography, neutral surfaces, and accessible theme control", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/play");
+  await page.goto("/experiment");
+
   await settle(page);
   const header = page.locator(".family-header");
   await expect(header).toBeVisible();
@@ -42,7 +43,7 @@ test("deterministic setup, simulation controls, pause, and replay remain intact 
   let judgeCalls = 0;
   await page.route("**/api/judge", (route) => { judgeCalls++; return route.abort(); });
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("combobox", { name: "Color theme" }).selectOption("light");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await expect(page.getByRole("heading", { name: "World conditions" })).toBeVisible();
@@ -65,7 +66,7 @@ test("theme controls and layout fit narrow screens and follow live OS Auto chang
   for (const width of [1280, 768, 320]) {
     await page.setViewportSize({ width, height: width === 320 ? 390 : 768 });
     await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
-    await page.goto("/play");
+    await page.goto("/experiment");
     await settle(page);
     const theme = page.getByRole("combobox", { name: "Color theme" });
     await expect(theme).toBeVisible();
@@ -78,9 +79,9 @@ test("theme controls and layout fit narrow screens and follow live OS Auto chang
   }
 });
 
- test("paused ecosystem canvas remains game-dark across shell themes without advancing", async ({ page }) => {
+ test("paused ecosystem canvas remains cool-neutral across shell themes without advancing", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await page.getByRole("button", { name: "Explore deterministic preset" }).click();
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   const canvas = page.locator("canvas.life-canvas");
@@ -93,15 +94,16 @@ test("theme controls and layout fit narrow screens and follow live OS Auto chang
     const data = el.getContext("2d")!.getImageData(2, 2, 1, 1).data;
     return Array.from(data).slice(0, 3).join(",");
   });
-  expect(await pixel()).toBe("2,10,9");
+  const beforePixel = await pixel();
+  expect(beforePixel.split(",").map(Number).every(channel => channel >= 120 && channel <= 190)).toBe(true);
   const theme = page.getByRole("combobox", { name: "Color theme" });
   await theme.selectOption("dark");
-  await expect.poll(pixel).toBe("2,10,9");
+  await expect.poll(pixel).toBe(beforePixel);
   await expect(page.getByTestId("generation")).toHaveText(before ?? "");
   await expect(page.getByLabel("Live ecosystem statistics")).toHaveText(population ?? "");
   await theme.selectOption("auto");
   await page.emulateMedia({ colorScheme: "dark" });
-  await expect.poll(pixel).toBe("2,10,9");
+  await expect.poll(pixel).toBe(beforePixel);
   await expect(page.getByTestId("generation")).toHaveText(before ?? "");
   await expect(page.getByLabel("Live ecosystem statistics")).toHaveText(population ?? "");
 });

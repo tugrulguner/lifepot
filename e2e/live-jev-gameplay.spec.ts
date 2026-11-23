@@ -24,10 +24,10 @@ test.describe("live Jev setup and gameplay", () => {
    } catch { /* Assertions on awaited responses handle failures. */ }
   });
   await page.setViewportSize({ width: 1280, height: 850 });
-  await page.goto("/play");
+  await page.goto("/experiment");
   let response;
   for (const [i, answer] of answers.entries()) {
-   await page.locator(".question-panel input").fill(answer);
+   await page.locator(".answer-field").getByRole("textbox").fill(answer);
    if (i === 2) { const pending = page.waitForResponse(r => r.url().endsWith("/api/judge"), { timeout: 90000 }); await page.getByRole("button", { name: /Continue|Review ecosystem/ }).click(); response = await pending; }
    else await page.getByRole("button", { name: /Continue|Review ecosystem/ }).click();
   }
@@ -58,7 +58,7 @@ test.describe("live Jev setup and gameplay", () => {
   const question = "PRIVATE live review prediction";
   await page.getByLabel("Your question or prediction (optional)").fill(question);
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
-  const canvas = page.locator("canvas").first();
+  const canvas = page.locator("canvas.life-canvas").first();
   await expect(canvas).toBeVisible();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await page.getByRole("button", { name: "Inspect a living organism", exact: true }).click();

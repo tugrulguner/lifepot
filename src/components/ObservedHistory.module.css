@@ -1,0 +1,67 @@
+.panel {
+  color: var(--mp-ink);
+  background: var(--mp-raised);
+  border: 1px solid var(--mp-control-boundary);
+  border-radius: 0.85rem;
+  padding: clamp(0.8rem, 3vw, 1.25rem);
+  min-width: 0;
+}
+.panel button, .dialog button, .panel select {
+  min-height: 44px;
+  max-width: 100%;
+  font: inherit;
+}
+.panel button, .dialog button {
+  padding: 0.5rem 0.8rem;
+  color: var(--mp-ink);
+  background: var(--mp-raised);
+  border: 1px solid var(--mp-control-boundary);
+  border-radius: 0.55rem;
+  cursor: pointer;
+}
+.panel select {
+  width: 100%;
+  color: var(--mp-ink);
+  background: var(--mp-raised);
+  border: 1px solid var(--mp-control-boundary);
+  border-radius: 0.45rem;
+  padding: 0.45rem;
+}
+.panel :focus-visible, .dialog :focus-visible { outline: 3px solid var(--mp-accent); outline-offset: 2px; }
+.focus {
+  border-inline-start: 3px solid var(--mp-accent);
+  padding: 0.65rem 0.8rem;
+  background: var(--mp-well);
+}
+.choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+.choices label { display: grid; gap: 0.35rem; min-width: 0; }
+.references { padding-inline-start: 1.25rem; }
+.references li { margin-block: 0.65rem; }
+.references button { display: block; margin-block-start: 0.4rem; }
+.dialog {
+  box-sizing: border-box;
+  width: min(46rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  max-height: min(90dvh, 56rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: clamp(0.8rem, 3vw, 1.4rem);
+  border: 1px solid var(--mp-control-boundary);
+  border-radius: 1rem;
+  color: var(--mp-ink);
+  background: var(--mp-raised);
+  font: 15px/1.5 var(--mp-font);
+  box-shadow: 0 1rem 4rem rgb(0 0 0 / 0.25);
+}
+.dialog::backdrop { background: rgb(4 10 12 / 0.62); }
+.header { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.header h2 { margin-block: 0 0.25rem; }
+.header button { min-width: 44px; flex: 0 0 auto; }
+.scene { min-width: 0; overflow: auto; }
+.historicalScene { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; }
+.dialog .historicalScene :global(.life-canvas) { width: min(100%, 70dvh); height: auto; flex: none; align-self: center; }
+.historicalScene > section { width: 100%; min-width: 0; position: static; box-sizing: border-box; }
+@media (max-width: 540px) {
+  .choices { grid-template-columns: minmax(0, 1fr); }
+  .dialog { width: calc(100vw - 1rem); max-width: calc(100vw - 1rem); max-height: 94dvh; padding: 0.75rem; }
+}

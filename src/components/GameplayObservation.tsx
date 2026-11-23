@@ -1,11 +1,29 @@
+import type { CSSProperties, ReactNode } from "react";
 import type { RunEvidence } from "@/game/run-evidence";
 import type { EvolutionDecision } from "@/game/decisions";
-import type { SimulationState } from "@/game/world";
+import { GRID_CELLS, type SimulationState } from "@/game/world";
 import { ruleTimingLabel, selectedChangeLabel, conciseChangeLabel } from "@/game/council-display";
-import { speciesColor } from "@/game/species-colors";
+import { roleColor } from "@/game/world-presentation";
+import OrganismArtwork from "./OrganismArtwork";
 
-export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string }) {
+export function CanvasMarkKey() {
+  return <div className="canvas-mark-key" role="note" aria-label="Canvas marks">
+        <span><i className="mark-birth" aria-label="White rays">✳</i> Birth</span>
+        <span><i className="mark-feeding" aria-label="Gold circle">○</i> Feeding</span>
+        <span><i className="mark-feeding" aria-label="Gold diamond">◇</i> Prey capture</span>
+        <span><i className="mark-death" aria-label="Coral cross">×</i> Death</span>
+        <span><i className="mark-resource" aria-label="Green field">■</i> Resources</span>
+        <span><i className="mark-death" aria-label="Coral shading">■</i> Hazards</span>
+        <small>Marks are sampled; no pulses with reduced motion.</small>
+      </div>;
+}
+
+export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate, inspection, playerChange, policy }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string; inspection?: ReactNode | ((context: ReactNode) => ReactNode); playerChange?: ReactNode; policy?: "fixed" | "adaptive" | "recorded" }) {
   const rules = state.config.rules!;
+  const latestSample = evidence?.samples.at(-1);
+  const recentSample = latestSample?.generation === state.generation
+    ? evidence?.samples.find(sample => sample.generation >= state.generation - 6 && sample.generation < state.generation)
+    : undefined;
   const counts = rules.species.map((species, index) => ({
     species,
     count: Array.from(state.guild).reduce((total, alive, cell) => total + (alive && state.ruleSpecies[cell] === index + 1 ? 1 : 0), 0),
@@ -17,27 +35,37 @@ export function GameplayObservation({ state, evidence, followed, decision, names
   ] : [];
   const latestFor = (kind: "species" | "family") => milestones.filter(item => item.kind === kind).reduce<typeof milestones>((latest, item) => item.generation > (latest[0]?.generation ?? -1) ? [item] : item.generation === latest[0]?.generation ? [...latest, item] : latest, []);
   const latest = [...latestFor("species"), ...latestFor("family")];
+  const latestNotice = [...new Set(latest.map(item => item.generation))].map(generation =>
+    `Generation ${generation}: ${latest.filter(item => item.generation === generation).map(item => item.text).join("; ")}`
+  ).join(" · ");
   const timing = decision ? ruleTimingLabel(decision, state) : "";
 
-  return <section className="gameplay-observation" aria-label="Near-board observations">
+  const speciesKey = <div className="configured-species-counts" aria-label="Configured species counts" style={{ "--species-columns": counts.length } as CSSProperties}>
+    <strong className={worldName ? "saved-world-heading" : "world-legend-heading"} title={worldName}>{worldName ? `Experiment: ${worldName}` : "World legend"}</strong>
+    {counts.map(({ species, count }) => {
+      const previous = recentSample?.species.find(item => item.speciesId === species.id);
+      const current = latestSample?.species.find(item => item.speciesId === species.id);
+      const delta = previous && current?.population === count ? count - previous.population : null;
+      const interval = recentSample ? state.generation - recentSample.generation : 0;
+      return <span key={species.id} aria-label={`Species ${species.id} count`}><svg className="species-legend-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={roleColor(species.role, species.id)} /></svg><span className="species-identity"><span className="species-name">{names?.[species.id] ?? species.role}</span><span className="species-id"> · {species.id}</span>{names?.[species.id] && <small className="species-role">{species.role}</small>}</span> <b>{count}</b>
+        {delta !== null && <span className="species-recent-change" role="img" aria-label={`Species ${species.id} population: ${previous!.population} to ${count}, generations ${recentSample!.generation}–${state.generation}. Recorded change, not a prediction.`} title={`Recorded population change over ${interval} ${interval === 1 ? "generation" : "generations"}; not a prediction or explanation.`}>{delta > 0 ? "↑" : delta < 0 ? "↓" : "→"}{Math.abs(delta)} /{interval}g</span>}
+      </span>;
+    })}
+  </div>;
+  const activity = <>
     <section className="recorded-activity" aria-label="Recorded activity">
       <strong>Generation {state.generation}</strong>
+      <span>{(state.stats.resources / GRID_CELLS).toFixed(1)} mean resources per cell</span>
       <div>{(["birth", "feeding", "death"] as const).map(kind => {
         const count = state.events.filter(event => event.generation === state.generation && event.kind === kind).length;
         return <span key={kind} className={`activity-${kind}`}><b>{count}</b> {kind}{count === 1 ? "" : "s"}</span>;
       })}</div>
+      <CanvasMarkKey />
     </section>
-    <div className="configured-species-counts" aria-label="Configured species counts">
-      <strong className="saved-world-heading" title={worldName}>{worldName ? `Experiment: ${worldName}` : "Configured species"}</strong>
-      {counts.map(({ species, count }) => <span key={species.id} aria-label={`Species ${species.id} count`}><i className="species-color" style={{ backgroundColor: speciesColor(species.id) }} />{names?.[species.id] ?? species.role} · {species.id} <b>{count}</b></span>)}
-    </div>
-    <div className="followed-family-context" aria-live="polite">
-      {followed === null ? <span>No founder lineage followed</span> : <span>Following lineage #{followed} · {familyCount ? `${familyCount} living ${familyCount === 1 ? "member" : "members"}` : "No living members"}</span>}
-    </div>
-    {latest.length > 0 && <p role="status" aria-label="Latest retained extinction">{latest.map(item => `Generation ${item.generation}: ${item.text}`).join(" · ")}</p>}
-    {cameraUpdate && <p role="status" aria-label="Camera update">{cameraUpdate}</p>}
-    <div className="intervention-status" aria-label="Intervention status">
-      {decision ? <>
+
+    </>;
+  const intervention = <div className="intervention-status" aria-label="Intervention status">
+      {policy === "fixed" ? <span>Fixed rules · no runtime AI interventions</span> : decision ? <>
         <span>{conciseChangeLabel(decision, state.engineVersion)}</span>
         {timing && <span>{timing}</span>}
         <details aria-label="Policy explanation">
@@ -46,6 +74,20 @@ export function GameplayObservation({ state, evidence, followed, decision, names
         </details>
       </> : <span>No active decision · inherited rules continue</span>}
       {state.activeRuleChange && <span>Graph change active since generation {state.activeRuleChange.activatedAt}</span>}
-    </div>
+    </div>;
+  const context = <details className="paused-world-context"><summary aria-label="World activity & species">Activity</summary>{activity}{intervention}</details>;
+  const composed = typeof inspection === "function";
+  const subject = composed ? inspection(context) : inspection;
+  return <section className="gameplay-observation" aria-label="Near-board observations">
+    {inspection ? <div className="world-legend-row">{speciesKey}{!composed && context}</div> : speciesKey}
+    {subject}
+    {!inspection && activity}
+    {!inspection && <div className="followed-family-context" aria-live="polite">
+      {followed === null ? <span>No founder lineage followed</span> : <span>Following lineage #{followed} · {familyCount ? `${familyCount} living ${familyCount === 1 ? "member" : "members"}` : "No living members"}</span>}
+    </div>}
+    {latest.length > 0 && <p role="status" aria-label="Latest retained extinction">{latestNotice}</p>}
+    {cameraUpdate && <p role="status" aria-label="Camera update">{cameraUpdate}</p>}
+    {inspection&&playerChange}
+    {!inspection && (playerChange??intervention)}
   </section>;
 }

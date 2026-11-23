@@ -21,7 +21,7 @@ async function settle(page: import("@playwright/test").Page) {
 
 test("family resources are visible desktop links with the contracted order and target geometry", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/play");
+  await page.goto("/experiment");
   await settle(page);
   const header = page.locator(".family-header");
   await expect(header).toBeVisible();
@@ -39,6 +39,7 @@ test("family resources are visible desktop links with the contracted order and t
     expect(box!.height, name).toBeGreaterThanOrEqual(44);
     expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest("a")?.textContent?.trim(), { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 })).toBe(name);
   }
+
   await page.locator(".setup-intro summary").click();
   const creator = page.getByRole("link", { name: "Created by Tugrul Guner" });
   await expect(creator).toHaveAttribute("href", "https://tugrul.modepot.io/");
@@ -47,13 +48,23 @@ test("family resources are visible desktop links with the contracted order and t
   expect(creatorBox!.y + creatorBox!.height).toBeLessThanOrEqual(900);
 });
 
-test("compact menu keeps ModePot visible and exposes ordered resources before docs with Escape focus return", async ({ page }) => {
+test("compact header exposes Feedback and menu preserves ordered family resources with Escape focus return", async ({ page }) => {
   for (const width of [768, 401, 400, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
-    await page.goto("/play");
+    await page.goto("/experiment?question=PRIVATE_SENTINEL#PRIVATE_SENTINEL");
     await settle(page);
     const header = page.locator(".family-header");
-    await expect(header.getByRole("link", { name: "ModePot" })).toBeVisible();
+    const feedback=header.locator(".family-compact-home .family-feedback");
+    await expect(feedback).toBeVisible();
+    await expect(feedback).toHaveAttribute("target","_blank");
+    await expect(feedback).toHaveAttribute("rel","noopener noreferrer");
+    const feedbackUrl=new URL((await feedback.getAttribute("href"))!);
+    expect(feedbackUrl.origin+feedbackUrl.pathname).toBe("https://github.com/tugrulguner/lifepot/issues/new");
+    expect(feedbackUrl.searchParams.get("title")).toBe("LifePot feedback — /experiment");
+    expect(feedbackUrl.href).not.toContain("PRIVATE_SENTINEL");
+    const feedbackHit=await feedback.evaluate(e=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{width:r.width,height:r.height,hit:hit===e||e.contains(hit)}});
+    expect(feedbackHit.width).toBeGreaterThanOrEqual(44);expect(feedbackHit.height).toBeGreaterThanOrEqual(44);expect(feedbackHit.hit).toBe(true);
+    await feedback.focus();await expect(feedback).toBeFocused();
     await expect(header.getByRole("button", { name: "Menu" })).toBeVisible();
     expect(await page.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) <= innerWidth)).toBe(true);
     const menuButton = header.getByRole("button", { name: "Menu" });
@@ -64,8 +75,8 @@ test("compact menu keeps ModePot visible and exposes ordered resources before do
     await expect(menu).toBeVisible();
     if (width === 390) await page.screenshot({ path: `${evidence}/menu-390-open.png`, fullPage: true });
     const menuLinks = menu.getByRole("navigation", { name: "ModePot family" }).getByRole("link");
-    await expect(menuLinks).toHaveCount(3);
-    for (const [index, [name, href]] of resources.slice(1).entries()) {
+    await expect(menuLinks).toHaveCount(4);
+    for (const [index, [name, href]] of resources.entries()) {
       const link = menuLinks.nth(index);
       await expect(link).toHaveText(name);
       await expect(link).toHaveAttribute("href", href);
@@ -100,7 +111,8 @@ test("creator attribution is in the setup intro and deterministic preset remains
   let judgeCalls = 0;
   await page.route("**/api/judge", (route) => { judgeCalls++; return route.abort(); });
   await page.setViewportSize({ width: 320, height: 850 });
-  await page.goto("/play");
+  await page.goto("/experiment");
+
   const intro = page.locator(".setup-intro");
   await intro.locator("summary").click();
   await expect(intro.getByRole("link", { name: "Created by Tugrul Guner" })).toHaveAttribute("href", "https://tugrul.modepot.io/");
