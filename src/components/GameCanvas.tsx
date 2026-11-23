@@ -5,8 +5,8 @@ import { publicDocuments } from "@/app/project-docs/content";
 import { z } from "zod";
 import {
   createReplay,
-  decodeReplay,
-  encodeReplay,
+  decodeReplayLink,
+  encodeReplayLink,
   type ReplayData,
 } from "@/game/replay";
 import {
@@ -575,13 +575,13 @@ export function GameCanvas() {
   }
   useEffect(() => {
     const p = new URLSearchParams(location.hash.slice(1)).get("replay") ?? new URL(location.href).searchParams.get("replay");
-    if (p)
-      try {
-        const r = decodeReplay(p);
-        queueMicrotask(() => begin(r.answers, r.config, r.seed, r));
-      } catch {
-        queueMicrotask(() => setNotice("Invalid or legacy replay rejected"));
-      }
+    if (!p) return;
+    let cancelled = false;
+    decodeReplayLink(p).then(
+      (r) => { if (!cancelled) begin(r.answers, r.config, r.seed, r); },
+      () => { if (!cancelled) setNotice("Invalid or legacy replay rejected"); },
+    );
+    return () => { cancelled = true; };
   }, [begin]);
   useEffect(() => {
     if (
@@ -954,17 +954,18 @@ export function GameCanvas() {
         }
       }} onClear={() => setSelected(null)} onPick={() => { const index = simulation.guild.findIndex(value => value > 0); if (index >= 0) { setSelected(index); setPaused(true); } }} />
       <FamilyHeader><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
-      <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} /></div>
+      <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} evidence={evidence} /></div>
       <section className="stats-strip" aria-label="Live ecosystem statistics">
         <Stat
           id="generation"
           label="Generation"
           value={`${simulation.generation} / ${DEFAULT_GENERATIONS}`}
         />
-        <Stat id="prey" label="Other roles" value={simulation.stats.prey} />
+        <Stat id="prey" label="Foragers" hint="Producers, grazers and scavengers" value={simulation.stats.prey} />
         <Stat
           id="predators"
-          label="Hunters + omnivores"
+          label="Predators"
+          hint="Hunters and omnivores"
           value={simulation.stats.predators}
         />
         <Stat id="births" label="Births · total" value={simulation.stats.births} />
@@ -972,6 +973,7 @@ export function GameCanvas() {
         <Stat
           id="species"
           label="Living variants"
+          hint="Distinct inherited trait classes among living organisms"
           value={simulation.stats.speciesRichness}
         />
         <Stat id="kills" label="Kills · total" value={simulation.stats.kills} />
@@ -1087,7 +1089,7 @@ export function GameCanvas() {
         }}/>
 
         <ResultImageShare key={`${simulation.seed}-${simulation.generation}`} state={simulation} question={question} evidence={evidence}/>
-        <button className="back-button" onClick={async () => { try { if (!replayRef.current) return setNotice("Replay not ready"); const url = new URL(location.origin + location.pathname); url.hash = new URLSearchParams({ replay: encodeReplay(replayRef.current) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
+        <button className="back-button" onClick={async () => { try { if (!replayRef.current) return setNotice("Replay not ready"); const url = new URL(location.origin + location.pathname); url.hash = new URLSearchParams({ replay: await encodeReplayLink(replayRef.current) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
       </RunResults>}
       {complete && simulation.outcome !== "running" && showResults && evidence && completedReplay && <MyWorldsPanel current={{ replay: completedReplay, evidence, outcome: simulation.outcome, stopReason: simulation.stats.population === 0 ? "World empty" : "Observation horizon reached", parentId: parentWorldId, policy: replayMode ? recordedPolicy : policy, setup: proof ? { source: proof.source, model: proof.model, namedIntent: proof.namedIntent } : undefined }} onOpen={openSavedWorld} onReview={reviewSavedWorld} onSaved={record => { setOriginWorldId(record.id); setLocalWorldName(record.name); }} />}
     </main>
@@ -1097,13 +1099,15 @@ function Stat({
   id,
   label,
   value,
+  hint,
 }: {
   id: string;
   label: string;
   value: string | number;
+  hint?: string;
 }) {
   return (
-    <div className="stat">
+    <div className="stat" title={hint}>
       <span>{label}</span>
       <strong data-testid={id}>{value}</strong>
     </div>

@@ -1,6 +1,6 @@
 import { lifeConfigSchema, type SetupAnswers } from "./setup";
 import { defaultRuleGraph, validateRuleGraph, type PairInteraction, type RulePatch, type SpeciesId, type TrophicRole } from "./rules";
-import type { LifeConfig } from "./world";
+import { founderCount, type LifeConfig } from "./world";
 import { relationshipLabel } from "./visuals";
 
 export type WorldPreviewData = {
@@ -18,9 +18,12 @@ export type WorldEdit = RulePatch | { kind: "role"; species: SpeciesId; role: Tr
 const human = (value: string) => value.replaceAll("_", " ");
 export function interpretWorldPreview(config: LifeConfig, answers: SetupAnswers): WorldPreviewData {
   const graph = validateRuleGraph(config.rules ?? defaultRuleGraph());
-  const species = graph.species.map((item) => ({ id: item.id, role: item.role, name: item.id, count: Math.max(3, Math.round(({ producer: 18, grazer: 18, hunter: 8, scavenger: 10, omnivore: 10 } as const)[item.role] * (config.founders.balance === "prey_heavy" ? (item.role === "hunter" || item.role === "omnivore" ? .65 : 1.3) : config.founders.balance === "predator_heavy" ? (item.role === "hunter" || item.role === "omnivore" ? 1.5 : .8) : 1))) }));
+  const species = graph.species.map((item) => ({ id: item.id, role: item.role, name: item.id, count: founderCount(item.role, config.founders.balance) }));
   const relationships = graph.interactions.map((edge) => ({ pair: edge.pair, mode: edge.mode, description: edge.mode.includes("consumes") ? relationshipLabel(edge.pair, edge.mode) : `Species ${edge.pair.replace(":", " and ")} · ${relationshipLabel(edge.pair, edge.mode)}` }));
-  const warnings = graph.species.filter((s) => s.role === "hunter" || s.role === "omnivore").filter((s) => !graph.interactions.some((e) => e.mode === (e.pair.startsWith(`${s.id}:`) ? "a_consumes_b" : e.pair.endsWith(`:${s.id}`) ? "b_consumes_a" : "__none__"))).map((s) => `${s.id} (${s.role}) has no modeled consumption link; the hunter name does not create prey.`);
+  const warnings = graph.species.filter((s) => s.role === "hunter" || s.role === "omnivore").filter((s) => !graph.interactions.some((e) => e.mode === (e.pair.startsWith(`${s.id}:`) ? "a_consumes_b" : e.pair.endsWith(`:${s.id}`) ? "b_consumes_a" : "__none__"))).map((s) => `${s.id} (${s.role}) has no modeled consumption link; the hunter name does not create prey.${s.role === "hunter" ? " It cannot feed and is expected to starve." : ""}`);
+  // A scavenger has no basal feeding and no carrion pool exists, so without a feeding link it has no energy source.
+  const feeds = (id: string) => graph.interactions.some((e) => (e.pair.startsWith(`${id}:`) && e.mode === "a_consumes_b") || (e.pair.endsWith(`:${id}`) && e.mode === "b_consumes_a"));
+  for (const s of graph.species) if (s.role === "scavenger" && s.selfInteraction !== "cannibalistic" && !feeds(s.id)) warnings.push(`${s.id} (scavenger) has no modeled food source: scavengers cannot use basal resources and there is no carrion pool. Without a consumption link it is expected to starve.`);
   const hasConsumption = graph.interactions.some((e) => e.mode === "a_consumes_b" || e.mode === "b_consumes_a");
   if (!hasConsumption && /predat|hunter|hunt|eat|wolf|wolves|lion|shark/i.test(`${answers.world} ${answers.threat} ${answers.reward}`) && !warnings.length) warnings.push("Your setup mentions predation or hunters, but no modeled consumption link exists; no feeding link was added.");
   return { species, relationships, environment: [`${human(config.environment.abundance)} resources`, `${human(config.environment.distribution)} distribution`, `${human(config.environment.hazard)} pressure`, `${human(config.environment.volatility)} variability`, `${human(graph.environment.pressure)} rule pressure at ${graph.environment.intensity} intensity`, `${human(graph.environment.regeneration)} resource regeneration`], founders: `${species.reduce((sum, item) => sum + item.count, 0)} estimated founders (${human(config.founders.balance)}, ${human(config.founders.diversity)})`, stoppingRule: "Observation stops at 180 generations or when the world is empty.", policyDisclosure: `Setup interpretation reflects: “${answers.world}”; threat: “${answers.threat}”; aim: “${answers.reward}”. No new AI interpretation is requested by this preview.`, warnings };

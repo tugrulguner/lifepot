@@ -181,8 +181,11 @@ test("copied replay opens at generation zero and never calls the judge", async (
   await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 90_000 });
   await page.getByRole("button", { name: "Copy challenge link" }).click();
+  // The link is compressed before it is written, so wait for the confirmation.
+  await expect(page.getByText("Replay link copied")).toBeVisible();
   const replayUrl = await page.evaluate(() => navigator.clipboard.readText());
-  expect(replayUrl).toContain("#replay=");
+  expect(replayUrl).toContain("#replay=z1.");
+  expect(replayUrl.length).toBeLessThan(6000);
 
   let replayJudgeCalls = 0;
   const replayPage = await context.newPage();

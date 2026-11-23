@@ -12,8 +12,8 @@ export function relationshipLabel(pair: string, mode: string): string {
 export function triggerLabel(trigger: string): string {
   const labels: Record<string, string> = {
     speciation: "Heritable variant increase",
-    prey_crash: "Other-role population decline",
-    predator_crash: "Hunter / omnivore population decline",
+    prey_crash: "Forager population decline",
+    predator_crash: "Predator population decline",
   };
   return labels[trigger] ?? trigger.replaceAll("_", " ");
 }

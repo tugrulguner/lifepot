@@ -1,0 +1,1 @@
+Copied challenge links are now deflated and are a fraction of their former length; earlier links still open. A finished run is proven by one simulation instead of being re-simulated for creating, encoding and saving its replay.

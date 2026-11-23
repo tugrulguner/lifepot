@@ -84,7 +84,7 @@ export function drawResultImage(ctx: CanvasRenderingContext2D, model: ResultImag
   }
   const tx = 940, tw = 590; ctx.fillStyle = "#f2f6fb"; ctx.font = "700 30px system-ui, sans-serif"; ctx.fillText("Final ecosystem", tx, 190);
   ctx.font = "23px system-ui, sans-serif"; ctx.fillStyle = "#d0dfec";
-  const stats = [`Population  ${model.totalPopulation}`, `Other roles ${model.prey} · Hunters/omnivores ${model.predators}`, `Births ${model.totalBirths} · Deaths ${model.totalDeaths} · Kills ${model.totalKills}`, `Mean resources/cell  ${(model.totalResources / model.cells.length).toFixed(1)}`];
+  const stats = [`Population  ${model.totalPopulation}`, `Foragers ${model.prey} · Predators ${model.predators}`, `Births ${model.totalBirths} · Deaths ${model.totalDeaths} · Kills ${model.totalKills}`, `Mean resources/cell  ${(model.totalResources / model.cells.length).toFixed(1)}`];
   stats.slice(0, 4).forEach((line, i) => ctx.fillText(line, tx, 238 + i * 38));
   wrappedLines(ctx, model.environment, tw, 2).forEach((line, i) => ctx.fillText(line, tx, 398 + i * 28));
   model.speciesCounts.forEach((item, i) => ctx.fillText(`Species ${item.species} · ${item.count}`, tx, 466 + i * 30));
