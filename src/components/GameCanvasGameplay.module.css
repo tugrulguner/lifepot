@@ -75,7 +75,7 @@ main.starterReview { overflow: clip; }
 }
 .worldContext { display: contents; }
 @media (min-width: 1001px) {
-  .worldContext { grid-area: observation; display: flex; flex-direction: column; gap: 12px; align-self: start; min-width: 0; }
+  .worldContext { grid-area: observation; padding-top: calc(var(--overview-width) + 3rem); display: flex; flex-direction: column; gap: 12px; align-self: start; min-width: 0; }
 }
 /* Completion retains the original canvas and places its payoff before the observatory. */
 .completed:global(.simulation-shell) {

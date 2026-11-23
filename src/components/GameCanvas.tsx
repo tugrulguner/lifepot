@@ -305,6 +305,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
   const [viewOptionsOpen, setViewOptionsOpen] = useState(false);
   const ref = useRef<HTMLCanvasElement>(null);
   const overviewRef = useRef<HTMLCanvasElement>(null);
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [camera, setCamera] = useState<Camera>(NEUTRAL_CAMERA);
   const [target, setTarget] = useState<FollowTarget | null>(null);
   const [releasedNotice, setReleasedNotice] = useState("");
@@ -424,7 +425,7 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
   }, [state, selected, followed, focusedSpecies, view, validTarget, tracked, showHazards]);
   return (
     <>
-    <aside className="world-overview" aria-label="World overview"><canvas ref={overviewRef} width={GRID_SIZE} height={GRID_SIZE} aria-hidden="true" /><span>Overview</span></aside>
+    <aside className={`world-overview${overviewExpanded ? " is-expanded" : ""}`} aria-label="World overview"><button type="button" aria-label={overviewExpanded ? "Collapse world overview" : "Expand world overview"} aria-expanded={overviewExpanded} onClick={() => setOverviewExpanded(value => !value)}><canvas ref={overviewRef} width={GRID_SIZE} height={GRID_SIZE} aria-hidden="true" /></button><span>Overview</span></aside>
     <canvas
       ref={ref}
       className="life-canvas"

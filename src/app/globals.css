@@ -992,15 +992,19 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
   .camera-primary .camera-buttons { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .camera-primary output { min-width: 24px; text-align: center; }
-.simulation-shell .world-overview { grid-area:observation; z-index:2; align-self:start; justify-self:end; display:flex; flex-direction:column; align-items:center; gap:.2rem; margin:0; padding:.25rem; width:76px; background:var(--panel); border:1px solid var(--line); border-radius:4px; color:var(--muted); font-size:.6rem; text-align:center; }
-.simulation-shell .gameplay-observation .configured-species-counts { padding-right:88px; min-height:64px; }
-.simulation-shell .world-overview canvas { width:48px; height:auto; aspect-ratio:1; border:1px solid var(--line); border-radius:4px; }
+.simulation-shell .world-overview { grid-area:observation; z-index:2; align-self:start; justify-self:end; display:flex; flex-direction:column; align-items:center; gap:.35rem; margin:0; padding:.5rem; width:var(--overview-width); background:var(--panel); border:1px solid var(--line); border-radius:8px; color:var(--muted); font-size:.7rem; text-align:center;  }
+.simulation-shell .world-overview button { display:block; width:100%; padding:0; border:0; background:transparent; cursor:zoom-in; }
+.simulation-shell .world-overview button:focus-visible { outline:2px solid var(--mint); outline-offset:3px; }
+.simulation-shell .world-overview canvas { display:block; width:100%; height:auto; aspect-ratio:1; border:1px solid var(--line); border-radius:5px; }
+.simulation-shell { --overview-width: 144px; }
+.simulation-shell:has(.world-overview.is-expanded) { --overview-width: min(216px, 17vw); }
+@media (max-width: 1000px) { .simulation-shell .gameplay-observation { margin-inline-end: calc(var(--overview-width) + 8px); } }
+.simulation-shell .world-overview.is-expanded button { cursor:zoom-out; }
 @media(max-width:600px) {
-  .simulation-shell .world-overview { width:44px; }
-  .simulation-shell .world-overview canvas { width:32px; }
-  .simulation-shell .world-overview span { display:none; }
-  .simulation-shell .gameplay-observation .configured-species-counts { padding-right:52px; min-height:0; }
+  .simulation-shell { --overview-width: 92px; }
+  .simulation-shell:has(.world-overview.is-expanded) { --overview-width: min(160px, 42vw); }
 }
+@media(prefers-reduced-motion:reduce) { .simulation-shell .world-overview { transition:none; } }
 
 .camera-options { scroll-margin-top: 80px; }
 @media(max-width: 1000px) {
