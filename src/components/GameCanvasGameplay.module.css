@@ -51,6 +51,8 @@ main.starterReview { overflow: clip; }
   .shell .viewOptions { display: block; float: right; min-height: 44px; padding-inline: 12px; }
   .shell .viewOptions::after { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 2px 3px 7px; border: solid currentColor; border-width: 0 1px 1px 0; transform: rotate(45deg); }
   .shell .viewOptions[aria-expanded="true"]::after { transform: rotate(225deg); margin-bottom: 0; }
+  /* Long observation notices must not squeeze the playable habitat. */
+  .shell:global(.simulation-shell) :global(.life-canvas) { min-width: min(280px, 100%); }
   .shell .viewOptions ~ :global(.watching-progress) { min-height: 44px; }
   .shell .viewOptions ~ :global(.camera-buttons) { clear: both; }
   .shell .viewOptions[aria-expanded="false"] ~ :global(.camera-buttons),
@@ -75,7 +77,7 @@ main.starterReview { overflow: clip; }
 }
 .worldContext { display: contents; }
 @media (min-width: 1001px) {
-  .worldContext { grid-area: observation; display: flex; flex-direction: column; gap: 12px; align-self: start; min-width: 0; }
+  .worldContext { grid-area: observation; padding-top: calc(var(--overview-width) + 3rem); display: flex; flex-direction: column; gap: 12px; align-self: start; min-width: 0; }
 }
 /* Completion retains the original canvas and places its payoff before the observatory. */
 .completed:global(.simulation-shell) {

@@ -1,5 +1,10 @@
 const cache = new Map<string, HTMLCanvasElement>();
 const clamp=(n:number)=>Math.max(0,Math.min(255,Math.round(n)));
+// Fixed, perceptually stronger mapping: same engine values always mean the same thing.
+export function resourceFieldColor(value: number): [number, number, number] {
+  const t = Math.sqrt(Math.max(0, Math.min(255, value)) / 255);
+  return [clamp(139 - 39 * t), clamp(143 + 46 * t), clamp(135 + 42 * t)];
+}
 function rgba([r,g,b]:number[],a:number){return`rgba(${r},${g},${b},${a})`;}
 function contour(c:CanvasRenderingContext2D,pred:boolean,v:number){c.beginPath();for(let k=0;k<=80;k++){const a=k/80*Math.PI*2,r=1+.045*Math.sin(a*4+v*.8)+.025*Math.sin(a*7-v),t=pred?1+.34*Math.cos(a):1,x=Math.cos(a)*r*t,y=Math.sin(a)*r*(pred?.69:.89);if(!k)c.moveTo(x,y);else c.lineTo(x,y);}c.closePath();}
 const portraits = new Map<string, string>();
@@ -38,7 +43,8 @@ export function paintResourceField(c: CanvasRenderingContext2D, pad: number, cw:
       const read=(x:number,y:number)=>resources[wrap(y)*50+wrap(x)]||0;
       const q=Math.max(0,Math.min(1,((read(cx,cy)*(1-fx)+read(cx+1,cy)*fx)*(1-fy)+(read(cx,cy+1)*(1-fx)+read(cx+1,cy+1)*fx)*fy)/150));
       const cell=wrap(cy)*50+wrap(cx),grain=Math.sin((px+cell*13)*12.9898+(py-cell*7)*78.233)*.5,i=(py*200+px)*4;
-      im.data[i]=clamp(151+q*28+grain*3);im.data[i+1]=clamp(160+q*27+grain*3);im.data[i+2]=clamp(157+q*25+grain*3);im.data[i+3]=255;
+      const [red, green, blue] = resourceFieldColor(q * 255);
+      im.data[i]=clamp(red+grain*3);im.data[i+1]=clamp(green+grain*3);im.data[i+2]=clamp(blue+grain*3);im.data[i+3]=255;
     }
     ctx.putImageData(im,0,0); resourceSource=resources; resourceView=view;
   }

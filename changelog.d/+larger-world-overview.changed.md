@@ -1,0 +1,1 @@
+Enlarge the in-game world overview and let players expand it without moving the camera. Use a stronger color scale to distinguish resource-rich and depleted areas of the habitat without changing the simulation.
