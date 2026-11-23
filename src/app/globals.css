@@ -1028,6 +1028,11 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
   .simulation-shell .camera-tools p { margin: 2px 0; }
 }
 @media(max-width: 395px) {
+  /* Let Restart fit alongside speed without sacrificing touch-target height. */
+  .simulation-shell .playback-speed { padding-inline: 2px; gap: 2px; }
+  .simulation-shell .playback-speed select { width: 76px; min-width: 76px; padding-inline: 3px; }
+  .simulation-shell .gameplay-observation { padding: 3px 6px; line-height: 1.2; }
+  .canvas-mark-key > span { white-space: normal; }
   .simulation-shell .camera-tools { padding: 4px 6px; }
   .simulation-shell .camera-buttons { gap: 4px; }
   .simulation-shell .camera-buttons + .camera-buttons { margin-top: 4px; }
