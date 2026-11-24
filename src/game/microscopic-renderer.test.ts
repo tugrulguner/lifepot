@@ -60,6 +60,17 @@ describe("native habitat resource field encoding", () => {
     };
     expect(variance(wide)).toBeLessThan(variance(close));
   });
+  it("retains grain detail at six food units at whole-world scale", () => {
+    const [field] = paint(new Uint8Array(2500).fill(6));
+    const green = Array.from({length: 40000}, (_, i) => field[i*4+1]);
+    expect(Math.max(...green) - Math.min(...green)).toBeGreaterThanOrEqual(3);
+  });
+  it("draws low nonzero hazards with distinct stripes at whole-world scale", () => {
+    const [, overlay] = paint(new Uint8Array(2500), new Uint8Array(2500).fill(12), true);
+    const alpha = Array.from({length: 25600}, (_, i) => overlay[i*4+3]);
+    expect(Math.max(...alpha)).toBeGreaterThanOrEqual(32);
+    expect(Math.min(...alpha)).toBe(0);
+  });
   it("keeps hazard alpha gaps transparent independently of food", () => {
     const hazards = new Uint8Array(2500).fill(255);
     const [food, hazard] = paint(new Uint8Array(2500).fill(150), hazards, true);

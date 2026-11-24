@@ -9,7 +9,7 @@ export function resourceGrainOffset(worldX:number,worldY:number,abundance:number
   const px=worldX*GRAIN_SIZE/5,py=worldY*GRAIN_SIZE/5,x0=Math.floor(px),y0=Math.floor(py),fx=px-x0,fy=py-y0;
   const sample=(x:number,y:number)=>grainMask[((y%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE)*GRAIN_SIZE+(x%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE]/255;
   const filtered=(sample(x0,y0)*(1-fx)+sample(x0+1,y0)*fx)*(1-fy)+(sample(x0,y0+1)*(1-fx)+sample(x0+1,y0+1)*fx)*fy;
-  const amount=Math.min(1,abundance);
+  const amount=Math.cbrt(Math.min(1,abundance));
   // Preserve the absolute world-space texture scale at every abundance. A
   // low abundance reduces contrast, rather than shrinking/thresholding grain.
   return filtered * amount;
@@ -20,7 +20,7 @@ export function hazardHatchAlpha(hazard:number,worldX:number,worldY:number,cellF
   const phase=(worldX+worldY)*.8, half=Math.max(.035,cellFootprint*.8);
   const area=(p:number)=>Math.floor(p)*.33+Math.min(.33,p-Math.floor(p));
   const stripe=(area(phase+half)-area(phase-half))/(2*half);
-  return Math.round(Math.min(1,hazard/255)*205*stripe);
+  return Math.round(Math.cbrt(Math.min(1,hazard/255))*205*stripe);
 }
 // Fixed, perceptually stronger mapping: same engine values always mean the same thing.
 export function resourceFieldColor(value: number): [number, number, number] {
