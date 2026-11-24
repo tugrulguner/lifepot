@@ -1,0 +1,1 @@
+The observatory population chart now shows every generation of the run with one line per species, replacing the 31-frame total-population sparkline. The stat strip, result image and trigger labels say “Foragers” and “Predators” instead of “Other roles” and “Hunters + omnivores”. The setup preview warns when a scavenger has no modeled food source.

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { clickCell, founderLostWithin, presetWorld } from "./preset-world";
 
 async function completeWithRealSteps(page: Page) {
   const start = Number.parseInt((await page.getByTestId("generation").textContent())!, 10);
@@ -139,7 +140,8 @@ for (const width of [1280, 390]) test.describe.serial(`linked camera completion 
     await page.getByLabel("World policy", { exact: true }).selectOption("fixed");
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
     await page.getByRole("button", { name: "Pause", exact: true }).click();
-    await page.getByRole("button", { name: "Inspect a living organism", exact: true }).click();
+    // Pick a founder the engine removes within ten generations, before the first decision pause.
+    await clickCell(page, founderLostWithin(presetWorld(), 10));
     if (width <= 600) await page.getByRole("button", { name: "View options", exact: true }).click();
     await page.getByRole("button", { name: "Follow organism with camera" }).click();
     await page.getByLabel("Playback speed").selectOption("normal");

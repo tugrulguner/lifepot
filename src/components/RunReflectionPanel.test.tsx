@@ -44,6 +44,6 @@ it("renders evidence references as readable facts rather than raw identifiers", 
  render(<RunReflectionPanel evidence={createRunEvidence(state)} config={state.config} onExperiment={vi.fn()}/>);
  fireEvent.click(screen.getByRole("button",{name:"Ask Jev about this run"}));
  await screen.findByText("Observed population");
- expect(screen.getAllByText(/Population: 26 at generation 0; 26 at generation 0/)).toHaveLength(2);
+ expect(screen.getAllByText(/Population: 30 at generation 0; 30 at generation 0/)).toHaveLength(2);
  expect(document.querySelectorAll(".evidence-references code")).toHaveLength(0);
 });

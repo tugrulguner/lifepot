@@ -254,13 +254,22 @@ test.describe.serial("share a second world after the pond example", () => {
     await page.getByRole("button", { name: "Preview Hunters and prey" }).click();
     await page.getByRole("button", { name: "Review this world", exact: true }).click();
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+    // Hold compression through the copy click. The second world must be shareable
+    // immediately, without waiting for the stream or reusing the example link.
+    await page.evaluate(() => {
+      Object.defineProperty(window, "CompressionStream", { configurable: true, value: class extends TransformStream {
+        constructor() { super({ transform: () => new Promise<void>(() => {}) }); }
+      } });
+    });
     second = await finish(page);
     expect(second).not.toEqual(pond);
     await page.getByRole("button", { name: "Copy challenge link" }).click();
+    // Do not release compression: the actual clipboard must already be usable.
+    await expect(page.getByText("Replay link copied")).toBeVisible();
     copied = await page.evaluate(() => navigator.clipboard.readText());
     expect(new URL(copied).pathname).toBe("/experiment");
     expect(new URL(copied).search).toBe("");
-    expect(new URL(copied).hash).toMatch(/^#replay=/);
+    expect(new URL(copied).hash).toMatch(/^#replay=(?!z1\.)[A-Za-z0-9_-]+$/);
   });
   test("the copied link replays the second outcome in a fresh tab", async () => {
     const recipient = await page.context().newPage();
@@ -287,8 +296,11 @@ test("copied replay opens at generation zero and never calls the judge", async (
   await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   await expect(page.getByRole("region", { name: "Run results", exact: true }).getByRole("heading", { name: /No organisms remain|Observation complete/ })).toBeVisible({ timeout: 90_000 });
   await page.getByRole("button", { name: "Copy challenge link" }).click();
+  // The link is compressed before it is written, so wait for the confirmation.
+  await expect(page.getByText("Replay link copied")).toBeVisible();
   const replayUrl = await page.evaluate(() => navigator.clipboard.readText());
-  expect(replayUrl).toContain("#replay=");
+  expect(replayUrl).toContain("#replay=z1.");
+  expect(replayUrl.length).toBeLessThan(6000);
 
   let replayJudgeCalls = 0;
   const replayPage = await context.newPage();

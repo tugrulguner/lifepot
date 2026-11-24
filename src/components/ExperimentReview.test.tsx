@@ -9,7 +9,7 @@ import { createSimulation } from "@/game/world";
 afterEach(cleanup);
 it("stages a new trial from starting conditions and keeps the previous focus readable", () => {
  const state = createSimulation({ seed: 7, config: defaultConfig() }), evidence = createRunEvidence(state);
- const reference = { config: state.config, evidence, seed: 7, policy: "fixed" as const, focus: { id: "population", reference: "population", generation: 0, description: "Population: 26 at generation 0; 26 at generation 0.", kind: "end" as const }, question: "What changed?" };
+ const reference = { config: state.config, evidence, seed: 7, policy: "fixed" as const, focus: { id: "population", reference: "population", generation: 0, description: "Population: 30 at generation 0; 30 at generation 0.", kind: "end" as const }, question: "What changed?" };
  const onChange = vi.fn();
  render(<ExperimentReview reference={reference} config={state.config} seed={7} policy="fixed" onChange={onChange} />);
  expect(screen.getByText(reference.focus.description)).toBeInTheDocument(); expect(screen.getByText(/Earlier question: What changed\?/)).toBeInTheDocument();

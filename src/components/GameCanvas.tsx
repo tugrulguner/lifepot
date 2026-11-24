@@ -7,7 +7,9 @@ import { z } from "zod";
 import {
   createReplay,
   decodeReplay,
+  decodeReplayLink,
   encodeReplay,
+  encodeReplayLink,
   type ReplayData,
 } from "@/game/replay";
 import {
@@ -614,6 +616,8 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
     simRef = useRef<SimulationState | null>(null),
     initialConfigRef = useRef<LifeConfig | null>(null),
     replayRef = useRef<ReplayData | null>(null),
+    replayLinkRef = useRef<{ replay: ReplayData; link: string } | null>(null),
+    pendingLink = useRef<{ payload: string; run: number; superseded: boolean; settled: boolean } | null>(null),
     pending = useRef<number | null>(null),
     runId = useRef(0),
     pendingArrival = useRef(false),
@@ -624,6 +628,17 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
   useEffect(() => { analyticsProof.current = proof; analyticsBaseline.current = Boolean(baseline); }, [proof, baseline]);
   const complete = simulation && simulation.outcome !== "running";
   const completedReplay = currentReplay;
+  // Compress the share link as soon as a replay exists, so the copy button can write it to the
+  // clipboard without waiting. The replay is already proven, so this does not simulate again.
+  useEffect(() => {
+    if (!currentReplay) { replayLinkRef.current = null; return; }
+    let stale = false;
+    encodeReplayLink(currentReplay).then(
+      (link) => { if (!stale) replayLinkRef.current = { replay: currentReplay, link }; },
+      () => {},
+    );
+    return () => { stale = true; };
+  }, [currentReplay]);
   useEffect(() => {
     if (!complete || stage !== "simulation") return;
     if (!completionSeen.current) {
@@ -755,13 +770,33 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
       };
     }
     const p = new URLSearchParams(location.hash.slice(1)).get("replay") ?? new URL(location.href).searchParams.get("replay");
-    if (p)
-      try {
-        const r = decodeReplay(p);
-        queueMicrotask(() => begin(r.answers, r.config, r.seed, r));
-      } catch {
-        queueMicrotask(() => setNotice("Invalid or legacy replay rejected"));
-      }
+    if (!p) return;
+    // Decoding is asynchronous, so the player can act before it settles. Choosing a starter or
+    // editing setup does not start a run, so any use of a control while the link is pending
+    // supersedes it, as does a run that started meanwhile. The record lives in a ref so that a
+    // re-run of this effect cannot forget that the link was superseded or already opened.
+    if (pendingLink.current?.payload !== p) pendingLink.current = { payload: p, run: runId.current, superseded: false, settled: false };
+    const link = pendingLink.current;
+    if (link.settled) return;
+    const supersede = (event: Event) => {
+      if (event.target instanceof Element && event.target.closest("button, a, input, textarea, select, [role='button']")) link.superseded = true;
+    };
+    const release = () => { document.removeEventListener("click", supersede, true); document.removeEventListener("input", supersede, true); };
+    document.addEventListener("click", supersede, true);
+    document.addEventListener("input", supersede, true);
+    const current = () => !cancelled && !link.settled && !link.superseded && runId.current === link.run;
+    const settle = (apply: () => void) => {
+      release();
+      if (cancelled || link.settled) return;
+      const wasCurrent = current();
+      link.settled = true;
+      if (wasCurrent) apply();
+    };
+    decodeReplayLink(p).then(
+      (r) => settle(() => begin(r.answers, r.config, r.seed, r)),
+      () => settle(() => setNotice("This replay link could not be opened. You can still create your own world.")),
+    );
+    return () => { cancelled = true; release(); };
   }, [begin, cancelExample, initialEntry, exampleRetry]);
   useEffect(() => {
     if (
@@ -1114,6 +1149,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
       <main className={`setup-shell ${setupStyles.shell}`}>
         <FamilyHeader feedbackPath="/experiment" skipTarget="play-content"><span className="header-detail">{proof?.starter ? "Designed starter" : "Co-evolution laboratory"}</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
         <section id="play-content" tabIndex={-1} className={`question-panel ${setupStyles.panel} ${customSetup ? setupStyles.custom : ""}`} style={!customSetup ? { width: "min(1000px, calc(100% - 40px))", maxWidth: "1000px" } : undefined} onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
+          {notice && <p className="run-notice" role="status">{notice}</p>}
           <div id="my-worlds-entry" />
           {!customSetup && <StarterWorldPicker onChoose={chooseStarter} onDescribeOwn={() => { focusReturningEditor.current = true; setCustomSetup(true); }} />}
           {customSetup && <>
@@ -1340,17 +1376,18 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
       </div>
       <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={followLineage} onClear={() => setSelected(null)} onPick={inspectLiving} />
       <FamilyHeader feedbackPath="/experiment" skipTarget="play-content"><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
-      <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} /></div>
+      <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} evidence={evidence} /></div>
       <section id="live-measurements" tabIndex={-1} className="stats-strip" aria-label="Live ecosystem statistics">
         <Stat
           id="generation"
           label="Generation"
           value={`${simulation.generation} / ${simulation.fixedHabitat ? getObservationLimit(simulation) : DEFAULT_GENERATIONS}`}
         />
-        <Stat id="prey" label="Other roles" value={simulation.stats.prey} />
+        <Stat id="prey" label="Foragers" hint="Producers, grazers and scavengers" value={simulation.stats.prey} />
         <Stat
           id="predators"
-          label="Hunters + omnivores"
+          label="Predators"
+          hint="Hunters and omnivores"
           value={simulation.stats.predators}
         />
         <Stat id="births" label="Births · total" value={simulation.stats.births} />
@@ -1358,6 +1395,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
         <Stat
           id="species"
           label="Living variants"
+          hint="Distinct inherited trait classes among living organisms"
           value={simulation.stats.speciesRichness}
         />
         <Stat id="kills" label="Kills · total" value={simulation.stats.kills} />
@@ -1501,7 +1539,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
         }}/>
 
         <ResultImageShare key={`${simulation.seed}-${simulation.generation}`} state={simulation} question={question} evidence={evidence}/>
-        <button className="back-button" onClick={async () => { try { if (!replayRef.current) return setNotice("Replay not ready"); const url = new URL("/experiment", location.origin); url.hash = new URLSearchParams({ replay: encodeReplay(replayRef.current) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
+        <button className="back-button" onClick={async () => { try { const replay = replayRef.current; if (!replay) return setNotice("Replay not ready"); const url = new URL("/experiment", location.origin); const ready = replayLinkRef.current?.replay === replay ? replayLinkRef.current.link : null; /* Keep the clipboard write in the click gesture: if compression is still pending, synchronously use the compatible plain replay encoding. */ url.hash = new URLSearchParams({ replay: ready ?? encodeReplay(replay) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
         </>}
       </RunResults>}
       {complete && simulation.outcome !== "running" && showResults && evidence && completedReplay && <MyWorldsPanel current={{ replay: completedReplay, evidence, outcome: simulation.outcome, stopReason: simulation.stats.population === 0 ? "World empty" : "Observation horizon reached", parentId: parentWorldId, policy: replayMode ? recordedPolicy : policy, setup: proof ? { source: proof.source, model: proof.model, namedIntent: proof.namedIntent } : undefined }} onOpen={openSavedWorld} onReview={reviewSavedWorld} onSaved={record => { setOriginWorldId(record.id); setLocalWorldName(record.name); }} />}
@@ -1518,13 +1556,15 @@ function Stat({
   id,
   label,
   value,
+  hint,
 }: {
   id: string;
   label: string;
   value: string | number;
+  hint?: string;
 }) {
   return (
-    <div className="stat">
+    <div className="stat" title={hint}>
       <span>{label}</span>
       <strong data-testid={id}>{value}</strong>
     </div>

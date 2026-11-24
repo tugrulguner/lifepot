@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { clickCell, founderCell, presetWorld } from "./preset-world";
 
 test("real species and followed-family extinction remain near the board after inspection is cleared and the family is unpinned", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
@@ -13,7 +14,8 @@ test("real species and followed-family extinction remain near the board after in
   await page.getByLabel("World policy").selectOption("fixed");
   await page.getByRole("button", { name: /Seed ecosystem/ }).click();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
-  await page.getByRole("button", { name: "Inspect living organism", exact: true }).click();
+  // Follow a founder hunter: this world's hunters disappear, so its family is certain to end.
+  await clickCell(page, founderCell(presetWorld(config => { config.environment.abundance = "scarce"; }), 2));
   const follow = page.getByRole("button", { name: /^Follow founder lineage #/ });
   const lineage = (await follow.innerText()).match(/#(\d+)/)![1];
   await follow.click();
@@ -21,7 +23,7 @@ test("real species and followed-family extinction remain near the board after in
   await page.getByRole("combobox", { name: "Playback speed" }).selectOption("fast");
   const milestones = page.getByRole("region", { name: "Observed extinction milestones" });
   await expect(milestones).toContainText("Species B first observed extinct at generation", { timeout: 120_000 });
-  // Under ca8 the hunters disappear while grazers survive; verify the event during play.
+  // The hunters disappear while grazers survive; verify the event during play.
   await expect(page.getByRole("region", { name: "Run status" })).toContainText("Running");
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   const nearBoard = page.getByRole("region", { name: "Near-board observations" });

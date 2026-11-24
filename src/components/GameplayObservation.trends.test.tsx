@@ -22,8 +22,8 @@ it('shows neutral per-species recent changes beside current counts with the actu
  const before=JSON.stringify({state,evidence});
  render(<GameplayObservation state={state} evidence={evidence} followed={null} decision={null}/>);
  const legend=screen.getByLabelText('Configured species counts');
- expect(within(legend).getByRole('img',{name:'Species A population: 14 to 18, generations 4–10. Recorded change, not a prediction.'})).toHaveTextContent('↑4 /6g');
- expect(within(legend).getByRole('img',{name:'Species B population: 9 to 8, generations 4–10. Recorded change, not a prediction.'})).toHaveTextContent('↓1 /6g');
+ expect(within(legend).getByRole('img',{name:'Species A population: 14 to 24, generations 4–10. Recorded change, not a prediction.'})).toHaveTextContent('↑10 /6g');
+ expect(within(legend).getByRole('img',{name:'Species B population: 9 to 6, generations 4–10. Recorded change, not a prediction.'})).toHaveTextContent('↓3 /6g');
  expect(legend).not.toHaveTextContent(/healthy|winning|improving|because/i);
  expect(JSON.stringify({state,evidence})).toBe(before);
 });

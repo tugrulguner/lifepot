@@ -111,7 +111,7 @@ it("keeps an optional previous focus anchored to a recorded fact in the before t
  const config = defaultConfig(), evidence = createRunEvidence(createSimulation({ seed: 7, config }));
  const focus = { id: "population", reference: "population", generation: 0, description: "Population recorded", kind: "end" as const };
  render(<RunComparison before={{ config, evidence, seed: 7, policy: "fixed", focus }} after={{ config, evidence, seed: 7, policy: "fixed" }} />);
- expect(screen.getByRole("region", { name: "Observation being investigated" })).toHaveTextContent("Population: 26 at generation 0; 26 at generation 0.");
+ expect(screen.getByRole("region", { name: "Observation being investigated" })).toHaveTextContent("Population: 30 at generation 0; 30 at generation 0.");
  expect(screen.getByText(/repeat observation, not a changed-condition experiment/)).toBeInTheDocument();
 });
 
@@ -121,7 +121,7 @@ it("anchors a third-trial comparison to the previous recorded focus without caus
  const evidence = createRunEvidence(createSimulation({ seed: 7, config: previous }));
  const focus = { id: "population", reference: "population", generation: 0, description: "older summary", kind: "end" as const };
  render(<RunComparison before={{ config: previous, evidence, seed: 7, policy: "fixed", focus }} after={{ config: current, evidence, seed: 7, policy: "fixed" }} />);
- expect(screen.getByRole("region", { name: "Observation being investigated" })).toHaveTextContent("Population: 26 at generation 0; 26 at generation 0.");
+ expect(screen.getByRole("region", { name: "Observation being investigated" })).toHaveTextContent("Population: 30 at generation 0; 30 at generation 0.");
  expect(screen.getByText(/Resource abundance/)).toHaveTextContent("scarce → rich");
  expect(screen.getByRole("region", { name: "Observation being investigated" })).toHaveTextContent("The outcomes below describe each whole trial; they do not establish what caused this observation.");
  expect(screen.queryByText(/because of/i)).not.toBeInTheDocument();

@@ -137,17 +137,25 @@ test.each(["clear", "switch"])("family camera stays released after %s then re-pi
   expect(JSON.stringify(stepSimulation(engine))).toBe(continuation);
 });
 
-test("camera releases a dead organism and allows a new manual view", () => {
+test("camera releases a dead organism and allows a new manual view", async () => {
+  vi.spyOn(HTMLCanvasElement.prototype, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, top: 0, left: 0, right: 400, bottom: 400, width: 400, height: 400, toJSON() {} });
   renderPresetForPlayback();
   fireEvent.click(screen.getByRole("button", { name: "Pause" }));
-  fireEvent.click(screen.getByRole("button", { name: "Inspect a living organism" }));
+  // Follow a founder hunter: the engine's age limit ends it within one run under any
+  // mechanics version, so the test does not depend on which organisms happen to starve.
+  const hunter = captured.at(-1)!.guild.findIndex(guild => guild === 2);
+  const board = document.querySelector(".life-canvas")!;
+  const pitch = (400 - 36) / 50;
+  fireEvent.click(board, { clientX: 18 + (hunter % 50 + .5) * pitch, clientY: 18 + (Math.floor(hunter / 50) + .5) * pitch });
   fireEvent.click(screen.getByRole("button", { name: "Follow organism with camera" }));
   const step = screen.getByRole("button", { name: "Step one generation" });
-  const board = document.querySelector(".life-canvas")!;
+  expect(board).toHaveAttribute("data-camera-follow", "organism");
   let lastView: Array<string | null> = [];
-  for (let i = 0; i < 180 && board.getAttribute("data-camera-follow") === "organism"; i++) {
+  // A fixed-rule decision still resolves asynchronously at each trigger, so let it settle between steps.
+  for (let i = 0; i < 400 && board.getAttribute("data-camera-follow") === "organism"; i++) {
     lastView = ["data-camera-zoom", "data-camera-x", "data-camera-y"].map(key => board.getAttribute(key));
     fireEvent.click(step);
+    await act(async () => {});
   }
   expect(["data-camera-zoom", "data-camera-x", "data-camera-y"].map(key => board.getAttribute(key))).toEqual(lastView);
   expect(screen.getByRole("status", { name: "Camera update" })).toHaveTextContent(/Organism #\d+ is no longer living/);

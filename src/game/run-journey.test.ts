@@ -20,7 +20,7 @@ it('describes every supported starting-condition reference without inventing an 
 it('describes recorded species counts and only a verified species extinction',()=>{
  const state=createSimulation({seed:7,config:defaultConfig()}),evidence=createRunEvidence(state),first=evidence.samples[0];
  evidence.samples=[first,{...first,generation:4,species:first.species.map(item=>item.speciesId==='A'?{...item,population:0}:item)}];
- expect(describeEvidenceReference('species:A',evidence,state.config,{A:'pond snails'})).toEqual({reference:'species:A',description:'pond snails (Species A): 18 at generation 0; 0 at generation 4.',generation:4});
+ expect(describeEvidenceReference('species:A',evidence,state.config,{A:'pond snails'})).toEqual({reference:'species:A',description:'pond snails (Species A): 24 at generation 0; 0 at generation 4.',generation:4});
  expect(describeEvidenceReference('extinction:A',evidence,state.config)).toBeNull();
  evidence.firstExtinction=[{speciesId:'A',generation:4}];
  expect(describeEvidenceReference('extinction:A',evidence,state.config,{A:'pond snails'})).toMatchObject({generation:4,description:'pond snails (Species A) first observed extinct at generation 4.'});

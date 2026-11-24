@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaultConfig } from "./setup";
-import { createSimulation, runSimulation, stepSimulation, snapshotSimulation } from "./world";
+import { ENGINE_VERSION, createSimulation, runSimulation, stepSimulation, snapshotSimulation } from "./world";
 import { advanceFixedHabitat, createFixedHabitat, extendFixedHabitat, getObservationLimit, MAX_FIXED_HABITAT_GENERATIONS } from "./fixed-habitat";
 import { advanceUntilDecisionTrigger, detectDecisionTriggerForRun, playerProposalAvailability, runFreshWithDecisions, runWithDecisionLedger, stepWithPlayerEvents } from "./runtime";
 
@@ -21,9 +21,9 @@ describe("fixed habitat bounded continuity", () => {
     expect(() => stepSimulation(state)).toThrow(/fixed habitat|observation/i);
     expect(state).toStrictEqual(before);
   });
-  it("opts into a ca8 world with a default 180-generation observation window", () => {
+  it("opts into a current-engine world with a default 180-generation observation window", () => {
     const habitat = createFixedHabitat({ seed: 41, config: defaultConfig() });
-    expect(habitat.engineVersion).toBe("lifepot-ca-8");
+    expect(habitat.engineVersion).toBe(ENGINE_VERSION);
     expect(habitat.fixedHabitat).toEqual({ version: 1, observationLimit: 180 });
     expect(getObservationLimit(habitat)).toBe(180);
     expect("fixedHabitat" in createSimulation({ seed: 41, config: defaultConfig() })).toBe(false);

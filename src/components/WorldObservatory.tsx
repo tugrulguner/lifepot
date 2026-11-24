@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { EvolutionLedger } from "@/game/decisions";
 import { buildWorldReport } from "@/game/observatory";
 import type { SimulationState } from "@/game/world";
+import type { RunEvidence } from "@/game/run-evidence";
 import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
 import { roleColor } from "@/game/world-presentation";
 import { relationshipLabel, triggerLabel } from "@/game/visuals";
@@ -20,25 +21,34 @@ const TABS: Array<{ id: Tab; label: string }> = [
 const title = (value: string) => value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
 const signed = (value: number) => `${value > 0 ? "+" : ""}${value}`;
 
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length < 2) return <div className="chart-collecting"><strong>Collecting history</strong><p>{values.length ? `First sample: ${values[0]} organisms. ` : ""}A trend appears after the next generation.</p></div>;
+type Series = { id: string; label: string; color: string; values: number[] };
+
+// One line per series on a shared scale, so a rise in one species can be read against a fall in another.
+function PopulationChart({ series }: { series: Series[] }) {
+  const length = Math.max(0, ...series.map((item) => item.values.length));
+  if (length < 2) return <div className="chart-collecting"><strong>Collecting history</strong><p>{length ? `First sample: ${series.reduce((sum, item) => sum + (item.values[0] ?? 0), 0)} organisms. ` : ""}A trend appears after the next generation.</p></div>;
   const width = 280;
   const height = 62;
-  const min = Math.min(...values, 0);
-  const max = Math.max(...values, 1);
-  const range = Math.max(1, max - min);
-  const points = values.map((value, index) => `${(index / Math.max(1, values.length - 1)) * width},${height - ((value - min) / range) * height}`).join(" ");
-  return <svg className="observatory-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Population history"><polyline points={points}/></svg>;
+  const max = Math.max(1, ...series.flatMap((item) => item.values));
+  const line = (values: number[]) => values.map((value, index) => `${(index / Math.max(1, length - 1)) * width},${height - (value / max) * height}`).join(" ");
+  return <svg className="observatory-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Population history">{series.map((item) => <polyline key={item.id} points={line(item.values)} style={{ stroke: item.color }}/>)}</svg>;
 }
 
 function Metric({ label, value, tone }: { label: string; value: string | number; tone?: "good" | "bad" }) {
   return <div className={`observatory-metric ${tone ? `is-${tone}` : ""}`}><span>{label}</span><strong>{value}</strong></div>;
 }
 
-export function WorldObservatory({ state, ledger, replay = false }: { state: SimulationState; ledger: EvolutionLedger; replay?: boolean }) {
+export function WorldObservatory({ state, ledger, replay = false, evidence = null }: { state: SimulationState; ledger: EvolutionLedger; replay?: boolean; evidence?: RunEvidence | null }) {
   const [tab, setTab] = useState<Tab>("overview");
   const report = useMemo(() => buildWorldReport(state, ledger), [state, ledger]);
   const activeRule = state.activeRuleChange;
+  // Recorded run samples cover every generation and every species; the engine's own history
+  // keeps only a short rolling window, which is the fallback when no samples were recorded.
+  const samples = evidence?.samples ?? [];
+  const series: Series[] = samples.length > 1
+    ? state.config.rules!.species.map((species) => ({ id: species.id, label: `Species ${species.id}`, color: roleColor(species.role, species.id), values: samples.map((sample) => sample.species.find((item) => item.speciesId === species.id)?.population ?? 0) }))
+    : [{ id: "total", label: "Total population", color: "var(--acid)", values: report.history.map((frame) => frame.population) }];
+  const span = samples.length > 1 ? `generations ${samples[0].generation}–${samples[samples.length - 1].generation}` : `last ${report.history.length} frames`;
 
   return <aside id="world-observatory" className="world-observatory" aria-label="World observatory panel">
     <header className="observatory-header">
@@ -66,9 +76,9 @@ export function WorldObservatory({ state, ledger, replay = false }: { state: Sim
           <Metric label="Deepest generation" value={state.stats.maxGeneration}/>
         </section>
         <section className="observatory-section">
-          <div className="observatory-section-title"><span>Population history</span><b>last {report.history.length} frames</b></div>
-          <Sparkline values={report.history.map((frame) => frame.population)}/>
-          <div className="chart-legend"><span><i className="chart-total"/>Total population</span><span>Other roles {report.population.prey}</span><span>Hunters + omnivores {report.population.predators}</span></div>
+          <div className="observatory-section-title"><span>Population history</span><b>{span}</b></div>
+          <PopulationChart series={series}/>
+          <div className="chart-legend">{series.map((item) => <span key={item.id}><i style={{ background: item.color }}/>{item.label} {item.values[item.values.length - 1] ?? 0}</span>)}<span title="Producers, grazers and scavengers">Foragers {report.population.prey}</span><span title="Hunters and omnivores">Predators {report.population.predators}</span></div>
         </section>
         <section className="observatory-section">
           <div className="observatory-section-title"><span>Living ecology</span><b>{report.species.filter((row) => row.population).length} active</b></div>

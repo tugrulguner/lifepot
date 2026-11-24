@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { createReplay, decodeReplay, encodeReplay, playReplay, replayCounterfactual } from "./replay";
+import {
+  createReplay,
+  decodeReplay,
+  encodeReplay,
+  inspectReplayAtGeneration,
+  playReplay,
+  replayCounterfactual,
+} from "./replay";
 import { defaultConfig, hashSetupRequest } from "./setup";
 import { createSimulation } from "./world";
 import { runFreshWithDecisions } from "./runtime";
@@ -36,5 +43,38 @@ describe("replay v3", () => {
     expect(replay.ledger).toEqual(legacy.ledger);
   }, 15_000);
 
-  it("rejects legacy versions", () => expect(() => decodeReplay(btoa(JSON.stringify({ version: 2 })))).toThrow(/invalid|unsupported/i));
+  it("keeps the proven state private so a mutated playback result cannot change a later one", async () => {
+    const legacy = JSON.parse(readFileSync(new URL("./fixtures/ca7-replay.json", import.meta.url), "utf8"));
+    const replay = decodeReplay(encodeReplay(legacy));
+    const first = await playReplay(replay);
+    const expected = structuredClone(first.state);
+    const expectedInspection = inspectReplayAtGeneration(replay, expected.generation);
+    expect(expected.generation).toBe(180);
+
+    // Damage every kind of field the first result exposes: scalars, typed arrays, nested objects.
+    first.state.generation = 0;
+    first.state.outcome = "extinct";
+    first.state.occupied.fill(0);
+    first.state.ruleSpecies.fill(0);
+    first.state.energy.fill(0);
+    first.state.stats.population = -1;
+    first.state.config.founders.balance = "predator_heavy";
+    first.state.history.length = 0;
+    first.state.everPopulatedSlots.length = 0;
+    first.snapshot.ruleSpecies.fill(0);
+
+    const second = await playReplay(replay);
+    expect(second.state).not.toBe(first.state);
+    expect(second.state.occupied).not.toBe(first.state.occupied);
+    expect(second.state).toEqual(expected);
+    expect(inspectReplayAtGeneration(replay, expected.generation)).toEqual(expectedInspection);
+
+    // A fresh decode of the identical recording shares no cache entry and must agree.
+    const fresh = decodeReplay(encodeReplay(legacy));
+    expect((await playReplay(fresh)).state).toEqual(expected);
+    expect(inspectReplayAtGeneration(fresh, expected.generation)).toEqual(expectedInspection);
+    expect(second.state).toEqual(inspectReplayAtGeneration(fresh, expected.generation).state);
+  }, 30_000);
+
+  it("rejects legacy versions",() => expect(() => decodeReplay(btoa(JSON.stringify({ version: 2 })))).toThrow(/invalid|unsupported/i));
 });
