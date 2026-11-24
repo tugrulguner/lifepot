@@ -1,0 +1,1 @@
+The habitat now shows local food-resource abundance with a generated grain texture and marks hazards separately with coral hatching. Both cues follow the simulation fields without changing world rules or recordings.

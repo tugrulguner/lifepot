@@ -1455,10 +1455,10 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
         </details>
       </aside>
       <div className="legend">
-        <span><i className="resource-key" />Resource field</span>
+        <span><i className="resource-key" />Food resources · green grain</span>
         {simulation.config.rules!.species.map(species => <span key={species.id}><svg className="role-glyph" viewBox="0 0 100 100" aria-hidden="true"><OrganismArtwork role={species.role} color={roleColor(species.role, species.id)} /></svg><i style={{ backgroundColor: roleColor(species.role, species.id) }} />Species {species.id} · {title(species.role)}</span>)}
         <span>Teal = producer, grazer, or scavenger · coral = hunter or omnivore</span>
-        <span>coral shading = hazards (when Hazard shading is enabled) · cell detail at 2× zoom</span>
+        <span><i className="hazard-key" aria-hidden="true" /> Coral hatching = hazards (when Hazard shading is enabled) · cell detail at 2× zoom</span>
         <span>White ring = selected · dashed gold ring = followed family</span>
         <span>White rays/dot = birth · gold circle = feeding · gold diamond = prey capture · red cross = death · marks show event locations; pulses are sampled</span>
       </div>

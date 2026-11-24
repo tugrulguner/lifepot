@@ -21,6 +21,7 @@ test.describe("built gameplay world legend acceptance", () => {
       await page.setViewportSize(viewport);
       await page.emulateMedia({ colorScheme: theme });
       let judgeCalls = 0;
+      await page.route("**/api/**", async route => { await route.abort(); });
       await page.route("**/api/judge**", async route => { judgeCalls++; await route.abort(); });
       await page.goto("/experiment");
       await page.getByRole("combobox", { name: "Color theme" }).selectOption(theme);
@@ -33,6 +34,25 @@ test.describe("built gameplay world legend acceptance", () => {
       const legend = page.getByLabel("Configured species counts");
       await expect(legend).toBeVisible();
       await expect(legend).toContainText("World legend");
+      const hazardKey = page.locator(".legend .hazard-key");
+      const hazardStyle = await hazardKey.evaluate(element => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return { width: rect.width, height: rect.height, borderRadius: style.borderRadius, backgroundImage: style.backgroundImage };
+      });
+      expect(hazardStyle.width).toBeGreaterThanOrEqual(10);
+      expect(hazardStyle.height).toBeGreaterThanOrEqual(10);
+      expect(hazardStyle.borderRadius).toBe("0px");
+      expect(hazardStyle.backgroundImage).toContain("repeating-linear-gradient");
+      const ordinarySwatch = await page.locator(".legend span i[style]").first().evaluate(element => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return { width: rect.width, height: rect.height, borderRadius: style.borderRadius };
+      });
+      expect(ordinarySwatch.width).toBe(6);
+      expect(ordinarySwatch.height).toBe(6);
+      expect(ordinarySwatch.borderRadius).toBe("50%");
+      expect(await hazardKey.getAttribute("aria-hidden")).toBe("true");
       const roles = await legend.locator(":scope > span").evaluateAll(rows => rows.map(row => {
         const text = row.textContent ?? "";
         const role = text.match(/producer|grazer|scavenger|hunter|omnivore/)?.[0];
