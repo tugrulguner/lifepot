@@ -433,7 +433,8 @@ html[data-theme="dark"] .primary-button { background: #73cfc0; color: #181a1d; }
 .decision-source { border-color: var(--mp-border); color: var(--mp-ink); font: 12px/1.4 var(--mp-font); }
 .decision-source.is-jev, .decision-source.is-fallback, .decision-source.is-deciding { border-color: var(--mp-accent); color: var(--mp-accent); box-shadow: none; }
 .decision-meta div, .decision-meta dd, .decision-meta dt { font-family: var(--mp-font); font-size: 13px; }
-.legend { color: var(--mp-muted); font: 12px/1.4 var(--mp-code-font); }
+.legend { color: var(--mp-muted); font: 12px/1.4 var(--mp-code-font); flex-wrap: wrap; min-width: 0; }
+.legend > span { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .result-card h1 { font-size: clamp(32px, 4.5vw, 56px); }
 .result-card > p:not(.eyebrow):not(.copy-notice) { color: var(--mp-muted); }
 .result-actions button { min-height: 44px; border: 1px solid var(--mp-control-boundary); border-radius: 6px; background: var(--mp-surface); color: var(--mp-ink); font-size: 14px; }
@@ -635,11 +636,13 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .recorded-activity > div { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .activity-birth { color: #f1f8ed; }.activity-feeding { color: #ffd65c; }.activity-death { color: #ff8877; }
 .canvas-mark-key, .recorded-activity > .canvas-mark-key { display: flex; flex-wrap: wrap; flex-basis: 100%; gap: 3px 10px; color: var(--muted); font-size: 11px; line-height: 1.35; }
-.canvas-mark-key > span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.canvas-mark-key > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .canvas-mark-key i { font: normal 16px/1 var(--mono); }
 .canvas-mark-key .mark-birth { color: #f1f8ed; }
 .canvas-mark-key .mark-feeding { color: #ffd65c; }
 .canvas-mark-key .mark-death { color: #ff8877; }
+.canvas-mark-key .mark-hazard, .hazard-key { display: inline-block; flex: 0 0 10px; width: 10px; height: 10px; background: repeating-linear-gradient(135deg, #ff8877 0 1px, transparent 1px 3px); border: 1px solid #ff8877; }
+.legend .hazard-key { flex: 0 0 10px; width: 10px; height: 10px; min-width: 10px; min-height: 10px; border-radius: 0; }
 .canvas-mark-key .mark-resource { color: #73caa1; }
 .canvas-mark-key small { flex-basis: 100%; font: inherit; }
 .organism-portrait { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 12px; margin-top: 12px; padding: 12px; background: #020a09; border-radius: 8px; }
@@ -1028,6 +1031,10 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
   .simulation-shell .camera-tools p { margin: 2px 0; }
 }
 @media(max-width: 395px) {
+  /* Let Restart fit alongside speed without sacrificing touch-target height. */
+  .simulation-shell .playback-speed { padding-inline: 2px; gap: 2px; }
+  .simulation-shell .playback-speed select { width: 76px; min-width: 76px; padding-inline: 3px; }
+  .simulation-shell .gameplay-observation { padding: 3px 6px; line-height: 1.2; }
   .simulation-shell .camera-tools { padding: 4px 6px; }
   .simulation-shell .camera-buttons { gap: 4px; }
   .simulation-shell .camera-buttons + .camera-buttons { margin-top: 4px; }
