@@ -15,6 +15,30 @@ function paint(resources: Uint8Array, hazards = new Uint8Array(2500), showHazard
 }
 
 describe("native habitat resource field encoding", () => {
+  it("keeps trace food quiet and reserves grain contrast for rich patches", () => {
+    // Green minus red removes the neutral frost signal from the measured texture.
+    const ranges = [0,1,6,12,128,255].map(level => {
+      const [image] = paint(new Uint8Array(2500).fill(level));
+      const chroma = Array.from({length:40000}, (_,i) => image[i*4+1]-image[i*4]);
+      return Math.max(...chroma)-Math.min(...chroma);
+    });
+    expect(ranges[0]).toBe(0);
+    expect(ranges[1]).toBeLessThanOrEqual(5);
+    expect(ranges[2]).toBeGreaterThan(ranges[1]+5);
+    expect(ranges[5]).toBeGreaterThan(ranges[4]*1.5);
+    expect(ranges[4]).toBeGreaterThan(ranges[3]*1.5);
+  });
+  it("keeps trace hazard quiet without flattening moderate and severe stripes", () => {
+    const peaks = [0,1,6,12,128,255].map(level => {
+      const [, overlay] = paint(new Uint8Array(2500), new Uint8Array(2500).fill(level), true);
+      return Math.max(...Array.from({length:25600}, (_,i) => overlay[i*4+3]));
+    });
+    expect(peaks[0]).toBe(0);
+    expect(peaks[1]).toBeLessThanOrEqual(5);
+    expect(peaks[2]).toBeGreaterThan(peaks[1]+5);
+    expect(peaks[5]).toBeGreaterThan(peaks[4]*1.5);
+    expect(peaks[4]).toBeGreaterThan(peaks[3]*1.5);
+  });
   afterEach(() => vi.unstubAllGlobals());
   it("renders distinct normalized resource levels with spatial 5-cell grain", () => {
     const a = new Uint8Array(2500).fill(150), b = new Uint8Array(2500).fill(235);

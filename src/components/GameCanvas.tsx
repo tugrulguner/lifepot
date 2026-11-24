@@ -78,7 +78,7 @@ import { SetupCouncil, RuntimeCouncil } from "./CouncilPanel";
 import { setupFidelitySchema, setupFailureSchema, setupNamedIntentSchema, SETUP_REVIEW_QUESTIONS, type SetupFidelity, type SetupFailure, type SetupNamedIntent } from "@/game/setup-review";
 import { roleColor } from "@/game/world-presentation";
 import { organismSprite, paintOrganism } from "@/game/organism-glyphs";
-import { microscopicSprite, paintResourceField } from "@/game/microscopic-renderer";
+import { fieldStrength, microscopicSprite, paintResourceField } from "@/game/microscopic-renderer";
 import OrganismArtwork from "./OrganismArtwork";
 import { gameplayAnalytics } from "@/app/gameplay-analytics";
 import { isSurvivingNewborn, relationshipLabel, triggerLabel } from "@/game/visuals";
@@ -375,7 +375,8 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
     context.fillRect(0, 0, canvas.width, canvas.height);
     for (let i = 0; i < state.resources.length; i++) {
       const x = i % GRID_SIZE * scale, y = Math.floor(i / GRID_SIZE) * scale;
-      const resource = state.resources[i] / 255, hazard = state.hazards[i] / 255;
+      // Same absolute strength scale as the habitat; use a flat tint at map scale.
+      const resource = fieldStrength(state.resources[i]), hazard = fieldStrength(state.hazards[i]);
       if (resource > 0) {
         context.fillStyle = `rgba(27, 126, 101, ${resource * .48})`;
         context.fillRect(x, y, scale, scale);

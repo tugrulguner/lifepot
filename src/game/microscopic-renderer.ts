@@ -3,10 +3,19 @@ import habitatMaterials from "./habitat-materials.json";
 const cache = new Map<string, HTMLCanvasElement>();
 const clamp=(n:number)=>Math.max(0,Math.min(255,Math.round(n)));
 const GRAIN_SIZE=32;
+const strengthKnots = [[0,0],[1,.025],[12,.29],[25,.46],[128,.60],[255,1]] as const;
+export function fieldStrength(value: number): number {
+  const v=Math.max(0,Math.min(255,value));
+  for(let i=1;i<strengthKnots.length;i++){
+    const [x1,y1]=strengthKnots[i];
+    if(v<=x1){const [x0,y0]=strengthKnots[i-1];return y0+(y1-y0)*(v-x0)/(x1-x0);}
+  }
+  return 1;
+}
 const sediment=habitatMaterials.sediment as number[];
 const frost=habitatMaterials.frost as number[];
 const etch=habitatMaterials.etch as number[];
-const abundanceScale=Array.from({length:256},(_,i)=>Math.cbrt(i/255));
+const abundanceScale=Array.from({length:256},(_,i)=>fieldStrength(i));
 const materialAt=(mask:number[],x:number,y:number)=>mask[((y%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE)*GRAIN_SIZE+(x%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE]/255;
 export function resourceGrainOffset(worldX:number,worldY:number,abundance:number):number {
   if (abundance <= 0) return 0;
@@ -24,7 +33,7 @@ export function hazardHatchAlpha(hazard:number,worldX:number,worldY:number,cellF
   const phase=(worldX+worldY)*.8, half=Math.max(.035,cellFootprint*.8);
   const area=(p:number)=>Math.floor(p)*.33+Math.min(.33,p-Math.floor(p));
   const stripe=(area(phase+half)-area(phase-half))/(2*half);
-  return Math.round(Math.cbrt(Math.min(1,hazard/255))*205*stripe);
+  return Math.round(fieldStrength(hazard)*205*stripe);
 }
 // Fixed, perceptually stronger mapping: same engine values always mean the same thing.
 export function resourceFieldColor(value: number): [number, number, number] {
