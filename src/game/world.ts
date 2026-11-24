@@ -301,8 +301,7 @@ function fillResources(a: Uint8Array, c: LifeConfig, seed: number) {
 }
 /**
  * Founders seeded for one rule species. ca-9 seeds a wider basal base under fewer hunters:
- * the earlier 18:8 "balanced" ratio behaved like a predator-heavy start and decided most
- * runs before generation 60.
+ * this is a versioned starting condition, not an empirically calibrated trophic ratio.
  */
 export function founderCount(
   role: TrophicRole,

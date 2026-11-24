@@ -97,7 +97,7 @@ it("does not report a failed link over a setup the player has already started", 
   fireEvent.click(screen.getByRole("button", { name: "Review this world" }));
   await settle("fail");
   expect(screen.getByRole("button", { name: /Seed ecosystem/ })).toBeEnabled();
-  expect(screen.queryByText("Invalid or legacy replay rejected")).not.toBeInTheDocument();
+  expect(screen.queryByText("This replay link could not be opened. You can still create your own world.")).not.toBeInTheDocument();
 });
 
 it("leaves setup in place when the link is invalid", async () => {

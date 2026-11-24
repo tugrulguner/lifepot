@@ -8,6 +8,7 @@ import {
   createReplay,
   decodeReplay,
   decodeReplayLink,
+  encodeReplay,
   encodeReplayLink,
   type ReplayData,
 } from "@/game/replay";
@@ -793,7 +794,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
     };
     decodeReplayLink(p).then(
       (r) => settle(() => begin(r.answers, r.config, r.seed, r)),
-      () => settle(() => setNotice("Invalid or legacy replay rejected")),
+      () => settle(() => setNotice("This replay link could not be opened. You can still create your own world.")),
     );
     return () => { cancelled = true; release(); };
   }, [begin, cancelExample, initialEntry, exampleRetry]);
@@ -1148,6 +1149,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
       <main className={`setup-shell ${setupStyles.shell}`}>
         <FamilyHeader feedbackPath="/experiment" skipTarget="play-content"><span className="header-detail">{proof?.starter ? "Designed starter" : "Co-evolution laboratory"}</span><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
         <section id="play-content" tabIndex={-1} className={`question-panel ${setupStyles.panel} ${customSetup ? setupStyles.custom : ""}`} style={!customSetup ? { width: "min(1000px, calc(100% - 40px))", maxWidth: "1000px" } : undefined} onInputCapture={cancelExample} onClickCapture={cancelExample} onSubmitCapture={cancelExample}>
+          {notice && <p className="run-notice" role="status">{notice}</p>}
           <div id="my-worlds-entry" />
           {!customSetup && <StarterWorldPicker onChoose={chooseStarter} onDescribeOwn={() => { focusReturningEditor.current = true; setCustomSetup(true); }} />}
           {customSetup && <>
@@ -1537,7 +1539,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
         }}/>
 
         <ResultImageShare key={`${simulation.seed}-${simulation.generation}`} state={simulation} question={question} evidence={evidence}/>
-        <button className="back-button" onClick={async () => { try { const replay = replayRef.current; if (!replay) return setNotice("Replay not ready"); const url = new URL("/experiment", location.origin); const ready = replayLinkRef.current?.replay === replay ? replayLinkRef.current.link : null; /* No await before the write when the link is ready: Safari only allows clipboard writes inside the click. */ url.hash = new URLSearchParams({ replay: ready ?? await encodeReplayLink(replay) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
+        <button className="back-button" onClick={async () => { try { const replay = replayRef.current; if (!replay) return setNotice("Replay not ready"); const url = new URL("/experiment", location.origin); const ready = replayLinkRef.current?.replay === replay ? replayLinkRef.current.link : null; /* Keep the clipboard write in the click gesture: if compression is still pending, synchronously use the compatible plain replay encoding. */ url.hash = new URLSearchParams({ replay: ready ?? encodeReplay(replay) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
         </>}
       </RunResults>}
       {complete && simulation.outcome !== "running" && showResults && evidence && completedReplay && <MyWorldsPanel current={{ replay: completedReplay, evidence, outcome: simulation.outcome, stopReason: simulation.stats.population === 0 ? "World empty" : "Observation horizon reached", parentId: parentWorldId, policy: replayMode ? recordedPolicy : policy, setup: proof ? { source: proof.source, model: proof.model, namedIntent: proof.namedIntent } : undefined }} onOpen={openSavedWorld} onReview={reviewSavedWorld} onSaved={record => { setOriginWorldId(record.id); setLocalWorldName(record.name); }} />}

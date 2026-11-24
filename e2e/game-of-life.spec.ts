@@ -254,15 +254,22 @@ test.describe.serial("share a second world after the pond example", () => {
     await page.getByRole("button", { name: "Preview Hunters and prey" }).click();
     await page.getByRole("button", { name: "Review this world", exact: true }).click();
     await page.getByRole("button", { name: /Seed ecosystem/ }).click();
+    // Hold compression through the copy click. The second world must be shareable
+    // immediately, without waiting for the stream or reusing the example link.
+    await page.evaluate(() => {
+      Object.defineProperty(window, "CompressionStream", { configurable: true, value: class extends TransformStream {
+        constructor() { super({ transform: () => new Promise<void>(() => {}) }); }
+      } });
+    });
     second = await finish(page);
     expect(second).not.toEqual(pond);
     await page.getByRole("button", { name: "Copy challenge link" }).click();
-    // The link is compressed before it is written, so wait for the confirmation.
+    // Do not release compression: the actual clipboard must already be usable.
     await expect(page.getByText("Replay link copied")).toBeVisible();
     copied = await page.evaluate(() => navigator.clipboard.readText());
     expect(new URL(copied).pathname).toBe("/experiment");
     expect(new URL(copied).search).toBe("");
-    expect(new URL(copied).hash).toMatch(/^#replay=/);
+    expect(new URL(copied).hash).toMatch(/^#replay=(?!z1\.)[A-Za-z0-9_-]+$/);
   });
   test("the copied link replays the second outcome in a fresh tab", async () => {
     const recipient = await page.context().newPage();
