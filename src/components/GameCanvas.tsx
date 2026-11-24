@@ -615,6 +615,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
     simRef = useRef<SimulationState | null>(null),
     initialConfigRef = useRef<LifeConfig | null>(null),
     replayRef = useRef<ReplayData | null>(null),
+    replayLinkRef = useRef<{ replay: ReplayData; link: string } | null>(null),
     pending = useRef<number | null>(null),
     runId = useRef(0),
     pendingArrival = useRef(false),
@@ -625,6 +626,17 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
   useEffect(() => { analyticsProof.current = proof; analyticsBaseline.current = Boolean(baseline); }, [proof, baseline]);
   const complete = simulation && simulation.outcome !== "running";
   const completedReplay = currentReplay;
+  // Compress the share link as soon as a replay exists, so the copy button can write it to the
+  // clipboard without waiting. The replay is already proven, so this does not simulate again.
+  useEffect(() => {
+    if (!currentReplay) { replayLinkRef.current = null; return; }
+    let stale = false;
+    encodeReplayLink(currentReplay).then(
+      (link) => { if (!stale) replayLinkRef.current = { replay: currentReplay, link }; },
+      () => {},
+    );
+    return () => { stale = true; };
+  }, [currentReplay]);
   useEffect(() => {
     if (!complete || stage !== "simulation") return;
     if (!completionSeen.current) {
@@ -757,8 +769,10 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
     }
     const p = new URLSearchParams(location.hash.slice(1)).get("replay") ?? new URL(location.href).searchParams.get("replay");
     if (!p) return;
+    // Decoding is asynchronous. If the player started something else meanwhile, leave it alone.
+    const linkRun = runId.current;
     decodeReplayLink(p).then(
-      (r) => { if (!cancelled) begin(r.answers, r.config, r.seed, r); },
+      (r) => { if (!cancelled && runId.current === linkRun) begin(r.answers, r.config, r.seed, r); },
       () => { if (!cancelled) setNotice("Invalid or legacy replay rejected"); },
     );
     return () => { cancelled = true; };
@@ -1503,7 +1517,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
         }}/>
 
         <ResultImageShare key={`${simulation.seed}-${simulation.generation}`} state={simulation} question={question} evidence={evidence}/>
-        <button className="back-button" onClick={async () => { try { if (!replayRef.current) return setNotice("Replay not ready"); const url = new URL("/experiment", location.origin); url.hash = new URLSearchParams({ replay: await encodeReplayLink(replayRef.current) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
+        <button className="back-button" onClick={async () => { try { const replay = replayRef.current; if (!replay) return setNotice("Replay not ready"); const url = new URL("/experiment", location.origin); const ready = replayLinkRef.current?.replay === replay ? replayLinkRef.current.link : null; /* No await before the write when the link is ready: Safari only allows clipboard writes inside the click. */ url.hash = new URLSearchParams({ replay: ready ?? await encodeReplayLink(replay) }).toString(); await navigator.clipboard.writeText(url.toString()); setNotice("Replay link copied"); } catch { setNotice("Clipboard unavailable. Use the result image download instead."); } }}>Copy challenge link</button>
         </>}
       </RunResults>}
       {complete && simulation.outcome !== "running" && showResults && evidence && completedReplay && <MyWorldsPanel current={{ replay: completedReplay, evidence, outcome: simulation.outcome, stopReason: simulation.stats.population === 0 ? "World empty" : "Observation horizon reached", parentId: parentWorldId, policy: replayMode ? recordedPolicy : policy, setup: proof ? { source: proof.source, model: proof.model, namedIntent: proof.namedIntent } : undefined }} onOpen={openSavedWorld} onReview={reviewSavedWorld} onSaved={record => { setOriginWorldId(record.id); setLocalWorldName(record.name); }} />}

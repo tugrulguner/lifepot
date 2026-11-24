@@ -265,11 +265,16 @@ export function detectEvolutionTrigger(
     // spent all eight decisions in the first half of a run at a fixed twelve-generation beat.
     if (Math.abs(o.resourceDelta12) >= Math.max(18, resourceCap(state.config) * 0.2)) return "resource_shift";
     if (o.speciesDelta12 >= 2) return "speciation";
-    const earlier = frameAt(state, Math.max(0, state.generation - 24)),
-      recent = frameAt(state, Math.max(0, state.generation - 12));
-    const previousKills = Math.max(0, recent.kills - earlier.kills);
-    if (o.kills12 >= Math.max(3, Math.round(o.prey * 0.16)) && o.kills12 >= previousKills * 1.5)
-      return "predation_spike";
+    // A spike needs a full twelve-generation baseline to stand out from. Before generation 24
+    // that window is empty or shorter than the one it is compared with, so any predation at all
+    // would count as a spike.
+    if (state.generation >= 24) {
+      const earlier = frameAt(state, state.generation - 24),
+        recent = frameAt(state, state.generation - 12);
+      const previousKills = Math.max(0, recent.kills - earlier.kills);
+      if (o.kills12 >= Math.max(3, Math.round(o.prey * 0.16)) && o.kills12 >= previousKills * 1.5)
+        return "predation_spike";
+    }
   }
   if (state.generation - last >= 30) return "stagnation";
   return null;

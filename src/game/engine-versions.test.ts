@@ -208,6 +208,20 @@ describe("ca-9 founders and triggers", () => {
     expect(at12(CA8_ENGINE_VERSION)).toBe("resource_shift");
     expect(at12(ENGINE_VERSION)).toBeNull();
   });
+
+  it("does not call early predation a spike before a full baseline window exists", () => {
+    for (const seed of [1, 2, 3, 4]) {
+      let state = createSimulation({ seed, config: defaultConfig() });
+      const early: Array<string | null> = [];
+      while (state.generation < 23 && state.outcome === "running") {
+        state = stepSimulation(state);
+        early.push(detectEvolutionTrigger(state, []));
+      }
+      expect(early).not.toContain("predation_spike");
+      // The default world does hunt in this period, so the absence above is the baseline rule at work.
+      expect(state.stats.kills).toBeGreaterThanOrEqual(3);
+    }
+  });
 });
 
 describe("setup preview names roles without an energy source", () => {
@@ -218,5 +232,16 @@ describe("setup preview names roles without an energy source", () => {
     expect(interpretWorldPreview(config, intent).warnings.join(" ")).toMatch(/B \(scavenger\) has no modeled food source/);
     config.rules!.interactions[0].mode = "b_consumes_a";
     expect(interpretWorldPreview(config, intent).warnings.join(" ")).not.toMatch(/scavenger/);
+  });
+
+  it("does not say a hunter that feeds on its own kind will starve", () => {
+    const config = defaultConfig();
+    config.rules!.interactions[0].mode = "neutral";
+    config.rules!.species[1] = { id: "B", role: "hunter", selfInteraction: "neutral" };
+    expect(interpretWorldPreview(config, intent).warnings.join(" ")).toMatch(/expected to starve/);
+    config.rules!.species[1] = { id: "B", role: "hunter", selfInteraction: "cannibalistic" };
+    const warnings = interpretWorldPreview(config, intent).warnings.join(" ");
+    expect(warnings).toMatch(/B \(hunter\) has no modeled consumption link/);
+    expect(warnings).not.toMatch(/expected to starve/);
   });
 });

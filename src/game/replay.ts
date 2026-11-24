@@ -81,10 +81,13 @@ function body(v: Omit<Common, "contractHash"> & { version: 3 | 4; playerEvents?:
   };
   return v.version === 4 ? { ...common, playerEvents: v.playerEvents } : common;
 }
-// Proving a replay means re-running all of its generations. A replay object that was already
-// proven is not simulated again as long as its contract hash still matches its content, so
-// creating, encoding and saving one finished run costs a single simulation instead of three.
-const proven = new WeakMap<object, { contractHash: string; state: SimulationState }>();
+// Proving a replay means re-running all of its generations. The proven terminal state is kept
+// under the replay's full canonical content, so creating a replay, encoding it and decoding it
+// again (as saving a world does) simulates it once. Keying by content, not by object or by the
+// short contract hash, means a changed replay can never reuse another replay's proof. The
+// states held here never leave this module; playReplay hands out copies.
+const PROVEN_LIMIT = 8;
+const proven = new Map<string, SimulationState>();
 function validate(input: unknown): { replay: ReplayData; state: SimulationState } {
   try {
     const p = z.discriminatedUnion("version", [base, playerBase]).parse(input),
@@ -94,17 +97,17 @@ function validate(input: unknown): { replay: ReplayData; state: SimulationState 
     ) as ReplayData;
     if (r.requestHash !== hashSetupRequest(r.answers) || r.contractHash !== hashReplayPayload(body(r)))
       throw new Error("tampered");
-    const known = typeof input === "object" && input !== null ? proven.get(input) : undefined;
-    let state: SimulationState;
-    if (known?.contractHash === r.contractHash) state = known.state;
-    else {
+    const key = JSON.stringify(r);
+    let state = proven.get(key);
+    if (!state) {
       const initial = createSimulation({ seed: r.seed, config: r.config, engineVersion: r.engineVersion });
       state =
         r.version === 4
           ? runWithPlayerEvents(initial, ledger, r.playerEvents, r.answers)
           : runWithDecisionLedger(initial, ledger, DEFAULT_GENERATIONS, r.answers);
+      if (proven.size >= PROVEN_LIMIT) proven.delete(proven.keys().next().value!);
+      proven.set(key, state);
     }
-    proven.set(r, { contractHash: r.contractHash, state });
     return { replay: r, state };
   } catch {
     throw new Error("Invalid, tampered, or unsupported LifePot replay");
