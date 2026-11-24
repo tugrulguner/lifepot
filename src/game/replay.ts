@@ -209,7 +209,10 @@ export async function decodeReplayLink(payload: string): Promise<ReplayData> {
 }
 export async function playReplay(input: ReplayData, _interpreter?: (...args: never[]) => unknown) {
   void _interpreter;
-  const { replay, state } = validate(input);
+  const { replay, state: cached } = validate(input);
+  // The proven state stays private to the cache. Callers get an independent deep copy, typed
+  // arrays and nested objects included, so changing a playback result cannot alter a later one.
+  const state = structuredClone(cached);
   return { replay, state, snapshot: snapshotSimulation(state) };
 }
 export type ReplayInspection = { state: SimulationState; evidence: RunEvidence };
