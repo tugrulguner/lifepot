@@ -616,6 +616,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
     initialConfigRef = useRef<LifeConfig | null>(null),
     replayRef = useRef<ReplayData | null>(null),
     replayLinkRef = useRef<{ replay: ReplayData; link: string } | null>(null),
+    pendingLink = useRef<{ payload: string; run: number; superseded: boolean; settled: boolean } | null>(null),
     pending = useRef<number | null>(null),
     runId = useRef(0),
     pendingArrival = useRef(false),
@@ -769,13 +770,32 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
     }
     const p = new URLSearchParams(location.hash.slice(1)).get("replay") ?? new URL(location.href).searchParams.get("replay");
     if (!p) return;
-    // Decoding is asynchronous. If the player started something else meanwhile, leave it alone.
-    const linkRun = runId.current;
+    // Decoding is asynchronous, so the player can act before it settles. Choosing a starter or
+    // editing setup does not start a run, so any use of a control while the link is pending
+    // supersedes it, as does a run that started meanwhile. The record lives in a ref so that a
+    // re-run of this effect cannot forget that the link was superseded or already opened.
+    if (pendingLink.current?.payload !== p) pendingLink.current = { payload: p, run: runId.current, superseded: false, settled: false };
+    const link = pendingLink.current;
+    if (link.settled) return;
+    const supersede = (event: Event) => {
+      if (event.target instanceof Element && event.target.closest("button, a, input, textarea, select, [role='button']")) link.superseded = true;
+    };
+    const release = () => { document.removeEventListener("click", supersede, true); document.removeEventListener("input", supersede, true); };
+    document.addEventListener("click", supersede, true);
+    document.addEventListener("input", supersede, true);
+    const current = () => !cancelled && !link.settled && !link.superseded && runId.current === link.run;
+    const settle = (apply: () => void) => {
+      release();
+      if (cancelled || link.settled) return;
+      const wasCurrent = current();
+      link.settled = true;
+      if (wasCurrent) apply();
+    };
     decodeReplayLink(p).then(
-      (r) => { if (!cancelled && runId.current === linkRun) begin(r.answers, r.config, r.seed, r); },
-      () => { if (!cancelled) setNotice("Invalid or legacy replay rejected"); },
+      (r) => settle(() => begin(r.answers, r.config, r.seed, r)),
+      () => settle(() => setNotice("Invalid or legacy replay rejected")),
     );
-    return () => { cancelled = true; };
+    return () => { cancelled = true; release(); };
   }, [begin, cancelExample, initialEntry, exampleRetry]);
   useEffect(() => {
     if (
