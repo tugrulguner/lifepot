@@ -1,15 +1,19 @@
-import nutrientGrain from "./nutrient-grain.json";
+import habitatMaterials from "./habitat-materials.json";
 
 const cache = new Map<string, HTMLCanvasElement>();
 const clamp=(n:number)=>Math.max(0,Math.min(255,Math.round(n)));
 const GRAIN_SIZE=32;
-const grainMask=nutrientGrain as number[];
+const sediment=habitatMaterials.sediment as number[];
+const frost=habitatMaterials.frost as number[];
+const etch=habitatMaterials.etch as number[];
+const abundanceScale=Array.from({length:256},(_,i)=>Math.cbrt(i/255));
+const materialAt=(mask:number[],x:number,y:number)=>mask[((y%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE)*GRAIN_SIZE+(x%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE]/255;
 export function resourceGrainOffset(worldX:number,worldY:number,abundance:number):number {
   if (abundance <= 0) return 0;
   const px=worldX*GRAIN_SIZE/5,py=worldY*GRAIN_SIZE/5,x0=Math.floor(px),y0=Math.floor(py),fx=px-x0,fy=py-y0;
-  const sample=(x:number,y:number)=>grainMask[((y%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE)*GRAIN_SIZE+(x%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE]/255;
+  const sample=(x:number,y:number)=>materialAt(sediment,x,y);
   const filtered=(sample(x0,y0)*(1-fx)+sample(x0+1,y0)*fx)*(1-fy)+(sample(x0,y0+1)*(1-fx)+sample(x0+1,y0+1)*fx)*fy;
-  const amount=Math.cbrt(Math.min(1,abundance));
+  const amount=abundanceScale[Math.round(Math.min(1,abundance)*255)];
   // Preserve the absolute world-space texture scale at every abundance. A
   // low abundance reduces contrast, rather than shrinking/thresholding grain.
   return filtered * amount;
@@ -77,7 +81,13 @@ export function paintResourceField(c: CanvasRenderingContext2D, pad: number, cw:
       grain/=grainSamples*grainSamples;
       const i=(py*200+px)*4;
       const [red, green, blue] = resourceFieldColor(q * 255);
-      im.data[i]=clamp(red-grain*12);im.data[i+1]=clamp(green+grain*25);im.data[i+2]=clamp(blue+grain*12);im.data[i+3]=255;
+      const frostValue=materialAt(frost,Math.floor(wx*GRAIN_SIZE/5),Math.floor(wy*GRAIN_SIZE/5));
+      const grainCenter=abundanceScale[Math.round(q*255)]*.5;
+      // Sediment is the high-contrast green aggregate; frost stays a faint,
+      // neutral mineral variation even when food is depleted.
+      const aggregate=(grain-grainCenter)*76;
+      const background=(frostValue-.5)*5;
+      im.data[i]=clamp(red-aggregate+background);im.data[i+1]=clamp(green+aggregate+background);im.data[i+2]=clamp(blue+background);im.data[i+3]=255;
     }
     ctx.putImageData(im,0,0); resourceSource=resources; resourceView=view;
   }
@@ -90,7 +100,7 @@ export function paintResourceField(c: CanvasRenderingContext2D, pad: number, cw:
     for(let y=0;y<160;y++)for(let x=0;x<160;x++){
       const wx=wrap(camera.x-camera.span/2+(x+.5)/160*camera.span),wy=wrap(camera.y-camera.span/2+(y+.5)/160*camera.span),v=hazards[Math.floor(wy)*50+Math.floor(wx)],k=(y*160+x)*4;
       im.data[k]=205;im.data[k+1]=62;im.data[k+2]=42;
-      im.data[k+3]=hazardHatchAlpha(v,wx,wy,camera.span/160);
+      im.data[k+3]=Math.round(hazardHatchAlpha(v,wx,wy,camera.span/160)*(.35+.65*materialAt(etch,Math.floor(wx*GRAIN_SIZE/5),Math.floor(wy*GRAIN_SIZE/5))));
     }
     hx.putImageData(im,0,0);hazardSource=hazards;hazardView=view;
   }

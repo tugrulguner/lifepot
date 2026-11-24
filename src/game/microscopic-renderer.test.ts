@@ -60,6 +60,25 @@ describe("native habitat resource field encoding", () => {
     };
     expect(variance(wide)).toBeLessThan(variance(close));
   });
+  it("uses sediment as a red/green aggregate and frost as quiet neutral grain", () => {
+    const depleted=paint(new Uint8Array(2500))[0];
+    const recovering=paint(new Uint8Array(2500).fill(25))[0];
+    const green=(image:Uint8ClampedArray,i:number)=>image[i*4+1];
+    const red=(image:Uint8ClampedArray,i:number)=>image[i*4];
+    const greenBase=resourceFieldColor(25)[1], redBase=resourceFieldColor(25)[0];
+    let positiveGreen=0,negativeRed=0,aggregatePixels=0;
+    for(let i=0;i<40000;i++){
+      const gd=green(recovering,i)-greenBase,rd=red(recovering,i)-redBase;
+      if(gd>8){positiveGreen++;if(rd < -8)negativeRed++;aggregatePixels++;}
+    }
+    expect(aggregatePixels).toBeGreaterThan(1000);
+    expect(negativeRed/positiveGreen).toBeGreaterThan(.8);
+    const channelRange=(image:Uint8ClampedArray,channel:number)=>{
+      let min=255,max=0;for(let i=0;i<40000;i++){const value=image[i*4+channel];min=Math.min(min,value);max=Math.max(max,value);}return max-min;
+    };
+    expect(channelRange(depleted,1)).toBeLessThanOrEqual(5);
+    expect(channelRange(depleted,0)).toBeLessThanOrEqual(5);
+  });
   it("retains grain detail at six food units at whole-world scale", () => {
     const [field] = paint(new Uint8Array(2500).fill(6));
     const green = Array.from({length: 40000}, (_, i) => field[i*4+1]);

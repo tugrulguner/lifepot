@@ -18,8 +18,14 @@ export function CanvasMarkKey() {
       </div>;
 }
 
+export function ConfiguredPressure({state}: {state: SimulationState}) {
+  const pressure = state.config.rules!.environment.pressure;
+  return (<div className="configured-pressure" data-pressure={pressure} aria-label={`Configured environmental pressure: ${pressure.replaceAll("_", " ")}`}><span className="configured-pressure-art" aria-hidden="true" /><span>Configured pressure · {pressure.replaceAll("_", " ")}</span></div>);
+}
+
 export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate, inspection, playerChange, policy }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string; inspection?: ReactNode | ((context: ReactNode) => ReactNode); playerChange?: ReactNode; policy?: "fixed" | "adaptive" | "recorded" }) {
   const rules = state.config.rules!;
+
   const latestSample = evidence?.samples.at(-1);
   const recentSample = latestSample?.generation === state.generation
     ? evidence?.samples.find(sample => sample.generation >= state.generation - 6 && sample.generation < state.generation)
@@ -55,6 +61,7 @@ export function GameplayObservation({ state, evidence, followed, decision, names
   const activity = <>
     <section className="recorded-activity" aria-label="Recorded activity">
       <strong>Generation {state.generation}</strong>
+
       <span>{(state.stats.resources / GRID_CELLS).toFixed(1)} mean resources per cell</span>
       <div>{(["birth", "feeding", "death"] as const).map(kind => {
         const count = state.events.filter(event => event.generation === state.generation && event.kind === kind).length;
@@ -80,6 +87,7 @@ export function GameplayObservation({ state, evidence, followed, decision, names
   const subject = composed ? inspection(context) : inspection;
   return <section className="gameplay-observation" aria-label="Near-board observations">
     {inspection ? <div className="world-legend-row">{speciesKey}{!composed && context}</div> : speciesKey}
+
     {subject}
     {!inspection && activity}
     {!inspection && <div className="followed-family-context" aria-live="polite">
