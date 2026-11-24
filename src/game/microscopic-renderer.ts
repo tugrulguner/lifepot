@@ -6,16 +6,19 @@ const GRAIN_SIZE=32;
 const grainMask=nutrientGrain as number[];
 export function resourceGrainOffset(worldX:number,worldY:number,abundance:number):number {
   if (abundance <= 0) return 0;
-  const x=((Math.floor(worldX*GRAIN_SIZE/5)%GRAIN_SIZE)+GRAIN_SIZE)%GRAIN_SIZE;
-  const y=((Math.floor(worldY*GRAIN_SIZE/5)%GRAIN_SIZE)+GRAIN_SIZE)%GRAIN_SIZE;
+  const px=worldX*GRAIN_SIZE/5,py=worldY*GRAIN_SIZE/5,x0=Math.floor(px),y0=Math.floor(py),fx=px-x0,fy=py-y0;
+  const sample=(x:number,y:number)=>grainMask[((y%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE)*GRAIN_SIZE+(x%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE]/255;
+  const filtered=(sample(x0,y0)*(1-fx)+sample(x0+1,y0)*fx)*(1-fy)+(sample(x0,y0+1)*(1-fx)+sample(x0+1,y0+1)*fx)*fy;
   const amount=Math.min(1,abundance);
-  return Math.max(0,grainMask[y*GRAIN_SIZE+x]/255-(1-amount)*.65)*Math.sqrt(amount);
+  return Math.max(0,filtered-(1-amount)*.65)*Math.sqrt(amount);
 }
-export function hazardHatchAlpha(hazard:number,worldX:number,worldY:number):number {
+export function hazardHatchAlpha(hazard:number,worldX:number,worldY:number,cellFootprint=0):number {
   if (hazard <= 0) return 0;
-  const phase=(worldX+worldY)*.8;
-  const stripe=phase-Math.floor(phase)<.33;
-  return Math.round(Math.min(1,hazard/255)*(stripe?205:83));
+  // Integrate periodic stripe coverage over the projected pixel footprint.
+  const phase=(worldX+worldY)*.8, half=Math.max(.035,cellFootprint*.8);
+  const area=(p:number)=>Math.floor(p)*.33+Math.min(.33,p-Math.floor(p));
+  const stripe=(area(phase+half)-area(phase-half))/(2*half);
+  return Math.round(Math.min(1,hazard/255)*205*stripe);
 }
 // Fixed, perceptually stronger mapping: same engine values always mean the same thing.
 export function resourceFieldColor(value: number): [number, number, number] {
@@ -58,10 +61,10 @@ export function paintResourceField(c: CanvasRenderingContext2D, pad: number, cw:
       const wx=wrap(camera.x-camera.span/2+(px+.5)/200*camera.span), wy=wrap(camera.y-camera.span/2+(py+.5)/200*camera.span);
       const gx=wx-.5,gy=wy-.5,cx=Math.floor(gx),cy=Math.floor(gy),fx=gx-cx,fy=gy-cy;
       const read=(x:number,y:number)=>resources[wrap(y)*50+wrap(x)]||0;
-      const q=Math.max(0,Math.min(1,((read(cx,cy)*(1-fx)+read(cx+1,cy)*fx)*(1-fy)+(read(cx,cy+1)*(1-fx)+read(cx+1,cy+1)*fx)*fy)/150));
+      const q=Math.max(0,Math.min(1,((read(cx,cy)*(1-fx)+read(cx+1,cy)*fx)*(1-fy)+(read(cx,cy+1)*(1-fx)+read(cx+1,cy+1)*fx)*fy)/255));
       const grain=resourceGrainOffset(wx,wy,q),i=(py*200+px)*4;
       const [red, green, blue] = resourceFieldColor(q * 255);
-      im.data[i]=clamp(red-grain*29);im.data[i+1]=clamp(green-grain*29);im.data[i+2]=clamp(blue-grain*29);im.data[i+3]=255;
+      im.data[i]=clamp(red-grain*12);im.data[i+1]=clamp(green+grain*25);im.data[i+2]=clamp(blue+grain*12);im.data[i+3]=255;
     }
     ctx.putImageData(im,0,0); resourceSource=resources; resourceView=view;
   }
@@ -74,7 +77,7 @@ export function paintResourceField(c: CanvasRenderingContext2D, pad: number, cw:
     for(let y=0;y<160;y++)for(let x=0;x<160;x++){
       const wx=wrap(camera.x-camera.span/2+(x+.5)/160*camera.span),wy=wrap(camera.y-camera.span/2+(y+.5)/160*camera.span),v=hazards[Math.floor(wy)*50+Math.floor(wx)],k=(y*160+x)*4;
       im.data[k]=205;im.data[k+1]=62;im.data[k+2]=42;
-      im.data[k+3]=hazardHatchAlpha(v,wx,wy);
+      im.data[k+3]=hazardHatchAlpha(v,wx,wy,camera.span/160);
     }
     hx.putImageData(im,0,0);hazardSource=hazards;hazardView=view;
   }
