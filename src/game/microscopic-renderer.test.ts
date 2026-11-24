@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { hazardHatchAlpha, paintResourceField, resourceFieldColor, resourceGrainOffset } from "./microscopic-renderer";
 
 let images: Uint8ClampedArray[] = [];
-function paint(resources: Uint8Array, hazards = new Uint8Array(2500), showHazards = false) {
+function paint(resources: Uint8Array, hazards = new Uint8Array(2500), showHazards = false, camera = {x:25,y:25,span:50}) {
   images = [];
   const makeCanvas = () => {
     let data: Uint8ClampedArray;
@@ -10,7 +10,7 @@ function paint(resources: Uint8Array, hazards = new Uint8Array(2500), showHazard
     return { width: 0, height: 0, getContext: () => ctx };
   };
   vi.stubGlobal("document", { createElement: makeCanvas });
-  paintResourceField({ drawImage() {}, save() {}, restore() {}, set globalCompositeOperation(_v: string) {}, set globalAlpha(_v: number) {} } as unknown as CanvasRenderingContext2D, 0, 1, 1, 50, 50, resources, hazards, showHazards);
+  paintResourceField({ drawImage() {}, save() {}, restore() {}, set globalCompositeOperation(_v: string) {}, set globalAlpha(_v: number) {} } as unknown as CanvasRenderingContext2D, 0, 1, 1, 50, 50, resources, hazards, showHazards, camera);
   return images;
 }
 
@@ -24,6 +24,41 @@ describe("native habitat resource field encoding", () => {
     const channel = (x: number, y: number) => first[(y * 200 + x) * 4 + 1];
     expect(channel(20, 20)).toBe(channel(40, 20));
     expect(channel(20, 20)).toBe(channel(20, 40));
+  });
+  it("renders grain across scarce-to-rich levels without changing world scale", () => {
+    const levels = [0, 25, 75, 150, 235];
+    const started = performance.now();
+    const images = levels.map(level => paint(new Uint8Array(2500).fill(level))[0]);
+    expect(performance.now() - started).toBeLessThan(5000);
+    const signal = (image: Uint8ClampedArray) => image.reduce((sum, value, i) => sum + (i % 4 === 1 ? value : 0), 0);
+    const means = images.map(image => signal(image) / (200 * 200));
+    expect(means[0]).toBeLessThan(means[1]);
+    expect(means[1]).toBeLessThan(means[2]);
+    expect(means[2]).toBeLessThan(means[3]);
+    expect(means[3]).toBeLessThan(means[4]);
+    // Resource 75 is visibly textured (not merely a flat tint), while the
+    // positions of grain features stay fixed as abundance changes.
+    const scarce = images[2];
+    const green = (x: number, y: number) => scarce[(y * 200 + x) * 4 + 1];
+    expect(Math.max(...Array.from({ length: 200 }, (_, y) => Math.max(...Array.from({ length: 200 }, (_, x) => green(x,y))))) -
+      Math.min(...Array.from({ length: 200 }, (_, y) => Math.min(...Array.from({ length: 200 }, (_, x) => green(x,y)))))).toBeGreaterThan(2);
+    const rich = images[4];
+    const textureDelta = (image: Uint8ClampedArray, x: number, y: number) => image[(y * 200 + x) * 4 + 1] - resourceFieldColor(75)[1];
+    const point = (x: number, y: number) => textureDelta(scarce,x,y);
+    const richDelta = (x: number, y: number) => rich[(y * 200 + x) * 4 + 1] - resourceFieldColor(235)[1];
+    const signedCorrelation = Array.from({length: 200*200},(_,i)=>point(i%200,Math.floor(i/200))*richDelta(i%200,Math.floor(i/200))).reduce((a,b)=>a+b,0);
+    expect(signedCorrelation).toBeGreaterThan(0);
+  });
+  it("footprint-averages grain when raster pixels span multiple mask texels", () => {
+    const resources = new Uint8Array(2500).fill(75);
+    const close = paint(resources, new Uint8Array(2500), false, {x:25,y:25,span:10})[0];
+    const wide = paint(resources, new Uint8Array(2500), false, {x:25,y:25,span:50})[0];
+    const variance = (image: Uint8ClampedArray) => {
+      const values = Array.from({length:200*200},(_,i)=>image[i*4+1]);
+      const mean = values.reduce((a,b)=>a+b,0)/values.length;
+      return values.reduce((a,b)=>a+(b-mean)**2,0)/values.length;
+    };
+    expect(variance(wide)).toBeLessThan(variance(close));
   });
   it("keeps hazard alpha gaps transparent independently of food", () => {
     const hazards = new Uint8Array(2500).fill(255);

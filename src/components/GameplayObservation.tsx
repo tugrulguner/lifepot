@@ -12,8 +12,8 @@ export function CanvasMarkKey() {
         <span><i className="mark-feeding" aria-label="Gold circle">○</i> Feeding</span>
         <span><i className="mark-feeding" aria-label="Gold diamond">◇</i> Prey capture</span>
         <span><i className="mark-death" aria-label="Coral cross">×</i> Death</span>
-        <span><i className="mark-resource" aria-label="Green grain">■</i> Food resources · more grain means more engine resources</span>
-        <span><i className="mark-hazard" aria-label="Coral hatching" /> Hazards · coral hatching where visible</span>
+        <span><i className="mark-resource" aria-hidden="true">■</i> Food resources · more grain means more engine resources</span>
+        <span><i className="mark-hazard" aria-hidden="true" /> Hazards · coral hatching where visible</span>
         <small>Marks are sampled; no pulses with reduced motion.</small>
       </div>;
 }

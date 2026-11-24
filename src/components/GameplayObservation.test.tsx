@@ -69,7 +69,8 @@ describe("near-board observation summary", () => {
     render(<GameplayObservation state={state} evidence={null} followed={null} decision={null} />);
     const key = within(screen.getByRole('region', { name: 'Recorded activity' })).getByRole('note', { name: 'Canvas marks' });
     for (const label of ['Birth', 'Feeding', 'Prey capture', 'Death', 'Food resources', 'more grain means more engine resources', 'Hazards', 'coral hatching where visible']) expect(key).toHaveTextContent(label);
-    expect(key.querySelector('.mark-hazard')).toHaveAttribute('aria-label', 'Coral hatching');
+    expect(key.querySelector('.mark-hazard')).toHaveAttribute('aria-hidden', 'true');
+    expect(key.querySelector('.mark-resource')).toHaveAttribute('aria-hidden', 'true');
     expect(key).toHaveTextContent('Marks are sampled');
     expect(key).toHaveTextContent('reduced motion');
   });

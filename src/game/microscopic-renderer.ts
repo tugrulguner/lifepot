@@ -10,7 +10,9 @@ export function resourceGrainOffset(worldX:number,worldY:number,abundance:number
   const sample=(x:number,y:number)=>grainMask[((y%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE)*GRAIN_SIZE+(x%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE]/255;
   const filtered=(sample(x0,y0)*(1-fx)+sample(x0+1,y0)*fx)*(1-fy)+(sample(x0,y0+1)*(1-fx)+sample(x0+1,y0+1)*fx)*fy;
   const amount=Math.min(1,abundance);
-  return Math.max(0,filtered-(1-amount)*.65)*Math.sqrt(amount);
+  // Preserve the absolute world-space texture scale at every abundance. A
+  // low abundance reduces contrast, rather than shrinking/thresholding grain.
+  return filtered * amount;
 }
 export function hazardHatchAlpha(hazard:number,worldX:number,worldY:number,cellFootprint=0):number {
   if (hazard <= 0) return 0;
@@ -62,7 +64,18 @@ export function paintResourceField(c: CanvasRenderingContext2D, pad: number, cw:
       const gx=wx-.5,gy=wy-.5,cx=Math.floor(gx),cy=Math.floor(gy),fx=gx-cx,fy=gy-cy;
       const read=(x:number,y:number)=>resources[wrap(y)*50+wrap(x)]||0;
       const q=Math.max(0,Math.min(1,((read(cx,cy)*(1-fx)+read(cx+1,cy)*fx)*(1-fy)+(read(cx,cy+1)*(1-fx)+read(cx+1,cy+1)*fx)*fy)/255));
-      const grain=resourceGrainOffset(wx,wy,q),i=(py*200+px)*4;
+      // Average mask samples across the source-world footprint represented by
+      // this raster pixel. At zoomed-out views this prevents point-sample aliasing.
+      const footprint=camera.span/200;
+      const grainSamples=Math.max(1,Math.ceil(footprint*GRAIN_SIZE/5));
+      let grain=0;
+      for(let sy=0;sy<grainSamples;sy++)for(let sx=0;sx<grainSamples;sx++){
+        const sampleX=wx+((sx+.5)/grainSamples-.5)*footprint;
+        const sampleY=wy+((sy+.5)/grainSamples-.5)*footprint;
+        grain+=resourceGrainOffset(sampleX,sampleY,q);
+      }
+      grain/=grainSamples*grainSamples;
+      const i=(py*200+px)*4;
       const [red, green, blue] = resourceFieldColor(q * 255);
       im.data[i]=clamp(red-grain*12);im.data[i+1]=clamp(green+grain*25);im.data[i+2]=clamp(blue+grain*12);im.data[i+3]=255;
     }
