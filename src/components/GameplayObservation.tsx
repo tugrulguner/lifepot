@@ -18,6 +18,14 @@ export function CanvasMarkKey() {
       </div>;
 }
 
+export function ConfiguredPressure({state}: {state: SimulationState}) {
+  const pressure = state.config.rules!.environment.pressure;
+  return (<div className="configured-pressure" data-pressure={pressure}>
+    <span className="configured-pressure-art" aria-hidden="true" />
+    <span>Configured pressure · {pressure.replaceAll("_", " ")}</span>
+  </div>);
+}
+
 export function GameplayObservation({ state, evidence, followed, decision, names, worldName, cameraUpdate, inspection, playerChange, policy }: { state: SimulationState; evidence: RunEvidence | null; followed: number | null; decision: EvolutionDecision | null; names?: Readonly<Record<string, string>>; worldName?: string; cameraUpdate?: string; inspection?: ReactNode | ((context: ReactNode) => ReactNode); playerChange?: ReactNode; policy?: "fixed" | "adaptive" | "recorded" }) {
   const rules = state.config.rules!;
   const latestSample = evidence?.samples.at(-1);

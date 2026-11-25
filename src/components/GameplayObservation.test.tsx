@@ -6,7 +6,7 @@ import { createRunEvidence } from "@/game/run-evidence";
 import { createSimulation, ENGINE_VERSION, GRID_CELLS, LEGACY_ENGINE_VERSION } from "@/game/world";
 import { buildWorldReport } from "@/game/observatory";
 import { deterministicSetup } from "@/game/setup";
-import { GameplayObservation } from "./GameplayObservation";
+import { ConfiguredPressure, GameplayObservation } from "./GameplayObservation";
 
 const setup = deterministicSetup({ world: "pond", threat: "drought", reward: "observe" });
 const state = createSimulation({ seed: 7, config: setup });
@@ -40,6 +40,18 @@ describe("near-board observation summary", () => {
     expect(observation).toHaveTextContent("Fixed rules · no runtime AI interventions");
     expect(observation).not.toHaveTextContent(/offline|degraded|why this policy matters/i);
     expect(observation).toHaveTextContent(`${(state.stats.resources / GRID_CELLS).toFixed(1)} mean resources per cell`);
+  });
+
+  it("shows the configured pressure as a compact, non-localizing material cue", () => {
+    const pressured = structuredClone(state);
+    pressured.config.rules!.environment.pressure = "toxin_wave";
+    render(<ConfiguredPressure state={pressured} />);
+    const pressure = screen.getByText("Configured pressure · toxin wave").parentElement!;
+    expect(pressure).not.toHaveAttribute("aria-label");
+    expect(pressure).toHaveTextContent("Configured pressure · toxin wave");
+    expect(pressure).toHaveAttribute("data-pressure", "toxin_wave");
+    expect(pressure.querySelector(".configured-pressure-art")).toHaveAttribute("aria-hidden", "true");
+    expect(pressure).not.toHaveTextContent(/here|nearby|trend|because|caused/i);
   });
 
   it("keeps the local saved-world identity beside the board", () => {
