@@ -46,7 +46,8 @@ describe("near-board observation summary", () => {
     const pressured = structuredClone(state);
     pressured.config.rules!.environment.pressure = "toxin_wave";
     render(<ConfiguredPressure state={pressured} />);
-    const pressure = screen.getByLabelText("Configured environmental pressure: toxin wave");
+    const pressure = screen.getByText("Configured pressure · toxin wave").parentElement!;
+    expect(pressure).not.toHaveAttribute("aria-label");
     expect(pressure).toHaveTextContent("Configured pressure · toxin wave");
     expect(pressure).toHaveAttribute("data-pressure", "toxin_wave");
     expect(pressure.querySelector(".configured-pressure-art")).toHaveAttribute("aria-hidden", "true");

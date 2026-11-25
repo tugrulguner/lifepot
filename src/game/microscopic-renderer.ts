@@ -3,9 +3,9 @@ import habitatMaterials from "./habitat-materials.json";
 const cache = new Map<string, HTMLCanvasElement>();
 const clamp=(n:number)=>Math.max(0,Math.min(255,Math.round(n)));
 const GRAIN_SIZE=32;
-const strengthKnots = [[0,0],[1,.025],[12,.29],[25,.46],[128,.60],[255,1]] as const;
+const strengthKnots = [[0,0],[1,.018],[12,.28],[25,.34],[128,.64],[255,1]] as const;
 export function fieldStrength(value: number): number {
-  const v=Math.max(0,Math.min(255,value));
+  const v=Number.isFinite(value)?Math.max(0,Math.min(255,value)):0;
   for(let i=1;i<strengthKnots.length;i++){
     const [x1,y1]=strengthKnots[i];
     if(v<=x1){const [x0,y0]=strengthKnots[i-1];return y0+(y1-y0)*(v-x0)/(x1-x0);}
@@ -17,8 +17,10 @@ const frost=habitatMaterials.frost as number[];
 const etch=habitatMaterials.etch as number[];
 const abundanceScale=Array.from({length:256},(_,i)=>fieldStrength(i));
 const materialAt=(mask:number[],x:number,y:number)=>mask[((y%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE)*GRAIN_SIZE+(x%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE]/255;
+const materialMean=(mask:number[])=>mask.reduce((sum,value)=>sum+value,0)/(mask.length*255);
+const sedimentMean=materialMean(sediment), frostMean=materialMean(frost), etchMean=materialMean(etch);
 export function resourceGrainOffset(worldX:number,worldY:number,abundance:number):number {
-  if (abundance <= 0) return 0;
+  if (!Number.isFinite(abundance) || abundance <= 0) return 0;
   const px=worldX*GRAIN_SIZE/5,py=worldY*GRAIN_SIZE/5,x0=Math.floor(px),y0=Math.floor(py),fx=px-x0,fy=py-y0;
   const sample=(x:number,y:number)=>materialAt(sediment,x,y);
   const filtered=(sample(x0,y0)*(1-fx)+sample(x0+1,y0)*fx)*(1-fy)+(sample(x0,y0+1)*(1-fx)+sample(x0+1,y0+1)*fx)*fy;
@@ -28,7 +30,7 @@ export function resourceGrainOffset(worldX:number,worldY:number,abundance:number
   return filtered * amount;
 }
 export function hazardHatchAlpha(hazard:number,worldX:number,worldY:number,cellFootprint=0):number {
-  if (hazard <= 0) return 0;
+  if (!Number.isFinite(hazard) || hazard <= 0) return 0;
   // Integrate periodic stripe coverage over the projected pixel footprint.
   const phase=(worldX+worldY)*.8, half=Math.max(.035,cellFootprint*.8);
   const area=(p:number)=>Math.floor(p)*.33+Math.min(.33,p-Math.floor(p));
@@ -81,21 +83,21 @@ export function paintResourceField(c: CanvasRenderingContext2D, pad: number, cw:
       // this raster pixel. At zoomed-out views this prevents point-sample aliasing.
       const footprint=camera.span/200;
       const grainSamples=Math.max(1,Math.ceil(footprint*GRAIN_SIZE/5));
-      let grain=0;
+      let grain=0,frostValue=0;
       for(let sy=0;sy<grainSamples;sy++)for(let sx=0;sx<grainSamples;sx++){
         const sampleX=wx+((sx+.5)/grainSamples-.5)*footprint;
         const sampleY=wy+((sy+.5)/grainSamples-.5)*footprint;
         grain+=resourceGrainOffset(sampleX,sampleY,q);
+        frostValue+=materialAt(frost,Math.floor(sampleX*GRAIN_SIZE/5),Math.floor(sampleY*GRAIN_SIZE/5));
       }
-      grain/=grainSamples*grainSamples;
+      grain/=grainSamples*grainSamples;frostValue/=grainSamples*grainSamples;
       const i=(py*200+px)*4;
       const [red, green, blue] = resourceFieldColor(q * 255);
-      const frostValue=materialAt(frost,Math.floor(wx*GRAIN_SIZE/5),Math.floor(wy*GRAIN_SIZE/5));
-      const grainCenter=abundanceScale[Math.round(q*255)]*.5;
+      const grainCenter=abundanceScale[Math.round(q*255)]*sedimentMean;
       // Sediment is the high-contrast green aggregate; frost stays a faint,
       // neutral mineral variation even when food is depleted.
-      const aggregate=(grain-grainCenter)*76;
-      const background=(frostValue-.5)*5;
+      const aggregate=(grain-grainCenter)*92;
+      const background=(frostValue-frostMean)*3;
       im.data[i]=clamp(red-aggregate+background);im.data[i+1]=clamp(green+aggregate+background);im.data[i+2]=clamp(blue+background);im.data[i+3]=255;
     }
     ctx.putImageData(im,0,0); resourceSource=resources; resourceView=view;
@@ -109,7 +111,14 @@ export function paintResourceField(c: CanvasRenderingContext2D, pad: number, cw:
     for(let y=0;y<160;y++)for(let x=0;x<160;x++){
       const wx=wrap(camera.x-camera.span/2+(x+.5)/160*camera.span),wy=wrap(camera.y-camera.span/2+(y+.5)/160*camera.span),v=hazards[Math.floor(wy)*50+Math.floor(wx)],k=(y*160+x)*4;
       im.data[k]=205;im.data[k+1]=62;im.data[k+2]=42;
-      im.data[k+3]=Math.round(hazardHatchAlpha(v,wx,wy,camera.span/160)*(.35+.65*materialAt(etch,Math.floor(wx*GRAIN_SIZE/5),Math.floor(wy*GRAIN_SIZE/5))));
+      const etchSamples=Math.max(1,Math.ceil(camera.span/160*GRAIN_SIZE/5));let etchValue=0;
+      for(let sy=0;sy<etchSamples;sy++)for(let sx=0;sx<etchSamples;sx++){
+        const sampleX=wx+((sx+.5)/etchSamples-.5)*camera.span/160;
+        const sampleY=wy+((sy+.5)/etchSamples-.5)*camera.span/160;
+        etchValue+=materialAt(etch,Math.floor(sampleX*GRAIN_SIZE/5),Math.floor(sampleY*GRAIN_SIZE/5));
+      }
+      etchValue/=etchSamples*etchSamples;
+      im.data[k+3]=Math.round(hazardHatchAlpha(v,wx,wy,camera.span/160)*(1+.25*(etchValue-etchMean)));
     }
     hx.putImageData(im,0,0);hazardSource=hazards;hazardView=view;
   }

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { hazardHatchAlpha, paintResourceField, resourceFieldColor, resourceGrainOffset } from "./microscopic-renderer";
+import { fieldStrength, hazardHatchAlpha, paintResourceField, resourceFieldColor, resourceGrainOffset } from "./microscopic-renderer";
+import materials from "./habitat-materials.json";
 
 let images: Uint8ClampedArray[] = [];
 function paint(resources: Uint8Array, hazards = new Uint8Array(2500), showHazards = false, camera = {x:25,y:25,span:50}) {
@@ -15,6 +16,46 @@ function paint(resources: Uint8Array, hazards = new Uint8Array(2500), showHazard
 }
 
 describe("native habitat resource field encoding", () => {
+  it("repairs material wraps while retaining period and grain variation", () => {
+    for (const name of ["sediment", "frost", "etch"] as const) {
+      const a = materials[name], mean = a.reduce((s,v)=>s+v,0)/a.length/255;
+      const sd = Math.sqrt(a.reduce((s,v)=>s+(v/255-mean)**2,0)/a.length);
+      const wrap: number[] = [], interior: number[] = [];
+      for(let y=0;y<32;y++){wrap.push(Math.abs(a[y*32]-a[y*32+31]));for(let x=0;x<31;x++)interior.push(Math.abs(a[y*32+x]-a[y*32+x+1]));}
+      for(let x=0;x<32;x++){wrap.push(Math.abs(a[x]-a[31*32+x]));for(let y=0;y<31;y++)interior.push(Math.abs(a[y*32+x]-a[(y+1)*32+x]));}
+      const avg=(v:number[])=>v.reduce((s,x)=>s+x,0)/v.length;
+      expect(mean).toBeGreaterThan(.35); expect(mean).toBeLessThan(.6);
+      expect(sd).toBeGreaterThan(.15); expect(new Set(a).size).toBeGreaterThan(80);
+      expect(avg(wrap)).toBeLessThan(avg(interior)*.05);
+    }
+  });
+  it("maps invalid strengths to zero and keeps moderate-to-severe contrast rising", () => {
+    expect(fieldStrength(Number.NaN)).toBe(0);
+    expect(fieldStrength(Number.POSITIVE_INFINITY)).toBe(0);
+    expect(fieldStrength(1)).toBeLessThanOrEqual(.025);
+    expect(fieldStrength(128)).toBeGreaterThan(fieldStrength(25));
+    expect(fieldStrength(255)).toBeGreaterThan(fieldStrength(128));
+    expect(hazardHatchAlpha(Number.NaN,0,0)).toBe(0);
+    expect(resourceGrainOffset(1,1,Number.NaN)).toBe(0);
+  });
+  it("separates two midrange fields and preserves mean food color and strong hatching", () => {
+    const signals = [40,110,128,255].map(level => {
+      const [field, overlay] = paint(new Uint8Array(2500).fill(level), new Uint8Array(2500).fill(level), true);
+      const base = resourceFieldColor(level);
+      for (const channel of [0,1]) {
+        const sum = field.reduce((s,v,i) => s+(i%4===channel?v:0),0);
+        expect(Math.abs(sum/40000-base[channel])).toBeLessThan(1);
+      }
+      const chroma = Array.from({length:40000},(_,i)=>field[i*4+1]-field[i*4]);
+      const alpha = overlay.reduce((s,v,i)=>s+(i%4===3?v:0),0)/25600;
+      return {grain:Math.max(...chroma)-Math.min(...chroma), alpha};
+    });
+    expect(signals[1].grain).toBeGreaterThan(signals[0].grain*1.4);
+    expect(signals[1].alpha).toBeGreaterThan(signals[0].alpha*1.4);
+    // Main's unetched hatch: 33% coverage, peak alpha 205, linear strength.
+    expect(signals[2].alpha).toBeGreaterThanOrEqual(.33*205*128/255-1);
+    expect(signals[3].alpha).toBeGreaterThanOrEqual(.33*205-1);
+  });
   it("keeps trace food quiet and reserves grain contrast for rich patches", () => {
     // Green minus red removes the neutral frost signal from the measured texture.
     const ranges = [0,1,6,12,128,255].map(level => {
