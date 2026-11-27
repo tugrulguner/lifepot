@@ -12,12 +12,12 @@ it('compares recorded food at stable boundaries, including the final partial int
   state.history = [1000, 1600, 1400].map((resources,i) => ({ ...state.history[0], generation: [0,6,8][i], resources }));
   const { rerender } = render(<EnvironmentReadout state={state} showHazards={true}/>);
   const note = screen.getByRole('note', {name:'Habitat readout'});
-  expect(note).toHaveTextContent('World food: up 600 units · Gen 0–6');
+  expect(note).toHaveTextContent('World food: up 600 units · Last interval: Gen 0–6');
   expect(note).toHaveTextContent('Coral stripes mark local hazards');
   expect(note).not.toHaveAttribute('aria-live');
   state.outcome = 'surviving';
   rerender(<EnvironmentReadout state={state} showHazards={false}/>);
-  expect(note).toHaveTextContent('World food: down 200 units · Gen 6–8');
+  expect(note).toHaveTextContent('World food: down 200 units · Last interval: Gen 6–8');
   expect(note).toHaveTextContent('Hazard stripes are off');
   state.history[2].resources = 1600;
   rerender(<EnvironmentReadout state={state} showHazards={false}/>);

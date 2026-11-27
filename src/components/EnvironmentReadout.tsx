@@ -14,7 +14,7 @@ export function EnvironmentReadout({ state, showHazards, placement = "compact" }
   if (before && after && start < end) {
     const change = after.resources - before.resources;
     const trend = change === 0 ? "the same at both readings" : `${change > 0 ? "up" : "down"} ${format(Math.abs(change))} units`;
-    summary = `World food: ${trend} · Gen ${start}–${end}`;
+    summary = `World food: ${trend} · Last interval: Gen ${start}–${end}`;
   }
   return <aside className={`${styles.readout} ${styles[placement]}`} role="note" aria-label="Habitat readout">
     <strong>{summary}</strong>

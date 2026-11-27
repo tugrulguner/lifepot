@@ -18,6 +18,13 @@ for (const width of [390, 1001, 1280]) test(`habitat readout stays visible with 
     expect(text.x).toBeGreaterThanOrEqual(board.x + board.width);
     const overview = (await page.getByRole('complementary', { name: 'World overview' }).boundingBox())!;
     expect(text.x + text.width).toBeLessThanOrEqual(overview.x);
+    await page.getByRole('button', { name: 'Expand world overview' }).click();
+    await expect.poll(async () => {
+      const bounds = (await note.boundingBox())!;
+      const expanded = (await page.getByRole('complementary', { name: 'World overview' }).boundingBox())!;
+      return expanded.x - bounds.x - bounds.width;
+    }).toBeGreaterThanOrEqual(0);
+    await expect(note).toBeInViewport({ ratio: 1 });
   } else {
     expect(text.y + text.height).toBeLessThanOrEqual(board.y);
     expect(board.width).toBeGreaterThanOrEqual(280);
