@@ -43,10 +43,12 @@ export function resourceFieldColor(value: number): [number, number, number] {
   return [clamp(165 - 65 * t), clamp(169 + 20 * t), clamp(161 + 16 * t)];
 }
 function rgba([r,g,b]:number[],a:number){return`rgba(${r},${g},${b},${a})`;}
+function colorRgb(color:string):number[]{const m=/^#([\da-f]{6})$/i.exec(color);return m?[parseInt(m[1].slice(0,2),16),parseInt(m[1].slice(2,4),16),parseInt(m[1].slice(4,6),16)]:[12,112,111];}
+function tint(rgb:number[],amount:number){return rgb.map(channel=>clamp(channel+(amount>=0?255-channel:channel)*amount));}
 function contour(c:CanvasRenderingContext2D,pred:boolean,v:number){c.beginPath();for(let k=0;k<=80;k++){const a=k/80*Math.PI*2,r=1+.045*Math.sin(a*4+v*.8)+.025*Math.sin(a*7-v),t=pred?1+.34*Math.cos(a):1,x=Math.cos(a)*r*t,y=Math.sin(a)*r*(pred?.69:.89);if(!k)c.moveTo(x,y);else c.lineTo(x,y);}c.closePath();}
 const portraits = new Map<string, string>();
 export function microscopicPortrait(role:string|undefined,color:string,variant:number){
- const key = `${role}:${variant % 12}`;
+ const key = `${role}:${color}:${variant % 12}`;
  const cached = portraits.get(key); if (cached) return cached;
  const portrait = microscopicSprite(role,color,variant,100,1)?.toDataURL() ?? "";
  if (portrait) { if (portraits.size >= 256) portraits.delete(portraits.keys().next().value!); portraits.set(key,portrait); }
@@ -67,8 +69,8 @@ export function microscopicSprite(role:string|undefined,color:string,variant:num
    else if(role==='omnivore'){x.fillStyle='#ffdc78';x.beginPath();x.arc(0,0,.17,0,Math.PI*2);x.fill();}
    cache.set(key,canvas);if(cache.size>256)cache.delete(cache.keys().next().value!);return canvas;
  }
- contour(x,pred,v);const base=pred?[190,54,57]:[12,112,111], light=pred?[255,207,191]:[201,246,239], dark=pred?[111,34,42]:[5,66,72],mid=pred?[232,91,82]:[27,166,155];const g=x.createRadialGradient(-.38,-.42,.03,.02,.02,1.18);g.addColorStop(0,rgba(light,1));g.addColorStop(.42,rgba(mid,1));g.addColorStop(.79,rgba(base,1));g.addColorStop(1,rgba(dark,1));x.fillStyle=g;x.fill();
- x.save();contour(x,pred,v);x.clip();for(let j=0;j<15;j++){const a=j*2.399+v*.41,r=.23+((j*37+v*11)%61)/100,ox=Math.cos(a)*r,oy=Math.sin(a)*r*(pred?.62:.8),sz=.035+(j%4)*.012,q=x.createRadialGradient(ox-.015,oy-.02,0,ox,oy,sz*2);q.addColorStop(0,pred?'rgba(255,236,184,.7)':'rgba(230,255,216,.65)');q.addColorStop(.55,pred?'rgba(152,77,56,.22)':'rgba(24,108,100,.22)');q.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=q;x.beginPath();x.ellipse(ox,oy,sz*1.6,sz,a,0,Math.PI*2);x.fill();}
+ contour(x,pred,v);const body=colorRgb(color),light=tint(body,.48),dark=tint(body,-.48),mid=tint(body,.18);const g=x.createRadialGradient(-.38,-.42,.03,.02,.02,1.18);g.addColorStop(0,rgba(light,1));g.addColorStop(.42,rgba(mid,1));g.addColorStop(.79,rgba(body,1));g.addColorStop(1,rgba(dark,1));x.fillStyle=g;x.fill();
+ x.save();contour(x,pred,v);x.clip();for(let j=0;j<15;j++){const a=j*2.399+v*.41,r=.23+((j*37+v*11)%61)/100,ox=Math.cos(a)*r,oy=Math.sin(a)*r*(pred?.62:.8),sz=.035+(j%4)*.012,q=x.createRadialGradient(ox-.015,oy-.02,0,ox,oy,sz*2);q.addColorStop(0,'rgba(255,255,255,.34)');q.addColorStop(.55,pred?'rgba(40,20,25,.14)':'rgba(5,25,35,.12)');q.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=q;x.beginPath();x.ellipse(ox,oy,sz*1.6,sz,a,0,Math.PI*2);x.fill();}
  x.save();x.translate(-.12,.07);x.rotate(.3+v*.19);x.beginPath();x.ellipse(0,0,.28,.22,0,0,Math.PI*2);const core=x.createRadialGradient(-.08,-.07,.01,0,0,.32);core.addColorStop(0,pred?'rgba(238,170,123,.75)':'rgba(132,197,153,.8)');core.addColorStop(1,pred?'rgba(100,47,58,.65)':'rgba(20,83,85,.65)');x.fillStyle=core;x.fill();x.strokeStyle='rgba(255,246,218,.35)';x.lineWidth=.016;x.stroke();x.restore();x.strokeStyle=pred?'rgba(119,54,52,.12)':'rgba(22,91,82,.12)';x.lineWidth=.012;for(let j=0;j<4;j++){x.beginPath();x.moveTo(-1,.2*j-.4);x.bezierCurveTo(-.4,-.7+j*.2,.2,.7-j*.17,1,.13*j-.2);x.stroke();}x.restore();
  contour(x,pred,v);x.lineWidth=.034;x.strokeStyle=pred?'rgba(91,28,34,.95)':'rgba(4,63,66,.95)';x.stroke();x.save();x.scale(.955,.955);contour(x,pred,v);x.lineWidth=.026;x.strokeStyle='rgba(255,255,228,.65)';x.stroke();x.restore();x.save();x.scale(.91,.91);contour(x,pred,v);x.lineWidth=.025;x.strokeStyle='rgba(251,255,237,.3)';x.stroke();x.restore();cache.set(key,canvas);if(cache.size>256)cache.delete(cache.keys().next().value!);return canvas;
 }

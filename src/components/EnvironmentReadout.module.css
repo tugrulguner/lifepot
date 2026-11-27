@@ -1,7 +1,7 @@
 .readout {
   display: grid;
   gap: .2rem;
-  flex-basis: 100%;
+  min-width: 0;
   padding: .45rem .65rem;
   border: 1px solid var(--mp-border, #9aa8a0);
   border-radius: .4rem;
@@ -12,4 +12,12 @@
   overflow-wrap: anywhere;
 }
 .readout strong { font-size: .82rem; }
+.beside { display: none; }
+@media (min-width: 1001px) {
+  .compact { display: none; }
+  .beside { display: grid; grid-area: observation; align-self: start; margin-inline-end: calc(var(--overview-width) + 10px); }
+}
+@media (max-width: 1000px) {
+  .compact { padding: .25rem .4rem; border: 0; background: transparent; color: inherit; }
+}
 @media (max-width: 600px) { .readout { font-size: .73rem; padding: .4rem .55rem; } }

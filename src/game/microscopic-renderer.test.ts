@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fieldStrength, hazardHatchAlpha, microscopicSprite, paintResourceField, resourceFieldColor, resourceGrainOffset } from "./microscopic-renderer";
+import { fieldStrength, hazardHatchAlpha, microscopicPortrait, microscopicSprite, paintResourceField, resourceFieldColor, resourceGrainOffset } from "./microscopic-renderer";
 import materials from "./habitat-materials.json";
 
 let images: Uint8ClampedArray[] = [];
@@ -16,6 +16,25 @@ function paint(resources: Uint8Array, hazards = new Uint8Array(2500), showHazard
 }
 
 describe("native habitat resource field encoding", () => {
+  it("keeps the species body color as anchor at native, detailed, and portrait scales", () => {
+    const stops: string[] = [];
+    const fills: string[] = [];
+    let portraitRenders = 0;
+    vi.stubGlobal("document", { createElement: () => {
+      let fill = "";
+      const gradient = { addColorStop(_at:number, color:string) { stops.push(color); } };
+      const ctx = { translate() {}, scale() {}, save() {}, restore() {}, beginPath() {}, clip() {}, ellipse() {}, arc() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() { fills.push(fill); }, stroke() {}, rotate() {}, bezierCurveTo() {}, createRadialGradient() { return gradient; }, set fillStyle(v:string) { fill=v; }, set strokeStyle(_v:string) {}, set lineWidth(_v:number) {} };
+      return { width:0,height:0,getContext:()=>ctx,toDataURL:()=>{ portraitRenders++; return "portrait"; } };
+    }});
+    const anchor = "#153f67";
+    microscopicSprite("grazer", anchor, 0, 10, 1);
+    microscopicSprite("grazer", anchor, 0, 100, 1);
+    microscopicPortrait("grazer", anchor, 0);
+    expect(fills).toContain(anchor);
+    expect(stops).toContain("rgba(21,63,103,1)");
+    expect(microscopicPortrait("grazer", "#234f71", 0)).toBe("portrait");
+    expect(portraitRenders).toBe(2);
+  });
   it("keeps organism role silhouettes and contrast in the tiny native-world sprite path", () => {
     const traces: Array<{ role: string; path: string; fill: string; stroke: string; width: number }> = [];
     vi.stubGlobal("document", { createElement: () => {

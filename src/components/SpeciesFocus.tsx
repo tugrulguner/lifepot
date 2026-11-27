@@ -5,13 +5,12 @@ import type { SpeciesId } from "@/game/rules";
 import { roleColor } from "@/game/world-presentation";
 import { relationshipLabel } from "@/game/visuals";
 
-export function SpeciesFocus({ state, selected, onSelect, readout }: { readout?: React.ReactNode; state: SimulationState; selected: SpeciesId | null; onSelect: (id: SpeciesId | null) => void }) {
+export function SpeciesFocus({ state, selected, onSelect }: { state: SimulationState; selected: SpeciesId | null; onSelect: (id: SpeciesId | null) => void }) {
   const report = buildWorldReport(state, []);
   const focused = report.species.find(row => row.id === selected);
   const edges = state.config.rules!.interactions.filter(edge => edge.pair.split(":").includes(selected ?? ""));
   return <section className="species-focus" aria-label="Species focus">
     <div className="species-focus-buttons">
-      {readout}
       <button aria-pressed={!selected} onClick={() => onSelect(null)}>All life</button>
       {report.species.map(row => <button key={row.id} aria-label={`Focus species ${row.id}`} aria-pressed={selected === row.id} onClick={() => onSelect(row.id as SpeciesId)}><i style={{ background: roleColor(row.role, row.id) }}/>{row.id} · {row.role} · {row.population}</button>)}
     </div>

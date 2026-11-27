@@ -303,7 +303,7 @@ function draw(canvas: HTMLCanvasElement, state: SimulationState, selected: numbe
   }
   c.globalAlpha=1;
 }
-function World({ state, selected, followed, focusedSpecies, onFocusSpecies, onInspect, onCameraUpdate, idPrefix = "world", showMeasurements = true }: { state: SimulationState; selected: number | null; followed: number | null; focusedSpecies: SpeciesId | null; onFocusSpecies?: (id: SpeciesId | null) => void; onInspect: (index: number) => void; onCameraUpdate: (message: string) => void; idPrefix?: string; showMeasurements?: boolean }) {
+function World({ state, selected, followed, focusedSpecies, onInspect, onCameraUpdate, idPrefix = "world", showMeasurements = true }: { state: SimulationState; selected: number | null; followed: number | null; focusedSpecies: SpeciesId | null; onInspect: (index: number) => void; onCameraUpdate: (message: string) => void; idPrefix?: string; showMeasurements?: boolean }) {
   const cameraHintId = `${idPrefix}-camera-hint`, cameraOptionsId = `${idPrefix}-camera-options`;
   const [viewOptionsOpen, setViewOptionsOpen] = useState(false);
   const ref = useRef<HTMLCanvasElement>(null);
@@ -482,10 +482,11 @@ function World({ state, selected, followed, focusedSpecies, onFocusSpecies, onIn
       role="img"
       aria-label={`Ecosystem generation ${state.generation}; ${state.stats.population} organisms`}
     />
-    {onFocusSpecies && <SpeciesFocus state={state} selected={focusedSpecies} onSelect={onFocusSpecies} readout={<EnvironmentReadout state={state} showHazards={showHazards} />} />}
+    {showMeasurements && <EnvironmentReadout state={state} showHazards={showHazards} placement="beside" />}
     <aside className={`world-overview${overviewExpanded ? " is-expanded" : ""}`} aria-label="World overview"><button type="button" aria-label={overviewExpanded ? "Collapse world overview" : "Expand world overview"} aria-expanded={overviewExpanded} onClick={() => setOverviewExpanded(value => !value)}><canvas ref={overviewRef} width={GRID_SIZE} height={GRID_SIZE} aria-hidden="true" /></button><span>Overview</span></aside>
     <section className="camera-tools camera-primary" aria-label="World camera">
       {idPrefix === "world" && <button type="button" className={gameplayStyles.viewOptions} aria-expanded={viewOptionsOpen} onClick={() => setViewOptionsOpen(open => !open)}>View options</button>}
+      {showMeasurements && !viewOptionsOpen && <EnvironmentReadout state={state} showHazards={showHazards} placement="compact" />}
       <div className="watching-progress" role="group" aria-label="Watching progress"><span>{state.outcome !== "running" && <strong>{state.stats.population === 0 ? "World empty" : "Observation complete"} · </strong>}Generation {state.generation} / {state.fixedHabitat ? getObservationLimit(state) : DEFAULT_GENERATIONS} · {state.stats.population} living</span>{showMeasurements && <a href="#live-measurements">Measurements</a>}</div>
       <div className="camera-buttons">
         <button aria-label="Zoom out" disabled={view.zoom <= 1} onClick={() => { zoom(-.5); returnToWorld(); }}>−</button>
@@ -499,6 +500,7 @@ function World({ state, selected, followed, focusedSpecies, onFocusSpecies, onIn
       <p id={cameraHintId} className="camera-hint">{canFollowFamily ? `Family #${followed} pinned. Follow family keeps it in view.` : followed !== null ? `Family #${followed} has no living members. Inspect another creature to pin a family.` : "Pause and inspect a creature, then pin its family to follow."}</p>
     </section>
     <section id={cameraOptionsId} className="camera-tools camera-options" aria-label="Camera options" tabIndex={-1}>
+      {showMeasurements && viewOptionsOpen && <EnvironmentReadout state={state} showHazards={showHazards} placement="compact" />}
       <div className="camera-buttons">
         {[2, 5, 10].map(magnification => <button key={magnification} aria-label={`${magnification}× magnification`} aria-pressed={view.zoom === magnification} onClick={() => { zoom(magnification - view.zoom); returnToWorld(); }}>{magnification}×</button>)}
         <button aria-pressed={showHazards} onClick={() => setShowHazards(!showHazards)}>Hazard shading</button>
@@ -1377,7 +1379,8 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
       {notice && <p className="run-notice" role="status">{notice}</p>}
       {archivedEvidence && <section className="archived-highlights" aria-label="Recorded highlights"><h2>Recorded highlights</h2><p>Validated from this saved replay; these are archived observations, not newly observed replay events.</p>{archivedEvidence.lineageExtinction.length ? <ul>{archivedEvidence.lineageExtinction.map((item, index) => <li key={`${item.lineage}-${item.generation}-${index}`}>Founder family {item.lineage} disappeared at generation {item.generation} (recorded).</li>)}</ul> : <p>No followed-family extinction milestone was recorded in this save.</p>}</section>}
       {Object.keys(decisionReasons).length > 0 && <details className="decision-availability"><summary>Adaptive availability · {Object.keys(decisionReasons).length} abstentions with reported reasons</summary><ul>{Object.entries(decisionReasons).map(([generation, reason]) => <li key={generation}>Generation {generation}: {failureLabels[reason]}. No new policy was applied; inherited behavior continued.</li>)}</ul></details>}
-      <World key={arrivalRevision} state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onFocusSpecies={setFocusedSpecies} onCameraUpdate={setCameraUpdate} onInspect={index => { setSelected(index); setPaused(true); }} />
+      <World key={arrivalRevision} state={simulation} selected={selected} followed={followed} focusedSpecies={focusedSpecies} onCameraUpdate={setCameraUpdate} onInspect={index => { setSelected(index); setPaused(true); }} />
+      <SpeciesFocus state={simulation} selected={focusedSpecies} onSelect={setFocusedSpecies} />
       <div className={gameplayStyles.mobileMarkKey}><CanvasMarkKey /></div>
       <div className={gameplayStyles.worldContext}>
       <GameplayObservation playerChange={playerEvents.some(e=>e.acceptedGeneration<=simulation.generation&&(!active||active.generation<e.generation+6))?<PlayerChangeStatus events={playerEvents} generation={simulation.generation} outcome={simulation.outcome} evidence={evidence}/>:undefined} inspection={selected === null ? undefined : context => <WatchingOrganism state={simulation} index={selected} followed={followed} onFollow={followLineage} onDetails={inspectDetails} context={context} />} cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} policy={replayMode ? "recorded" : policy} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
