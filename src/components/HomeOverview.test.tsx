@@ -16,7 +16,9 @@ it("explains adaptive ecology without calling life deterministic or promising in
 });
 it("keeps canonical artwork in the family hero and creator/family attribution immediately after aligned actions", () => {
   const root = overview();
-  expect(root.querySelector('.overview-hero img[src="/lifepot-lockup.png?v=adaptive-life-1"]')).not.toBeNull();
+  expect(root.querySelector('.overview-hero img[src="/art/recorded-habitat-closeup.webp"]')).not.toBeNull();
+  expect(root.querySelector('.overview-hero img')?.getAttribute("alt")).toContain("recorded LifePot habitat");
+  expect(root.querySelector(".overview-hero")?.textContent?.indexOf("Play LifePot")).toBeLessThan(root.querySelector(".overview-hero")!.textContent.indexOf("Play example"));
   const actions = root.querySelector(".overview-actions")!;
   expect(root.querySelector('.overview-actions a[href="/experiment"]')?.textContent).toContain("Play LifePot");
   expect(actions.querySelector('.overview-secondary[href="/play/example"]')?.textContent).toContain("Play example");

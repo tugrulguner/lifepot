@@ -7,6 +7,24 @@ import { createRunEvidence, followRunLineage } from '@/game/run-evidence';
 import { WorldOutcome } from './WorldOutcome';
 afterEach(cleanup);
 
+it('offers the supported recorded moment beside the board and inspects that exact moment', () => {
+  const state = createSimulation({ seed: 13, config: defaultConfig() });
+  const moments = createRunEvidence(state);
+  const onInspectMoment = vi.fn();
+  render(<WorldOutcome state={state} evidence={moments} followed={null} onInvestigate={() => {}} onInspectMoment={onInspectMoment} />);
+  const button = screen.getByRole('button', { name: 'Inspect this moment' });
+  expect(button).toBeTruthy();
+  fireEvent.click(button);
+  expect(onInspectMoment).toHaveBeenCalledWith(expect.objectContaining({ kind: 'end', generation: state.generation }));
+});
+
+it('does not offer a recorded-moment action when no supported moment exists', () => {
+  const state = createSimulation({ seed: 13, config: defaultConfig() });
+  const evidence = { ...createRunEvidence(state), samples: [], firstExtinction: [], lineageExtinction: [] };
+  render(<WorldOutcome state={state} evidence={evidence} followed={null} onInvestigate={() => {}} onInspectMoment={() => {}} />);
+  expect(screen.queryByRole('button', { name: 'Inspect this moment' })).toBeNull();
+});
+
 it('retains the living family and hands its recorded observation into review', () => {
   const state = createSimulation({ seed: 7, config: defaultConfig() });
   const followed = state.lineage[state.guild.findIndex(Boolean)];

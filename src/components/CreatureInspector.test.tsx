@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { createSimulation } from "@/game/world";
 import { createRunEvidence } from "@/game/run-evidence";
@@ -8,6 +8,17 @@ import { defaultConfig } from "@/game/setup";
 import { CreatureInspector } from "./CreatureInspector";
 
 describe("creature inspector summary", () => {
+  it("lets the player explicitly follow the inspected organism's founder family", () => {
+    const state = createSimulation({ seed: 17, config: defaultConfig() });
+    const index = state.guild.findIndex(Boolean);
+    const onFollow = vi.fn();
+    render(<CreatureInspector state={state} index={index} followed={null} onFollow={onFollow} onClear={() => {}} onPick={() => {}} />);
+    expect(screen.getByRole("button", { name: `Follow founder lineage #${state.lineage[index]}` })).toBeInTheDocument();
+    expect(onFollow).not.toHaveBeenCalled();
+    screen.getByRole("button", { name: `Follow founder lineage #${state.lineage[index]}` }).click();
+    expect(onFollow).toHaveBeenCalledWith(state.lineage[index]);
+  });
+
   it("magnifies the inspected role symbol and measured energy without inventing anatomy", () => {
     const state = createSimulation({ seed: 17, config: defaultConfig() });
     const index = state.guild.findIndex(Boolean);
