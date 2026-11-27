@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fieldStrength, hazardHatchAlpha, paintResourceField, resourceFieldColor, resourceGrainOffset } from "./microscopic-renderer";
+import { fieldStrength, hazardHatchAlpha, microscopicSprite, paintResourceField, resourceFieldColor, resourceGrainOffset } from "./microscopic-renderer";
 import materials from "./habitat-materials.json";
 
 let images: Uint8ClampedArray[] = [];
@@ -16,6 +16,20 @@ function paint(resources: Uint8Array, hazards = new Uint8Array(2500), showHazard
 }
 
 describe("native habitat resource field encoding", () => {
+  it("keeps organism role silhouettes and contrast in the tiny native-world sprite path", () => {
+    const traces: Array<{ role: string; path: string; fill: string; stroke: string; width: number }> = [];
+    vi.stubGlobal("document", { createElement: () => {
+      let fill = "", stroke = "", width = 0, path = "";
+      const ctx = { translate() {}, scale() {}, save() {}, restore() {}, beginPath() { path = ""; }, clip() {}, ellipse() {}, arc() {}, moveTo(x:number,y:number) { path += `M${x},${y}`; }, lineTo(x:number,y:number) { path += `L${x},${y}`; }, closePath() { path += "Z"; }, fill() { traces.push({ role: "", path, fill, stroke, width }); }, stroke() { traces.push({ role: "", path, fill, stroke, width }); }, set fillStyle(v:string) { fill=v; }, set strokeStyle(v:string) { stroke=v; }, set lineWidth(v:number) { width=v; }, createRadialGradient() { return { addColorStop() {} }; } };
+      return { width:0,height:0,getContext:()=>ctx };
+    }});
+    microscopicSprite("grazer", "#339966", 0, 10, 1);
+    microscopicSprite("hunter", "#cc3344", 0, 10, 1);
+    const fills = traces.filter(t => t.fill && t.path);
+    expect(fills.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(fills.map(t => t.path)).size).toBeGreaterThanOrEqual(2);
+    expect(fills.some(t => t.stroke === "#07100f")).toBe(true);
+  });
   it("repairs material wraps while retaining period and grain variation", () => {
     for (const name of ["sediment", "frost", "etch"] as const) {
       const a = materials[name], mean = a.reduce((s,v)=>s+v,0)/a.length/255;

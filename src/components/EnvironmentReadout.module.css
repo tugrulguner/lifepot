@@ -1,0 +1,15 @@
+.readout {
+  display: grid;
+  gap: .2rem;
+  flex-basis: 100%;
+  padding: .45rem .65rem;
+  border: 1px solid var(--mp-border, #9aa8a0);
+  border-radius: .4rem;
+  background: var(--mp-surface, #f4f6f4);
+  color: var(--mp-ink, #17231e);
+  font-size: .78rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.readout strong { font-size: .82rem; }
+@media (max-width: 600px) { .readout { font-size: .73rem; padding: .4rem .55rem; } }
