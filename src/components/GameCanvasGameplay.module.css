@@ -89,6 +89,12 @@ main.starterReview { overflow: clip; }
   }
 }
 
+@media (max-width: 600px) {
+  .shell.completed:global(.simulation-shell):has(.viewOptions[aria-expanded="false"]) {
+    grid-template-areas: "controls" "camera-primary" "board" "outcome" "focus-controls" "observation" "result" "inspector" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
+  }
+}
+
 /* Keep the real square habitat above the compact mobile/tablet proposal sheet. */
 @media (max-width: 1000px) {
   .proposing :global(.life-canvas) { max-width: max(280px, min(100%, calc(55dvh - 96px))); }

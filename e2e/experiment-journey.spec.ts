@@ -41,6 +41,21 @@ for (const width of [390, 1280]) test.describe.serial(`observed-history journey 
     expect(errors).toEqual([]); expect(inference).toEqual([]);
   });
 
+  test('open the moment offered beside the finished board', async () => {
+    const summary = page.getByRole('region', { name: 'World outcome', exact: true });
+    const opener = summary.getByRole('button', { name: 'Inspect this moment', exact: true });
+    const fact = await summary.locator('p').allTextContents();
+    await opener.click();
+    const dialog = page.getByRole('dialog', { name: 'Recorded moment', exact: true });
+    const caption = await dialog.locator(':scope > header p').innerText();
+    const [, description, generation] = caption.match(/^(.*) · Generation (\d+)$/)!;
+    expect(fact).toContain(description);
+    await expect(dialog.getByRole('img', { name: new RegExp(`Ecosystem generation ${generation};`) })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(opener).toBeFocused();
+    await expect(page.getByTestId('generation')).toHaveText('180 / 180');
+  });
+
   // Keep the actual completed world across serial legs; reconstruction and
   // native dialog behavior have their own unchanged 30-second test budget.
   test('inspect a real recorded scene and return to the unchanged completed world', async ({}, testInfo) => {

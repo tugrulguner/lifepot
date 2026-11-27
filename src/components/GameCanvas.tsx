@@ -1360,6 +1360,13 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
     setSeed(simulation.seed); setReplayMode(false); setManuallyEdited(false);
     setStage("review"); window.scrollTo(0, 0);
   };
+  const inspectRecordedMoment = (moment: RecordedMoment) => {
+    if (!completedReplay) return;
+    setRecordedCell(null);
+    setRecordedFamily(moment.kind === "family" ? Number(moment.reference.split(":")[1]) : null);
+    setRecordedCamera("");
+    setRecordedMoment({ moment, replay: completedReplay });
+  };
   const active = activeDecisionForGeneration(ledger, simulation.generation),
     resources = Math.round(simulation.stats.resources / 2500);
   return (
@@ -1373,9 +1380,9 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
       <div className={gameplayStyles.mobileMarkKey}><CanvasMarkKey /></div>
       <div className={gameplayStyles.worldContext}>
       <GameplayObservation playerChange={playerEvents.some(e=>e.acceptedGeneration<=simulation.generation&&(!active||active.generation<e.generation+6))?<PlayerChangeStatus events={playerEvents} generation={simulation.generation} outcome={simulation.outcome} evidence={evidence}/>:undefined} inspection={selected === null ? undefined : context => <WatchingOrganism state={simulation} index={selected} followed={followed} onFollow={followLineage} onDetails={inspectDetails} context={context} />} cameraUpdate={cameraUpdate} worldName={localWorldName} state={simulation} evidence={evidence} followed={followed} decision={active ?? null} policy={replayMode ? "recorded" : policy} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} />
-      {complete && evidence && <WorldOutcome state={simulation} evidence={evidence} followed={followed} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} onInvestigate={investigateOutcome} onReview={!simulation.fixedHabitat ? reviewOutcome : undefined} />}
+      {complete && evidence && <WorldOutcome state={simulation} evidence={evidence} followed={followed} names={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} onInvestigate={investigateOutcome} onInspectMoment={!simulation.fixedHabitat && completedReplay ? inspectRecordedMoment : undefined} onReview={!simulation.fixedHabitat ? reviewOutcome : undefined} />}
       </div>
-      <CreatureInspector state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={followLineage} onClear={() => setSelected(null)} onPick={inspectLiving} />
+      <CreatureInspector complete={complete} state={simulation} evidence={evidence} index={selected} followed={followed} onFollow={followLineage} onClear={() => setSelected(null)} onPick={inspectLiving} />
       <FamilyHeader feedbackPath="/experiment" skipTarget="play-content"><div className="environment-strip">{title(simulation.config.rules!.environment.pressure)} · {title(simulation.config.rules!.environment.volatility)}</div><ThemeControl theme={theme} onChange={changeTheme} /></FamilyHeader>
       <div className="observatory-boundary"><WorldObservatory state={simulation} ledger={ledger.filter(item => item.generation <= simulation.generation)} replay={replayMode} evidence={evidence} /></div>
       <section id="live-measurements" tabIndex={-1} className="stats-strip" aria-label="Live ecosystem statistics">
@@ -1502,12 +1509,7 @@ export function GameCanvas({ initialEntry = "setup" }: { initialEntry?: "setup" 
       {simulation.fixedHabitat && <HabitatLibrary onOpen={openSavedHabitat} refreshKey={habitatRefreshKey} />}
       {complete && showResults && evidence && <RunResults state={simulation} evidence={evidence} followedLineage={followed} question={simulation.fixedHabitat ? "" : question} interventions={!simulation.fixedHabitat ? <PlayerChangeHistory events={playerEvents} generation={simulation.generation} outcome={simulation.outcome} evidence={evidence}/> : undefined} comparison={!simulation.fixedHabitat && baseline ? <RunComparison speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])} before={baseline} after={{ evidence, config: initialConfig ?? config, seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }} /> : undefined} speciesNames={Object.fromEntries(proof?.namedIntent?.species.map(species => [species.id, species.name]) ?? [])}
         onInspect={() => { setShowResults(false); document.querySelector<HTMLCanvasElement>(".life-canvas")?.focus(); }}
-        onInspectMoment={!simulation.fixedHabitat && completedReplay ? moment => {
-          setRecordedCell(null);
-          setRecordedFamily(moment.kind === "family" ? Number(moment.reference.split(":")[1]) : null);
-          setRecordedCamera("");
-          setRecordedMoment({ moment, replay: completedReplay });
-        } : undefined}
+        onInspectMoment={!simulation.fixedHabitat && completedReplay ? inspectRecordedMoment : undefined}
         onEditMoment={!simulation.fixedHabitat ? reviewOutcome : undefined}
         onReplay={!simulation.fixedHabitat ? () => { if (replayRef.current) begin(answers, initialConfigRef.current ?? config, seed, replayRef.current); else setNotice("Replay is not ready yet."); } : undefined}
         onEdit={!simulation.fixedHabitat ? () => { setParentWorldId(originWorldId ?? parentWorldId); setBaseline({ evidence, config: structuredClone(initialConfigRef.current ?? config), seed: simulation.seed, decisions: structuredClone(ledger), policy: replayMode ? "recorded" : policy }); setConfig(structuredClone(initialConfigRef.current ?? config)); setReplayMode(false); setManuallyEdited(false); setStage("review"); window.scrollTo(0, 0); } : undefined}

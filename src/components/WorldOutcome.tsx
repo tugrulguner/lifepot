@@ -11,10 +11,11 @@ type Props = {
   names?: Partial<Record<SpeciesId, string>>;
   onInvestigate: () => void;
   onReview?: (moment: RecordedMoment) => void;
+  onInspectMoment?: (moment: RecordedMoment) => void;
 };
 
 /** A factual stopping point beside the original habitat, not another simulation. */
-export function WorldOutcome({ state, evidence, followed, names = {}, onInvestigate, onReview }: Props) {
+export function WorldOutcome({ state, evidence, followed, names = {}, onInvestigate, onReview, onInspectMoment }: Props) {
   const moments = getRecordedMoments(evidence, state.config, names);
   const moment = moments.find(item => item.reference === `family:${followed}` || item.reference === `family-observation:${followed}`)
     ?? moments.find(item => item.kind === 'species') ?? moments.at(-1);
@@ -27,6 +28,7 @@ export function WorldOutcome({ state, evidence, followed, names = {}, onInvestig
     {followed !== null && <p className={styles.family} aria-label="Near-board family outcome">Lineage #{followed} · {living ? `${living} living ${living === 1 ? 'member' : 'members'}` : extinction ? `no living members; first observed extinct at generation ${extinction.generation}` : 'no living members; extinction time not recorded'}.</p>}
     {moment && <p className={styles.fact}>{moment.description}</p>}
     <div className={styles.actions}>
+      {onInspectMoment && moment && <button type="button" onClick={() => onInspectMoment(moment)}>Inspect this moment</button>}
       <button type="button" onClick={onInvestigate}>Investigate this outcome</button>
       {onReview && moment && <button type="button" onClick={() => onReview(moment)}>Review next trial</button>}
     </div>

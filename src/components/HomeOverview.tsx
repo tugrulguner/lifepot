@@ -22,7 +22,7 @@ export function HomeOverview() {
         </p><CreatorSocialLinks /></div>
       </div>
       <div className="overview-brand">
-        <img className="overview-lockup" src="/lifepot-lockup.png?v=adaptive-life-1" width="1200" height="900" alt="LifePot — artificial life in a changing world" />
+        <img className="overview-lockup" src="/art/recorded-habitat-closeup.webp" width="960" height="515" alt="A close-up of a recorded LifePot habitat at generation 80" fetchPriority="high" />
       </div>
     </section>
     <section className="overview-example" aria-labelledby="example-title">

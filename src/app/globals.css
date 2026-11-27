@@ -1077,3 +1077,19 @@ html[data-theme="dark"] .primary-button, html[data-theme="dark"] .question-foote
 .player-change-actions { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
 .player-change [aria-label="Review Jev proposal"] { border-left:3px solid var(--mp-accent); padding-left:12px; }
 .player-change-status { margin:0; color:var(--mint); overflow-wrap:anywhere; }
+
+/* Homepage close-up-first composition; only homepage selectors below. */
+
+.overview-brand { grid-column:2; grid-row:1; }
+.overview-lockup { aspect-ratio:4/3; height:auto; object-fit:cover; border-radius:10px; }
+.overview-primary { min-height:52px; padding-inline:24px; font-size:16px; }
+.overview-secondary { min-height:48px; padding-inline:16px; border:1px solid var(--mp-control-boundary); border-radius:7px; color:var(--mp-ink); text-decoration:none; }
+.overview-example { padding-top:0; }
+@media(max-width:800px) {
+  .overview-hero { grid-template-columns:1fr; gap:12px; padding-top:20px; }
+  .overview-brand { grid-column:1; grid-row:1; max-width:none; }
+  .overview-lockup { height:164px; object-fit:cover; }
+  .overview-copy { grid-row:2; }
+  .overview-example { padding-bottom:24px; }
+}
+@media(max-width:370px) { .overview-hero { gap:8px; } }
