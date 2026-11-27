@@ -4,7 +4,7 @@ import styles from "./EnvironmentReadout.module.css";
 const interval = 6;
 const format = (n: number) => n.toLocaleString("en-US");
 
-export function EnvironmentReadout({ state, showHazards, placement = "compact" }: { state: SimulationState; showHazards: boolean; placement?: "beside" | "compact" | "phone" }) {
+export function EnvironmentReadout({ state, showHazards, placement = "phone" }: { state: SimulationState; showHazards: boolean; placement?: "beside" | "phone" }) {
   // Hold a completed comparison still long enough to read at normal speed.
   const end = state.outcome === "running" ? state.generation - state.generation % interval : state.generation;
   const start = Math.max(0, Math.floor((end - 1) / interval) * interval);

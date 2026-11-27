@@ -27,7 +27,9 @@ for (const width of [390, 1001, 1280]) test(`habitat readout stays visible with 
     await expect(note).toBeInViewport({ ratio: 1 });
   } else {
     expect(text.y).toBeGreaterThanOrEqual(board.y + board.height - 1);
-    expect(text.y - board.y - board.height).toBeLessThan(20);
+    const filters = (await page.locator('.species-focus-buttons').boundingBox())!;
+    expect(filters.y - board.y - board.height).toBeLessThanOrEqual(24);
+    expect(text.y - filters.y - filters.height).toBeLessThan(40);
     expect(board.width).toBeGreaterThanOrEqual(280);
   }
 });

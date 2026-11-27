@@ -13,12 +13,8 @@
 }
 .readout strong { font-size: .82rem; }
 .beside, .phone { display: none; }
-@media (max-width: 1000px) { .phone { display: grid; grid-area: habitat-readout; } }
+@media (max-width: 1000px) { .phone { display: grid; margin-block-end: .4rem; } }
 @media (min-width: 1001px) {
-  .compact { display: none; }
   .beside { display: grid; grid-area: observation; align-self: start; margin-inline-end: calc(var(--overview-width) + 10px); }
-}
-@media (max-width: 1000px) {
-  .compact { padding: .25rem .4rem; border: 0; background: transparent; color: inherit; }
 }
 @media (max-width: 600px) { .readout { font-size: .73rem; padding: .4rem .55rem; } }

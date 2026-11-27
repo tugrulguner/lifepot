@@ -5,12 +5,13 @@ import OrganismArtwork from "./OrganismArtwork";
 
 import type { RunEvidence } from "@/game/run-evidence";
 
-type Props = { historical?: boolean; evidence?: RunEvidence | null; state: SimulationState; index: number | null; followed: number | null; onFollow: (lineage: number | null) => void; onClear: () => void; onPick: () => void; complete?: boolean | null };
-export function CreatureInspector({ state, evidence, index, followed, onFollow, onClear, onPick, complete = false, historical = false }: Props) {
+type Props = { readout?: React.ReactNode; historical?: boolean; evidence?: RunEvidence | null; state: SimulationState; index: number | null; followed: number | null; onFollow: (lineage: number | null) => void; onClear: () => void; onPick: () => void; complete?: boolean | null };
+export function CreatureInspector({ readout, state, evidence, index, followed, onFollow, onClear, onPick, complete = false, historical = false }: Props) {
   const cell = index === null ? null : inspectCell(state, index);
   const living = lineageCells(state, followed);
   const family = cell?.occupied ? lineageCells(state, cell.lineage) : [];
   return <section id={historical ? "recorded-creature-inspector" : "creature-inspector"} className="creature-inspector" aria-label={historical ? "Historical creature inspector" : "Creature inspector"}>
+    {readout}
     <header><div><p className="eyebrow">FIELD NOTES</p><h2>{complete ? "Keep exploring this world" : "Meet an organism"}</h2>{!complete && index === null && followed === null && <p>Inspect one, then follow its family.</p>}</div><button onClick={onPick}>Inspect a living organism</button></header>
     {evidence && <section className="extinction-milestones" aria-label="Observed extinction milestones" aria-live="polite" aria-relevant="additions">
       {(evidence.firstExtinction.length > 0 || evidence.lineageExtinction.length > 0) && <><h3>Observed extinction milestones</h3>
