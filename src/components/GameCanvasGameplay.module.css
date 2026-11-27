@@ -79,6 +79,11 @@ main.starterReview { overflow: clip; }
 @media (min-width: 1001px) {
   .worldContext { grid-area: observation; padding-top: calc(var(--overview-width) + 3rem); display: flex; flex-direction: column; gap: 12px; align-self: start; min-width: 0; }
 }
+/* The outcome shares three desktop rows with the camera, board and focus controls.
+   Let its extra height grow below the board, not above the square canvas. */
+@media (min-width: 1001px) {
+  .completed:global(.simulation-shell) { grid-template-rows: auto auto auto minmax(auto, 1fr); }
+}
 /* Completion retains the original canvas and places its payoff before the observatory. */
 .completed:global(.simulation-shell) {
   grid-template-areas: "controls controls" "camera-primary observation" "board observation" "focus-controls observation" "result result" "inspector observatory" "camera observatory" "focus observatory" "stats observatory" "legend observatory" "status observatory" "event observatory" "decision observatory";
