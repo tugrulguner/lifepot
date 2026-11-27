@@ -62,15 +62,15 @@ main.starterReview { overflow: clip; }
   .shell:global(.simulation-shell):has(.viewOptions[aria-expanded="true"]) { row-gap: 4px; }
   /* With no selection, keep playback and the habitat first. */
   .shell:global(.simulation-shell):has(.viewOptions[aria-expanded="false"]) {
-    grid-template-areas: "controls" "camera-primary" "board" "focus-controls" "inspector" "observation" "outcome" "result" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
+    grid-template-areas: "controls" "camera-primary" "board" "habitat-readout" "focus-controls" "inspector" "observation" "outcome" "result" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
   }
   .shell:global(.simulation-shell):has(.viewOptions[aria-expanded="false"]):has(:global(.watching-organism)) {
-    grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "inspector" "outcome" "result" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
+    grid-template-areas: "controls" "observation" "camera-primary" "board" "habitat-readout" "focus-controls" "inspector" "outcome" "result" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
   }
 }
 @media (max-width: 1000px) {
   .shell:global(.simulation-shell) {
-    grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "inspector" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event" "result";
+    grid-template-areas: "controls" "observation" "camera-primary" "board" "habitat-readout" "focus-controls" "inspector" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event" "result";
   }
   .mobileMarkKey { display: block; grid-area: marks; padding: 8px 10px; border-bottom: 1px solid var(--line); background: var(--panel); }
   .worldContext :global(.canvas-mark-key) { display: none; }
@@ -90,16 +90,22 @@ main.starterReview { overflow: clip; }
 }
 @media (max-width: 1000px) {
   .completed:global(.simulation-shell) {
-    grid-template-areas: "controls" "observation" "camera-primary" "board" "focus-controls" "outcome" "result" "inspector" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
+    grid-template-areas: "controls" "observation" "camera-primary" "board" "habitat-readout" "focus-controls" "outcome" "result" "inspector" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
   }
 }
 
 @media (max-width: 600px) {
   .shell.completed:global(.simulation-shell):has(.viewOptions[aria-expanded="false"]) {
-    grid-template-areas: "controls" "camera-primary" "board" "outcome" "focus-controls" "observation" "result" "inspector" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
+    grid-template-areas: "controls" "camera-primary" "board" "habitat-readout" "outcome" "focus-controls" "observation" "result" "inspector" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
   }
 }
 
+/* When an extinction is recorded, keep field notes closer than the filters. */
+@media (max-width: 600px) {
+  .shell:global(.simulation-shell):not(.completed):has(.viewOptions[aria-expanded="false"]):has(:global(.extinction-milestones h3)):not(:has(:global(.watching-organism))) {
+    grid-template-areas: "controls" "camera-primary" "board" "habitat-readout" "inspector" "focus-controls" "observation" "outcome" "result" "marks" "camera" "focus" "stats" "status" "legend" "observatory" "decision" "event";
+  }
+}
 /* Keep the real square habitat above the compact mobile/tablet proposal sheet. */
 @media (max-width: 1000px) {
   .proposing :global(.life-canvas) { max-width: max(280px, min(100%, calc(55dvh - 96px))); }

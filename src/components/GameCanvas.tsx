@@ -483,10 +483,10 @@ function World({ state, selected, followed, focusedSpecies, onInspect, onCameraU
       aria-label={`Ecosystem generation ${state.generation}; ${state.stats.population} organisms`}
     />
     {showMeasurements && <EnvironmentReadout state={state} showHazards={showHazards} placement="beside" />}
+    {showMeasurements && !viewOptionsOpen && <EnvironmentReadout state={state} showHazards={showHazards} placement="phone" />}
     <aside className={`world-overview${overviewExpanded ? " is-expanded" : ""}`} aria-label="World overview"><button type="button" aria-label={overviewExpanded ? "Collapse world overview" : "Expand world overview"} aria-expanded={overviewExpanded} onClick={() => setOverviewExpanded(value => !value)}><canvas ref={overviewRef} width={GRID_SIZE} height={GRID_SIZE} aria-hidden="true" /></button><span>Overview</span></aside>
     <section className="camera-tools camera-primary" aria-label="World camera">
       {idPrefix === "world" && <button type="button" className={gameplayStyles.viewOptions} aria-expanded={viewOptionsOpen} onClick={() => setViewOptionsOpen(open => !open)}>View options</button>}
-      {showMeasurements && !viewOptionsOpen && <EnvironmentReadout state={state} showHazards={showHazards} placement="compact" />}
       <div className="watching-progress" role="group" aria-label="Watching progress"><span>{state.outcome !== "running" && <strong>{state.stats.population === 0 ? "World empty" : "Observation complete"} · </strong>}Generation {state.generation} / {state.fixedHabitat ? getObservationLimit(state) : DEFAULT_GENERATIONS} · {state.stats.population} living</span>{showMeasurements && <a href="#live-measurements">Measurements</a>}</div>
       <div className="camera-buttons">
         <button aria-label="Zoom out" disabled={view.zoom <= 1} onClick={() => { zoom(-.5); returnToWorld(); }}>−</button>

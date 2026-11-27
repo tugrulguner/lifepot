@@ -12,7 +12,8 @@
   overflow-wrap: anywhere;
 }
 .readout strong { font-size: .82rem; }
-.beside { display: none; }
+.beside, .phone { display: none; }
+@media (max-width: 1000px) { .phone { display: grid; grid-area: habitat-readout; } }
 @media (min-width: 1001px) {
   .compact { display: none; }
   .beside { display: grid; grid-area: observation; align-self: start; margin-inline-end: calc(var(--overview-width) + 10px); }

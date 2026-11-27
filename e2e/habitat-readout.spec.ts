@@ -26,7 +26,8 @@ for (const width of [390, 1001, 1280]) test(`habitat readout stays visible with 
     }).toBeGreaterThanOrEqual(0);
     await expect(note).toBeInViewport({ ratio: 1 });
   } else {
-    expect(text.y + text.height).toBeLessThanOrEqual(board.y);
+    expect(text.y).toBeGreaterThanOrEqual(board.y + board.height - 1);
+    expect(text.y - board.y - board.height).toBeLessThan(20);
     expect(board.width).toBeGreaterThanOrEqual(280);
   }
 });
