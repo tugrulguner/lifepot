@@ -223,6 +223,56 @@ describe("native habitat resource field encoding", () => {
     expect(Math.max(...hatch)).toBeGreaterThan(Math.min(...hatch));
     expect(low.every((a,i) => a <= hatch[i])).toBe(true);
   });
+  it("keeps a localized food patch distinct from bare ground after zoom and pan", () => {
+    const resources = new Uint8Array(2500);
+    for (let y=15;y<25;y++) for (let x=16;x<26;x++) resources[y*50+x]=128;
+    for (const camera of [{x:25,y:25,span:50},{x:23,y:20,span:20}]) {
+      const [image]=paint(resources,new Uint8Array(2500),false,camera);
+      const coverage=(left:number)=>{
+        let food=0,count=0;
+        for(let y=0;y<200;y++) for(let x=0;x<200;x++) {
+          const wx=camera.x+((x+.5)/200-.5)*camera.span, wy=camera.y+((y+.5)/200-.5)*camera.span;
+          if(wx<left || wx>=left+4 || wy<17 || wy>=22) continue;
+          const i=(200*y+x)*4; if(image[i+1]>image[i]+18) food++; count++;
+        }
+        expect(count).toBeGreaterThan(0); return food/count;
+      };
+      expect(coverage(18)).toBeGreaterThan(.5);
+      expect(coverage(28)).toBe(0);
+    }
+  });
+  it("expands clustered green-bed raster coverage as food rises", () => {
+    const levels = [0, 25, 75, 128, 255];
+    const rasters = levels.map(level => paint(new Uint8Array(2500).fill(level))[0]);
+    // Count visibly green pixels, not average channel tint: exposed sand must
+    // remain outside the green-bed footprint at low and intermediate food.
+    const coverage = (image: Uint8ClampedArray) => {
+      let green = 0;
+      for (let i = 0; i < 40000; i++) {
+        if (image[i * 4 + 1] > image[i * 4] + 18) green++;
+      }
+      return green / 40000;
+    };
+    const areas = rasters.map(coverage);
+    expect(areas[0]).toBe(0);
+    expect(areas[1]).toBeGreaterThan(areas[0] + 0.05);
+    expect(areas[2]).toBeGreaterThan(areas[1] + 0.05);
+    expect(areas[3]).toBeGreaterThan(areas[2] + 0.05);
+    expect(areas[4]).toBeGreaterThan(areas[3] + 0.05);
+  });
+  it("makes low and mid food raster coverage read green against warm exposed sediment", () => {
+    const levels = [0, 25, 75, 128, 255];
+    const rasters = levels.map(level => paint(new Uint8Array(2500).fill(level))[0]);
+    const mean = (image: Uint8ClampedArray, channel: number) => image.reduce((sum, value, i) => sum + (i % 4 === channel ? value : 0), 0) / 40000;
+    const colors = rasters.map(image => [mean(image, 0), mean(image, 1), mean(image, 2)]);
+    expect(colors[0][0]).toBeGreaterThan(colors[0][1]);
+    expect(colors[0][0] - colors[0][1]).toBeGreaterThan(20);
+    expect(colors[1][1]).toBeGreaterThan(colors[1][0] + 10);
+    expect(colors[2][1]).toBeGreaterThan(colors[2][0] + 25);
+    expect(colors[3][1]).toBeGreaterThan(colors[1][1] + 8);
+    expect(colors[3][1]).toBeGreaterThan(colors[3][2]);
+    expect(colors[1][1]).toBeGreaterThan(colors[0][1] + 8);
+  });
   it("maps resource levels to distinct but restrained field colors", () => {
     const depleted = resourceFieldColor(0), rich = resourceFieldColor(255);
     const distance = Math.hypot(rich[0] - depleted[0], rich[1] - depleted[1], rich[2] - depleted[2]);

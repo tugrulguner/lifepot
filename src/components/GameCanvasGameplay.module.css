@@ -76,8 +76,11 @@ main.starterReview { overflow: clip; }
   .worldContext :global(.canvas-mark-key) { display: none; }
 }
 .worldContext { display: contents; }
+@media (max-width: 1000px) { .readoutSlot { display: none; } }
 @media (min-width: 1001px) {
-  .worldContext { grid-area: observation; padding-top: calc(var(--overview-width) + 3rem); display: flex; flex-direction: column; gap: 12px; align-self: start; min-width: 0; }
+  .worldContext { pointer-events: none; grid-area: observation; display: flex; flex-direction: column; gap: 12px; align-self: start; min-width: 0; }
+  .readoutSlot { min-height: calc(var(--overview-width) + 2rem); margin-inline-end: calc(var(--overview-width) + 10px); }
+  .worldContext > * { pointer-events: auto; }
 }
 /* The outcome shares three desktop rows with the camera, board and focus controls.
    Let its extra height grow below the board, not above the square canvas. */
