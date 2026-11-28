@@ -1,0 +1,24 @@
+import { expect, test } from '@playwright/test';
+for (const width of [390, 1280]) test(`track one food cell across generations at ${width}px`, async ({page}) => {
+  await page.setViewportSize({width,height:844});
+  await page.route('**/api/**',r=>r.abort());
+  await page.goto('/experiment');
+  for (const name of ['Use a starter world instead','Preview Recurring scarcity','Review this world',/Seed ecosystem/]) await page.getByRole('button',{name,exact:true}).click();
+  const toggle=page.getByRole('button',{name:'Track food patch'});
+  await expect(toggle).toBeVisible(); await expect(page.getByRole('button',{name:'Track food patch'})).not.toHaveAttribute('aria-pressed','true'); await toggle.click();
+  await expect(page.getByRole('note',{name:'Habitat readout'}).getByText(/Click a food cell, or use arrow keys and Enter to select/)).toBeVisible();
+  const board=page.locator('canvas.life-canvas').first();
+  const box=await board.boundingBox(); if (!box) throw Error('Missing board');
+  await board.click({position:{x:box.width/2+1,y:box.height/2+1}});
+  const reading=page.getByRole('note',{name:'Habitat readout'}).getByLabel('Tracked food patch');
+  const initial = (await reading.textContent())!.match(/Cell (\d+), (\d+)/)!; const column=Number(initial[1]), row=Number(initial[2]);
+  await expect(reading).toContainText('Cell 26, 26');
+  await expect(reading).toContainText(/Since selection \(Gen \d+\): (up|down|unchanged) \d+ units · Now \(Gen \d+\): \d+/);
+  await board.press('ArrowRight'); await expect(reading).toContainText(`Cell ${column===50?1:column+1}, ${row}`);
+  await expect(reading).toContainText(/Since selection \(Gen \d+\): (up|down|unchanged) \d+ units · Now \(Gen \d+\): \d+/);
+  const current = Number((await reading.textContent())!.match(/Cell (\d+),/)![1]);
+  for (let step=0; step<(50-current); step++) await board.press('ArrowRight'); await expect(reading).toContainText(`Cell 50, ${row}`);
+  await board.press('ArrowRight'); await expect(reading).toContainText(`Cell 1, ${row}`);
+  await board.press('Enter'); await expect(reading).toContainText(`Cell 1, ${row}`);
+  await toggle.click(); await expect(reading).toHaveCount(0);
+});

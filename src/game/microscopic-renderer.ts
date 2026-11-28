@@ -15,7 +15,7 @@ export function fieldStrength(value: number): number {
 const sediment=habitatMaterials.sediment as number[];
 const frost=habitatMaterials.frost as number[];
 const etch=habitatMaterials.etch as number[];
-const coatCoverage=(relief:number,q:number)=>Math.max(0,Math.min(1,(relief+Math.sqrt(q)*.65-.67)*4));
+const coatCoverage=(relief:number,q:number)=>{const t=Math.max(0,Math.min(1,(relief+Math.sqrt(q)*.65-.67)*2));return t*t*(3-2*t);};
 // Subtract the mean coverage so surface detail doesn't change the food scale.
 const coatMeans=Array.from({length:256},(_,v)=>sediment.reduce((s,p)=>s+coatCoverage(p/255,v/255),0)/sediment.length);
 const abundanceScale=Array.from({length:256},(_,i)=>fieldStrength(i));
@@ -42,12 +42,14 @@ export function hazardHatchAlpha(hazard:number,worldX:number,worldY:number,cellF
 }
 // Fixed, perceptually stronger mapping: same engine values always mean the same thing.
 export function resourceFieldColor(value: number): [number, number, number] {
-  const t = Math.max(0, Math.min(1, value / 255));
-  // Depleted ground reads as warm exposed mineral; food transitions through
-  // visible green coverage at real low/mid values, not just rich endpoints.
-  const low = Math.sqrt(t);
-  const exposedMineral = 108 * t * (1 - t) * low;
-  return [clamp(202 - 108 * low + exposedMineral), clamp(174 + 39 * low), clamp(137 + 17 * low)];
+  // Keep the depleted field pale sand, but move measured food into a darker
+  // moss palette early enough to read at ordinary world scale. Use the same
+  // calibrated resource response as the texture so low values are not hidden
+  // until the field is nearly full.
+  const food = fieldStrength(value);
+  const sand = [202, 174, 137];
+  const moss = [105, 210, 145];
+  return sand.map((channel, i) => clamp(channel + (moss[i] - channel) * food)) as [number, number, number];
 }
 function rgba([r,g,b]:number[],a:number){return`rgba(${r},${g},${b},${a})`;}
 function colorRgb(color:string):number[]{const m=/^#([\da-f]{6})$/i.exec(color);return m?[parseInt(m[1].slice(0,2),16),parseInt(m[1].slice(2,4),16),parseInt(m[1].slice(4,6),16)]:[12,112,111];}

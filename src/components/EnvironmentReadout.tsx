@@ -6,7 +6,9 @@ const interval = 6;
 const format = (n: number) => n.toLocaleString("en-US");
 const rgb = (value: number) => `rgb(${resourceFieldColor(value).join(" ")})`;
 
-export function EnvironmentReadout({ state, showHazards, placement = "phone" }: { state: SimulationState; showHazards: boolean; placement?: "beside" | "phone" }) {
+type FoodSelection = { index: number; generation: number; food: number } | null;
+type FoodTracker = { active: boolean; selection: FoodSelection; current: number | null; delta: number | null; toggle: () => void };
+export function EnvironmentReadout({ state, showHazards, placement = "phone", trackFood }: { state: SimulationState; showHazards: boolean; placement?: "beside" | "phone"; trackFood?: FoodTracker }) {
   const end = state.outcome === "running" ? state.generation - state.generation % interval : state.generation;
   const start = Math.max(0, Math.floor((end - 1) / interval) * interval);
   const before = state.history.find(frame => frame.generation === start);
@@ -20,7 +22,8 @@ export function EnvironmentReadout({ state, showHazards, placement = "phone" }: 
   return <aside className={`${styles.readout} ${styles[placement]}`} role="note" aria-label="Habitat readout">
     <strong>{summary}</strong>
     <div className={styles.key} aria-label="Habitat visual key">
-      <span className={styles.keyTitle}>Food</span>
+      <span className={styles.keyTitle}>Food {trackFood && <button type="button" aria-label="Track food patch" aria-pressed={trackFood.active} title="Enable tracking, then click a cell or use arrow keys; Enter selects the current cell." onClick={trackFood.toggle}>Track</button>}</span>
+      {trackFood?.active && <span className={styles.tracker}><small>Click a food cell, or use arrow keys and Enter to select. Movement wraps at the board edges.</small>{trackFood.selection && trackFood.current !== null && trackFood.delta !== null && <output aria-label="Tracked food patch">Cell {trackFood.selection.index % 50 + 1}, {Math.floor(trackFood.selection.index / 50) + 1} · Since selection (Gen {trackFood.selection.generation}): {trackFood.delta > 0 ? "up" : trackFood.delta < 0 ? "down" : "unchanged"} {format(Math.abs(trackFood.delta))} units · Now (Gen {state.generation}): {format(trackFood.current)}</output>}</span>}
       <span className={styles.foodScale} aria-hidden="true"><i style={{ backgroundColor: rgb(0) }} /><i style={{ backgroundColor: rgb(64) }} /><i style={{ backgroundColor: rgb(128) }} /><i style={{ backgroundColor: rgb(192) }} /><i style={{ backgroundColor: rgb(255) }} /></span>
       <span className={styles.scaleLabels}><span>Low</span><span>Rich</span></span>
     </div>
