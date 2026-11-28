@@ -12,3 +12,9 @@
 .hazardKey { display: flex; align-items: center; gap: .35rem; margin-block-start: .2rem; }
 .hazardKey i { width: .9rem; height: .65rem; border: 1px solid #9e4d47; background: repeating-linear-gradient(135deg, transparent 0 3px, #d7776d 3px 5px); }
 @media (max-width: 600px) { .readout { font-size: .73rem; padding: .4rem .55rem; } .key { grid-template-columns: auto minmax(4rem, 1fr); } }
+
+.tracker { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.keyTitle button { min-height: 0; height: auto; line-height: 1; font-size: inherit; padding: 0 4px; border: 1px solid #65705f; border-radius: 4px; background: transparent; color: inherit; cursor: pointer; }
+.tracker button[aria-pressed="true"] { border-color: #438b72; color: #246b54; }
+.tracker small { color: #68736c; font: 11px/1.35 system-ui, sans-serif; }
+.tracker output { flex-basis: 100%; color: inherit; font: 11px/1.4 ui-monospace, monospace; }

@@ -241,6 +241,26 @@ describe("native habitat resource field encoding", () => {
       expect(coverage(28)).toBe(0);
     }
   });
+  it("shows a localized food bed edge as a gradual sediment-backed transition at normal zoom", () => {
+    const resources = new Uint8Array(2500);
+    for (let y=15;y<25;y++) for (let x=16;x<26;x++) resources[y*50+x]=128;
+    const [image] = paint(resources);
+    const green = (x:number,y:number) => {
+      const i=(200*y+x)*4;
+      return image[i+1] > image[i]+18;
+    };
+    const fraction = (xs:number[]) => {
+      let count=0, total=0;
+      for(let y=68;y<92;y++) for(const x of xs) { count += green(x,y) ? 1 : 0; total++; }
+      return count/total;
+    };
+    // The patch's left boundary spans several raster pixels: sediment gives it
+    // organic texture, while measured resource values—not a drawn contour—set its extent.
+    expect(fraction([63,64,65])).toBeGreaterThanOrEqual(0.75);
+    expect(fraction([63,64,65])).toBeLessThan(0.9);
+    expect(fraction([70,72,74])).toBeGreaterThan(0.75);
+    expect(fraction([55,57,59])).toBeLessThan(0.1);
+  });
   it("expands clustered green-bed raster coverage as food rises", () => {
     const levels = [0, 25, 75, 128, 255];
     const rasters = levels.map(level => paint(new Uint8Array(2500).fill(level))[0]);
