@@ -15,6 +15,9 @@ export function fieldStrength(value: number): number {
 const sediment=habitatMaterials.sediment as number[];
 const frost=habitatMaterials.frost as number[];
 const etch=habitatMaterials.etch as number[];
+const coatCoverage=(relief:number,q:number)=>Math.max(0,Math.min(1,(relief+Math.sqrt(q)*.65-.67)*4));
+// Subtract the mean coverage so surface detail doesn't change the food scale.
+const coatMeans=Array.from({length:256},(_,v)=>sediment.reduce((s,p)=>s+coatCoverage(p/255,v/255),0)/sediment.length);
 const abundanceScale=Array.from({length:256},(_,i)=>fieldStrength(i));
 const materialAt=(mask:number[],x:number,y:number)=>mask[((y%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE)*GRAIN_SIZE+(x%GRAIN_SIZE+GRAIN_SIZE)%GRAIN_SIZE]/255;
 const materialMean=(mask:number[])=>mask.reduce((sum,value)=>sum+value,0)/(mask.length*255);
@@ -39,8 +42,12 @@ export function hazardHatchAlpha(hazard:number,worldX:number,worldY:number,cellF
 }
 // Fixed, perceptually stronger mapping: same engine values always mean the same thing.
 export function resourceFieldColor(value: number): [number, number, number] {
-  const t = Math.sqrt(Math.max(0, Math.min(255, value)) / 255);
-  return [clamp(165 - 65 * t), clamp(169 + 20 * t), clamp(161 + 16 * t)];
+  const t = Math.max(0, Math.min(1, value / 255));
+  // Depleted ground reads as warm exposed mineral; food transitions through
+  // visible green coverage at real low/mid values, not just rich endpoints.
+  const low = Math.sqrt(t);
+  const exposedMineral = 108 * t * (1 - t) * low;
+  return [clamp(202 - 108 * low + exposedMineral), clamp(174 + 39 * low), clamp(137 + 17 * low)];
 }
 function rgba([r,g,b]:number[],a:number){return`rgba(${r},${g},${b},${a})`;}
 function colorRgb(color:string):number[]{const m=/^#([\da-f]{6})$/i.exec(color);return m?[parseInt(m[1].slice(0,2),16),parseInt(m[1].slice(2,4),16),parseInt(m[1].slice(4,6),16)]:[12,112,111];}
@@ -109,9 +116,19 @@ export function paintResourceField(c: CanvasRenderingContext2D, pad: number, cw:
       const grainCenter=abundanceScale[Math.round(q*255)]*sedimentMean;
       // Sediment is the high-contrast green aggregate; frost stays a faint,
       // neutral mineral variation even when food is depleted.
-      const aggregate=(grain-grainCenter)*92;
+      // Food coats the high points of the anchored mineral relief first.
+      // A broader portion of the mask is coated as the patch refills.
+      const strength=abundanceScale[Math.round(q*255)];
+      const relief=strength ? grain/strength : 0;
+      const coat=coatCoverage(relief,q);
+      const aggregate=(grain-grainCenter)*(82+29*q) + strength*(coat-coatMeans[Math.round(q*255)])*10;
       const background=(frostValue-frostMean)*3;
-      im.data[i]=clamp(red-aggregate+background);im.data[i+1]=clamp(green+aggregate+background);im.data[i+2]=clamp(blue+background);im.data[i+3]=255;
+      // The same filtered sediment relief determines which surface is coated;
+      // no independent spatial pattern is added to the resource measurements.
+      const ridge=Math.max(-1,Math.min(1,(sedimentMean-relief)*3));
+      const mineralChannels=4*q*(1-q)*(.75*aggregate + (21+7*q)*ridge);
+      const bedSignal=aggregate-mineralChannels;
+      im.data[i]=clamp(red-bedSignal+background);im.data[i+1]=clamp(green+bedSignal+background);im.data[i+2]=clamp(blue+background);im.data[i+3]=255;
     }
     ctx.putImageData(im,0,0); resourceSource=resources; resourceView=view;
   }
